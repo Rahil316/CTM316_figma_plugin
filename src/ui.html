@@ -576,6 +576,32 @@
               <button id="toggle-skipColorRamps" class="toggle-pill" onclick="toggleBoolSetting('skipColorRamps')"></button>
             </div>
 
+            <!-- Constants collection -->
+            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Constants Collection</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Write raw brand hex values — no themes, no processing</p>
+              </div>
+              <button id="toggle-includeConstants" class="toggle-pill" onclick="toggleBoolSetting('includeConstants')"></button>
+            </div>
+            <div id="constants-options" class="hidden space-y-2 pl-2 border-l-2 border-[var(--border)]">
+              <div class="space-y-1">
+                <label for="setting-constantsCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Collection Name</label>
+                <input type="text" id="setting-constantsCollectionName" placeholder="_constants" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+              </div>
+              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+                <div>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Opacity Variants</p>
+                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Add alpha versions under colorName/Opacities/</p>
+                </div>
+                <button id="toggle-includeConstantOpacities" class="toggle-pill" onclick="toggleBoolSetting('includeConstantOpacities')"></button>
+              </div>
+              <div id="opacity-values-row" class="hidden space-y-1">
+                <label for="setting-constantOpacities" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Opacity Values (CSV, 0–100)</label>
+                <input type="text" id="setting-constantOpacities" placeholder="10, 25, 50, 75, 90" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+              </div>
+            </div>
+
             <!-- Token grouping -->
             <div class="space-y-1">
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Token Grouping</label>

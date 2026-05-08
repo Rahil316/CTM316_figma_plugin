@@ -59,6 +59,10 @@
         colorsCollectionName: "_Colors",
         contextualCollectionName: "contextual",
         skipColorRamps: false,
+        includeConstants: false,
+        constantsCollectionName: "_constants",
+        includeConstantOpacities: false,
+        constantOpacities: "10, 25, 50, 75, 90",
         tokenGrouping: "color",
         useShortColorNames: false,
         useShortRoleNames: false,
@@ -1043,12 +1047,17 @@
       function syncOutputToggles() {
         const tg = appState.tokenGrouping || "color";
         // Sync all toggle pills (settings sheet + run dialog)
-        ["skipColorRamps", "useShortColorNames", "useShortRoleNames"].forEach((key) => {
+        ["skipColorRamps", "useShortColorNames", "useShortRoleNames", "includeConstants", "includeConstantOpacities"].forEach((key) => {
           ["toggle-" + key, "rd-toggle-" + key].forEach((id) => {
             const btn = document.getElementById(id);
             if (btn) btn.classList.toggle("on", !!appState[key]);
           });
         });
+        // Show/hide constants sub-options
+        const constOpts = document.getElementById("constants-options");
+        if (constOpts) constOpts.classList.toggle("hidden", !appState.includeConstants);
+        const opacRow = document.getElementById("opacity-values-row");
+        if (opacRow) opacRow.classList.toggle("hidden", !appState.includeConstantOpacities);
         // Sync grouping segment buttons
         [
           ["seg-group-color", "rd-seg-group-color"],
@@ -1134,6 +1143,10 @@
         appState.roleMapping = document.getElementById("setting-roleMapping").value;
         appState.roleStepNames = document.getElementById("setting-roleStepNames").value;
 
+        // Constants
+        appState.constantsCollectionName = document.getElementById("setting-constantsCollectionName").value.trim() || "_constants";
+        appState.constantOpacities = document.getElementById("setting-constantOpacities").value;
+
         renderColorGroups();
         renderRoles();
       }
@@ -1162,6 +1175,10 @@
         // Role Settings (roleSteps is fixed at 5, no DOM sync needed)
         document.getElementById("setting-roleMapping").value = appState.roleMapping || "Contrast Based";
         document.getElementById("setting-roleStepNames").value = appState.roleStepNames;
+
+        // Constants
+        document.getElementById("setting-constantsCollectionName").value = appState.constantsCollectionName || "_constants";
+        document.getElementById("setting-constantOpacities").value = appState.constantOpacities || "10, 25, 50, 75, 90";
       }
 
       /**
@@ -1703,6 +1720,11 @@
           if (scope !== "groups") {
             const ctxExists = existing.includes(ctxName);
             rows.push(collectionRow(ctxName, ctxExists ? "UPDATE" : "CREATE", ctxExists));
+          }
+          if (appState.includeConstants) {
+            const constName = appState.constantsCollectionName || "_constants";
+            const constExists = existing.includes(constName);
+            rows.push(collectionRow(constName, constExists ? "UPDATE" : "CREATE", constExists));
           }
           colsEl.innerHTML = rows.length ? rows.join("") : `<p class="text-[12px] text-[var(--text-muted)] px-1">No collections will be modified for this scope.</p>`;
         }

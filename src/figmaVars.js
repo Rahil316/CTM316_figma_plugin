@@ -146,6 +146,11 @@ const VariableManager = {
       }
     }
 
+    // STAGE 3: Constants collection — raw brand hex values, no themes
+    if (config.includeConstants) {
+      await this.syncConstants(config);
+    }
+
     // Persist config so the plugin can restore state on next launch
     if (appState) {
       await this.saveConfig(appState, colorName);
@@ -207,6 +212,42 @@ const VariableManager = {
       // Return null so the caller can skip writing rather than corrupting the wrong mode.
       return null;
     }
+  },
+
+  async syncConstants(config) {
+    const colName = config.constantsCollectionName || "_constants";
+    const col = await this.getOrCreateCollection(colName);
+    const modeId = col.modes[0].modeId;
+
+    const vars = [];
+    for (const color of config.colors) {
+      const hex = "#" + color.value.replace(/^#/, "").toUpperCase().padEnd(6, "0");
+      const label = config.useShortColorNames && color.shortName ? color.shortName : color.name;
+      vars.push([label, "COLOR", hex, "Brand constant — raw hex, no theme processing"]);
+
+      if (config.includeConstantOpacities && config.constantOpacities.length > 0) {
+        const rgb = hexToFigmaRgb(hex);
+        for (const opacityInt of config.constantOpacities) {
+          const alpha = opacityInt / 100;
+          const varName = `${label}/Opacities/${opacityInt}`;
+          try {
+            let variable = this.cache.variables.find((v) => v.name === varName && v.variableCollectionId === col.id);
+            if (!variable) {
+              variable = figma.variables.createVariable(varName, col, "COLOR");
+              this.cache.variables.push(variable);
+              this.tally.created++;
+            } else {
+              this.tally.updated++;
+            }
+            variable.description = `${opacityInt}% opacity variant`;
+            variable.setValueForMode(modeId, { r: rgb.r, g: rgb.g, b: rgb.b, a: alpha });
+          } catch (_err) {
+            this.tally.failed++;
+          }
+        }
+      }
+    }
+    await this.upsertVariables(col, modeId, vars);
   },
 
   async upsertVariables(collection, modeId, vars) {

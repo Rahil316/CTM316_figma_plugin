@@ -62,6 +62,13 @@ function translateConfig(appState) {
     tokenGrouping: appState.tokenGrouping || "color",
     useShortColorNames: appState.useShortColorNames || false,
     useShortRoleNames: appState.useShortRoleNames || false,
+    includeConstants: appState.includeConstants || false,
+    constantsCollectionName: appState.constantsCollectionName || "_constants",
+    includeConstantOpacities: appState.includeConstantOpacities || false,
+    constantOpacities: (appState.constantOpacities || "10, 25, 50, 75, 90")
+      .split(",")
+      .map((v) => Math.max(0, Math.min(100, parseInt(v.trim()))))
+      .filter((v) => !isNaN(v)),
   };
 }
 
