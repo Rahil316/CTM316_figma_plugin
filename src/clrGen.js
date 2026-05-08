@@ -413,6 +413,57 @@ function variableMaker(config) {
             }
           }
         }
+      } else if (config.roleMapping === "Direct Contrast") {
+        for (const roleName of roleNames) {
+          const role = roles[roleName];
+          const conRole = Object.create(null);
+          conGroup[roleName] = conRole;
+
+          const bgHex = mode.bg;
+          const solverMode = color.solverMode || "natural";
+          const variationKeys = config.roleStepNames || ["weakest", "weak", "base", "strong", "stronger"];
+          const variationTargets = role.variations || {};
+
+          // Pre-validate cardinality; push errors but still solve (best effort).
+          const cardinalityCheck = validateVariationContrasts(variationTargets);
+          if (!cardinalityCheck.valid) {
+            for (const msg of cardinalityCheck.errors) {
+              errors.warnings.push({ color: clrName, role: role.name, theme: modeName, warning: `Cardinality: ${msg}` });
+            }
+          }
+
+          for (let vi = 0; vi < variationKeys.length; vi++) {
+            const variation = variationKeys[vi];
+            const targetContrast = parseFloat(variationTargets[variation]) || 4.5;
+
+            const solved = solveColorForContrast(color.value, targetContrast, bgHex, solverMode);
+
+            if (solved.warning) {
+              errors.warnings.push({ color: clrName, role: role.name, variation, theme: modeName, warning: solved.warning });
+            }
+            if (solved.chromaReduced) {
+              errors.notices.push({ color: clrName, role: role.name, variation, theme: modeName, notice: `Chroma reduced to fit gamut at target contrast ${targetContrast}.` });
+            }
+
+            conRole[variation] = {
+              tknName:  `${clrName}-${role.name}-${variation}`,
+              color:    clrName,
+              role:     role.name,
+              variation,
+              tknRef:   null,
+              value:    solved.hex,
+              contrast: {
+                ratio:  solved.achievedContrast,
+                rating: contrastRating(solved.hex, bgHex),
+              },
+              contrastTarget:  targetContrast,
+              achievedContrast: solved.achievedContrast,
+              solverMode,
+              chromaReduced: solved.chromaReduced,
+              isAdjusted: solved.clipped || solved.achievedContrast > targetContrast + 0.3,
+            };
+          }
+        }
       }
     }
   }

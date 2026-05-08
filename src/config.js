@@ -34,6 +34,7 @@ function translateConfig(appState) {
       name: g.name,
       shortName: g.shortName,
       value: g.value,
+      solverMode: g.solverMode || "natural",
     })),
     roles: (appState.roles || []).map((role) => ({
       name: role.name,
@@ -42,6 +43,10 @@ function translateConfig(appState) {
       spread: Math.max(1, parseInt(role.spread) || 1),
       baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
       darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
+      baseContrast:   parseFloat(role.baseContrast) || 4.5,
+      contrastGap:    parseFloat(role.contrastGap)  || 1.5,
+      useContrastGap: !!role.useContrastGap,
+      variations: role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 },
     })),
     colorSteps: count,
     rampType: appState.rampType || "Natural",

@@ -948,6 +948,17 @@
                     </div>
                   </div>
                 </div>
+                ${appState.roleMapping === "Direct Contrast" ? `
+                <div class="space-y-1">
+                  <label class="text-[var(--text-muted)] text-[12px] font-medium">Solver Mode</label>
+                  <select onchange="updateGroup(${idx}, 'solverMode', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+                    <option value="natural"          ${(group.solverMode||"natural")==="natural"           ? "selected":""}>Natural — scales chroma with lightness</option>
+                    <option value="saturated"        ${(group.solverMode||"natural")==="saturated"         ? "selected":""}>Saturated — holds source chroma, moves L only</option>
+                    <option value="luminance"        ${(group.solverMode||"natural")==="luminance"         ? "selected":""}>Luminance — fades toward neutral gray at extremes</option>
+                    <option value="hue-locked"       ${(group.solverMode||"natural")==="hue-locked"        ? "selected":""}>Hue Locked — fixes H absolutely, co-adjusts L+C</option>
+                    <option value="chroma-maximized" ${(group.solverMode||"natural")==="chroma-maximized"  ? "selected":""}>Chroma Max — most vivid possible at required contrast</option>
+                  </select>
+                </div>` : ""}
               `;
             // Prevent accidental drags from interactive children
             card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
@@ -1022,7 +1033,32 @@
             const mid = Math.floor(appState.colorSteps / 2);
 
             let secondRowHtml = "";
-            if (mappingMethod === "Contrast Based") {
+            if (mappingMethod === "Direct Contrast") {
+              const vars = role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 };
+              const varKeys = ["weakest", "weak", "base", "strong", "stronger"];
+              const vals = varKeys.map((k) => parseFloat(vars[k]) || 0);
+              // Cardinality errors for inline display
+              const cardErrors = [];
+              for (let vi = 1; vi < varKeys.length; vi++) {
+                if (vals[vi] <= vals[vi - 1]) cardErrors.push(vi);
+              }
+              const inputRow = varKeys.map((k, vi) => {
+                const isErr = cardErrors.includes(vi) || cardErrors.includes(vi + 1);
+                return `
+                  <div class="space-y-1">
+                    <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">${k}</label>
+                    <div class="relative">
+                      <input type="number" step="0.1" min="1" max="21" value="${vars[k] || ""}"
+                        onchange="updateRole(${idx}, 'variation:${k}', parseFloat(this.value))"
+                        class="w-full h-[40px] bg-[var(--bg-input)] border ${isErr ? "border-[var(--danger)]" : "border-[var(--border)]"} rounded-[8px] p-2 pr-6 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                      <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-dim)] pointer-events-none">:1</span>
+                    </div>
+                  </div>`;
+              }).join("");
+              secondRowHtml = `
+                <div class="grid grid-cols-5 gap-1.5">${inputRow}</div>
+                ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase: weakest → weak → base → strong → stronger.</p>` : ""}`;
+            } else if (mappingMethod === "Contrast Based") {
               secondRowHtml = `
                 <div class="grid grid-cols-2 gap-2">
                   <div class="space-y-1">
@@ -1154,7 +1190,15 @@
       }
 
       function updateRole(idx, key, value) {
-        if (key === "minContrast") {
+        if (key.startsWith("variation:")) {
+          const varKey = key.slice("variation:".length);
+          if (!appState.roles[idx].variations) {
+            appState.roles[idx].variations = { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 };
+          }
+          let v = parseFloat(value);
+          if (isNaN(v) || v < 1) v = 1;
+          appState.roles[idx].variations[varKey] = Math.min(21, v);
+        } else if (key === "minContrast") {
           let v = parseFloat(value);
           if (isNaN(v)) v = 1;
           appState.roles[idx].minContrast = Math.max(1, Math.min(21, v)).toString();
@@ -1188,7 +1232,7 @@
       function addRole() {
         const n = appState.roles.length + 1;
         const mid = Math.floor(appState.colorSteps / 2);
-        appState.roles.unshift({ _id: generateId(), name: "Role " + n, shortName: `r-${n}`, spread: 2, minContrast: 4.5, baseIndex: mid, darkBaseIndex: mid });
+        appState.roles.unshift({ _id: generateId(), name: "Role " + n, shortName: `r-${n}`, spread: 2, minContrast: 4.5, baseIndex: mid, darkBaseIndex: mid, variations: { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 } });
         renderRoles();
       }
 
