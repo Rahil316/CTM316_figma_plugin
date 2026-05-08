@@ -408,15 +408,6 @@
       <!-- Banner slot: all runtime notifications render here via BannerManager -->
       <div id="banner-slot" class="banner-slot"></div>
 
-      <!-- Mode toggle: Ramp Mode vs Direct Contrast -->
-      <div class="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-panel)]">
-        <span class="text-[11px] font-bold text-[var(--text-muted)] tracking-wider uppercase shrink-0">Mode</span>
-        <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5 flex-1">
-          <button id="mode-btn-ramp"   onclick="setPluginMode('ramp')"   class="seg-btn active flex-1 text-[11px]">Ramp</button>
-          <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1 text-[11px]">Direct Contrast</button>
-        </div>
-      </div>
-
       <!-- Sidebar Tabs -->
       <div class="sidebar-tabs">
         <div class="flex gap-1">
@@ -454,6 +445,15 @@
           <button id="close-settings" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] py-1.5 px-4 rounded-[8px] text-[13px] font-bold transition-colors text-[var(--text-primary)]">Done</button>
         </div>
         <div class="p-4 overflow-y-auto space-y-6">
+          <!-- Plugin Mode -->
+          <div class="space-y-2">
+            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Plugin Mode</h3>
+            <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
+              <button id="mode-btn-ramp"   onclick="setPluginMode('ramp')"   class="seg-btn active flex-1">Ramp</button>
+              <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1">Direct Contrast</button>
+            </div>
+          </div>
+
           <!-- UI Settings Section -->
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">UI Settings</h3>
