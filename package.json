@@ -4,6 +4,7 @@
   "description": "Your Figma Plugin",
   "main": "code.js",
   "scripts": {
+    "build": "cat src/clrUtils.js src/clrSpaces.js src/clrGen.js src/docGen.js src/figmaVars.js src/config.js src/main.js > scripts.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
