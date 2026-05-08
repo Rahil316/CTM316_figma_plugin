@@ -1700,7 +1700,8 @@
         const existing = lastCollectionCheckResult;
         const colorName = appState.colorsCollectionName || "_Colors";
         const ctxName = appState.contextualCollectionName || "contextual";
-        const skipRamps = appState.skipColorRamps || appState.pluginMode === "direct";
+        const isDirect = appState.pluginMode === "direct";
+        const skipRamps = appState.skipColorRamps || isDirect;
         const tg = appState.tokenGrouping || "color";
         const shortC = appState.useShortColorNames;
         const shortR = appState.useShortRoleNames;
@@ -1708,6 +1709,12 @@
 
         // Sync all toggle states (settings sheet + run dialog)
         syncOutputToggles();
+
+        // Hide scope selector and skip-ramps toggle in Direct Contrast mode
+        const scopeSection = document.getElementById("rd-scope-section");
+        if (scopeSection) scopeSection.classList.toggle("hidden", isDirect);
+        const skipRampsRow = document.getElementById("rd-skip-ramps-row");
+        if (skipRampsRow) skipRampsRow.classList.toggle("hidden", isDirect);
 
         // Collections
         const colsEl = document.getElementById("rd-collections");
@@ -1744,14 +1751,14 @@
         const renameListEl = document.getElementById("rd-renames-list");
         if (renameEl && renameListEl) {
           const summary = lastRenameData && lastRenameData.summary;
-          const rampCount = (summary && summary.rampCount) || 0;
+          const rampCount = isDirect ? 0 : ((summary && summary.rampCount) || 0);
           const ctxCount = (summary && summary.contextualCount) || 0;
-          const changes = (summary && summary.changes) || [];
+          const changes = ((summary && summary.changes) || []).filter((ch) => isDirect ? ch.type !== "stepNames" : true);
           const totalRenames = rampCount + ctxCount;
 
           if (totalRenames > 0 && changes.length > 0) {
             renameEl.classList.remove("hidden");
-            const typeLabels = { color: "Color", role: "Role", stepNames: "Ramp Steps", roleStepNames: "Role Steps", grouping: "Grouping" };
+            const typeLabels = { color: "Color", role: "Role", stepNames: "Scale Steps", roleStepNames: "Role Steps", grouping: "Grouping" };
             let html = "";
             for (const ch of changes) {
               const label = typeLabels[ch.type] || ch.type;
@@ -1764,7 +1771,7 @@
             }
             html += `<div class="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] px-1 pt-0.5">
               <span class="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)] shrink-0"></span>
-              <span>${[rampCount > 0 ? `${rampCount} ramp var${rampCount > 1 ? "s" : ""}` : "", ctxCount > 0 ? `${ctxCount} token var${ctxCount > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ")} will be renamed</span>
+              <span>${[rampCount > 0 ? `${rampCount} scale var${rampCount > 1 ? "s" : ""}` : "", ctxCount > 0 ? `${ctxCount} token var${ctxCount > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ")} will be renamed</span>
             </div>`;
             renameListEl.innerHTML = html;
           } else {
@@ -1781,11 +1788,11 @@
             summaryRow("System", appState.name || "—"),
             summaryRow("Colors", `${appState.colors.length}: ${colorList}`),
             summaryRow("Roles", `${appState.roles.length}: ${roleList}`),
-            summaryRow("Mode", appState.pluginMode === "direct" ? "Direct Contrast" : "Ramp"),
+            summaryRow("Mode", appState.pluginMode === "direct" ? "Direct Contrast" : "Tonal Scale"),
             ...(appState.pluginMode === "direct" ? [] : [
               summaryRow("Role Mapping", appState.roleMapping || "Contrast Based"),
               summaryRow("Color Steps", String(appState.colorSteps || 25)),
-              summaryRow("Ramp Type", appState.rampType || "Natural"),
+              summaryRow("Scale Type", appState.rampType || "Natural"),
             ]),
           ].join("");
         }

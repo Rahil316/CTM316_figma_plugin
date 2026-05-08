@@ -161,8 +161,12 @@ const VariableManager = {
 
   async saveConfig(appState, colorName) {
     try {
-      const targetName = appState.skipColorRamps ? appState.contextualCollectionName || "contextual" : colorName;
-      const targetCol = await this.getOrCreateCollection(targetName);
+      // Use whichever collection already holds __ctm316_config__; fall back to the
+      // first collection in the cache (the one this run created/touched first).
+      const existingCfgCol = this.cache.collections.find((col) =>
+        this.cache.variables.some((v) => v.name === "__ctm316_config__" && v.variableCollectionId === col.id)
+      );
+      const targetCol = existingCfgCol || this.cache.collections[0] || await this.getOrCreateCollection(colorName);
       const modeId = targetCol.modes[0].modeId;
 
       // Remove any stale copies of __ctm316_config__ in other collections to avoid
@@ -223,7 +227,7 @@ const VariableManager = {
     for (const color of config.colors) {
       const hex = "#" + color.value.replace(/^#/, "").toUpperCase().padEnd(6, "0");
       const label = config.useShortColorNames && color.shortName ? color.shortName : color.name;
-      vars.push([label, "COLOR", hex, "Brand constant — raw hex, no theme processing"]);
+      vars.push([`${label}/${label}`, "COLOR", hex, "Brand constant — raw hex, no theme processing"]);
 
       if (config.includeConstantOpacities && config.constantOpacities.length > 0) {
         const rgb = hexToFigmaRgb(hex);

@@ -449,7 +449,7 @@
           <div class="space-y-2">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Plugin Mode</h3>
             <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-              <button id="mode-btn-ramp"   onclick="setPluginMode('ramp')"   class="seg-btn active flex-1">Ramp</button>
+              <button id="mode-btn-ramp"   onclick="setPluginMode('ramp')"   class="seg-btn active flex-1">Tonal Scale</button>
               <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1">Direct Contrast</button>
             </div>
           </div>
@@ -819,11 +819,11 @@
         </div>
         <div class="flex-1 overflow-y-auto p-4 space-y-5">
           <!-- SCOPE -->
-          <div class="space-y-2">
+          <div id="rd-scope-section" class="space-y-2">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px]">SCOPE</h3>
             <div class="flex gap-2">
               <button id="rd-scope-all" class="seg-btn" onclick="setRunScope('all')">All</button>
-              <button id="rd-scope-groups" class="seg-btn" onclick="setRunScope('groups')">Color Ramps Only</button>
+              <button id="rd-scope-groups" class="seg-btn" onclick="setRunScope('groups')">Tonal Scale Only</button>
               <button id="rd-scope-roles" class="seg-btn" onclick="setRunScope('roles')">Roles Only</button>
             </div>
           </div>
@@ -831,7 +831,7 @@
           <!-- OUTPUT OPTIONS (editable inline) -->
           <div class="space-y-2">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px]">OUTPUT OPTIONS</h3>
-            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+            <div id="rd-skip-ramps-row" class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
               <div>
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Skip Color Ramps</p>
                 <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Use hex values directly, no Color collection</p>
