@@ -43,10 +43,10 @@ const VariableManager = {
       ? buildVariableRenameMap(savedAppState, appState)
       : { ramps: {}, contextual: {} };
 
-    const colorName = (appState && appState.colorsCollectionName) || "_Colors";
-    const contextualName = (appState && appState.contextualCollectionName) || "contextual";
-    const skipRamps = config.skipColorRamps || config.pluginMode === "direct";
-    const tokenGrouping = config.tokenGrouping || "color";
+    const colorName = (appState && appState.tonalScaleCollectionName) || "_scale";
+    const contextualName = (appState && appState.tokenCollectionName) || "contextual";
+    const skipRamps = config.embedDirectly || config.pluginMode === "direct";
+    const variableStructure = config.variableStructure || "color";
     const useShortColor = config.useShortColorNames || false;
     const useShortRole = config.useShortRoleNames || false;
 
@@ -73,7 +73,7 @@ const VariableManager = {
 
     // Fetch ramps collection once — used by both stages when applicable.
     // scope="roles" skips Stage 1 but Stage 2 still needs rampsCol to resolve variable aliases
-    // (unless skipColorRamps is true, in which case raw hex values are used directly).
+    // (unless embedDirectly is true, in which case raw hex values are used directly).
     const needsRampsCol = !skipRamps && (scope === "all" || scope === "groups" || scope === "roles");
     const rampsCol = needsRampsCol ? await this.getOrCreateCollection(colorName) : null;
 
@@ -82,7 +82,7 @@ const VariableManager = {
       await this.applyRenames(rampsCol, renameMap.ramps);
     }
 
-    // STAGE 1: Color Ramps → color collection (skipped when skipColorRamps is true)
+    // STAGE 1: Tonal Scale → scale collection (skipped when embedDirectly is true)
     if (rampsCol && (scope === "all" || scope === "groups")) {
       const modeId = rampsCol.modes[0].modeId;
       const allRampVars = [];
@@ -120,7 +120,7 @@ const VariableManager = {
               const token = variations[refKey];
               if (!token) return null;
               const dispName = roleStepNames[i] || refKey;
-              const figmaName = tokenGrouping === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
+              const figmaName = variableStructure === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
               let value;
               if (skipRamps) {
                 value = token.value;
@@ -141,14 +141,14 @@ const VariableManager = {
       if (skippedModes.length > 0) {
         figma.ui.postMessage({
           type: "warning",
-          message: `The "${contextualName}" collection is missing the ${skippedModes.join(" and ")} mode(s). Multiple modes per collection require a paid Figma plan.`
+          message: `The "${contextualName}" token collection is missing the ${skippedModes.join(" and ")} mode(s). Multiple modes per collection require a paid Figma plan.`
         });
       }
     }
 
-    // STAGE 3: Constants collection — raw brand hex values, no themes
-    if (config.includeConstants) {
-      await this.syncConstants(config);
+    // STAGE 3: Global Colors collection — raw brand hex values, no themes
+    if (config.includeGlobalColors) {
+      await this.syncGlobalColors(config);
     }
 
     // Persist config so the plugin can restore state on next launch
@@ -170,7 +170,7 @@ const VariableManager = {
       const modeId = targetCol.modes[0].modeId;
 
       // Remove any stale copies of __ctm316_config__ in other collections to avoid
-      // ambiguous restore on next launch when skipColorRamps has been toggled.
+      // ambiguous restore on next launch when embedDirectly has been toggled.
       for (const v of this.cache.variables) {
         if (v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id) {
           try { v.remove(); } catch (_) {}
@@ -218,8 +218,8 @@ const VariableManager = {
     }
   },
 
-  async syncConstants(config) {
-    const colName = config.constantsCollectionName || "_constants";
+  async syncGlobalColors(config) {
+    const colName = config.globalColorsCollectionName || "_constants";
     const col = await this.getOrCreateCollection(colName);
     const modeId = col.modes[0].modeId;
 
@@ -229,9 +229,9 @@ const VariableManager = {
       const label = config.useShortColorNames && color.shortName ? color.shortName : color.name;
       vars.push([`${label}/${label}`, "COLOR", hex, "Brand constant — raw hex, no theme processing"]);
 
-      if (config.includeConstantOpacities && config.constantOpacities.length > 0) {
+      if (config.includeAlphaTints && config.alphaValues.length > 0) {
         const rgb = hexToFigmaRgb(hex);
-        for (const opacityInt of config.constantOpacities) {
+        for (const opacityInt of config.alphaValues) {
           const alpha = opacityInt / 100;
           const varName = `${label}/Opacities/${opacityInt}`;
           try {

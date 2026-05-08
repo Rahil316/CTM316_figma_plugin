@@ -56,23 +56,23 @@
        */
       const demoConfig = {
         name: "CTM316",
-        colorsCollectionName: "_Colors",
-        contextualCollectionName: "contextual",
-        skipColorRamps: false,
-        includeConstants: false,
-        constantsCollectionName: "_constants",
-        includeConstantOpacities: false,
-        constantOpacities: "10, 25, 50, 75, 90",
-        tokenGrouping: "color",
+        tonalScaleCollectionName: "_scale",
+        tokenCollectionName: "contextual",
+        embedDirectly: false,
+        includeGlobalColors: false,
+        globalColorsCollectionName: "_constants",
+        includeAlphaTints: false,
+        alphaValues: "10, 25, 50, 75, 90",
+        variableStructure: "color",
         useShortColorNames: false,
         useShortRoleNames: false,
         colorSteps: 25,
-        rampType: "Natural",
+        scaleAlgorithm: "Natural",
         colorStepNames: "",
         pluginMode: "ramp",
-        roleMapping: "Contrast Based",
+        baseSelection: "By Contrast",
         roleSteps: 5,
-        roleStepNames: "weakest, weak, base, strong, stronger",
+        roleStepNames: "decorative, subtle, default, emphasized, prominent",
         colors: [
           { name: "Primary", shortName: "pr", value: "0067DD" },
           { name: "Secondary", shortName: "sc", value: "EFEFF2" },
@@ -315,7 +315,7 @@
           .split(",")
           .map((v) => v.trim())
           .filter(Boolean);
-        const defaultVarNames = ["weakest", "weak", "base", "strong", "stronger"];
+        const defaultVarNames = ["decorative", "subtle", "default", "emphasized", "prominent"];
         const roleStepNames = defaultVarNames.map((def, i) => userVarNames[i] || def);
         const themes = state.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
         return {
@@ -331,9 +331,9 @@
             variations: role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 },
           })),
           colorSteps: count,
-          rampType: state.rampType || "Natural",
+          scaleAlgorithm: state.scaleAlgorithm || "Natural",
           pluginMode: state.pluginMode || "ramp",
-          roleMapping: state.pluginMode === "direct" ? "Direct Contrast" : (state.roleMapping || "Contrast Based"),
+          roleMapping: state.pluginMode === "direct" ? "Direct Contrast" : (state.baseSelection || "By Contrast"),
           colorStepNames: stepNames,
           roleStepNames,
           themes: [
@@ -485,7 +485,7 @@
       }
 
       function variableMakerUI(config) {
-        const inputHash = JSON.stringify({ colors: config.colors, steps: config.colorSteps, rampType: config.rampType, themes: config.themes, roles: config.roles, roleMapping: config.roleMapping, colorStepNames: config.colorStepNames, roleStepNames: config.roleStepNames });
+        const inputHash = JSON.stringify({ colors: config.colors, steps: config.colorSteps, scaleAlgorithm: config.scaleAlgorithm, themes: config.themes, roles: config.roles, roleMapping: config.roleMapping, colorStepNames: config.colorStepNames, roleStepNames: config.roleStepNames });
         if (inputHash === _previewLastHash && _previewCache) return _previewCache;
 
         const colors = config.colors;
@@ -502,7 +502,7 @@
         // Build color ramps — skipped entirely for Direct Contrast
         if (!isDirectContrast) {
           for (const color of colors) {
-            const colorRamp = colorRampMaker(color.value, rampLength, config.rampType);
+            const colorRamp = colorRampMaker(color.value, rampLength, config.scaleAlgorithm);
             const ramp = Object.create(null);
             clrRamps[color.name] = ramp;
             for (let i = 0; i < rampLength; i++) {
@@ -568,7 +568,7 @@
                 const maxAllowed = rampLength - 1 - maxOffset;
 
                 let baseIdx;
-                if (config.roleMapping === "Manual Base Index") {
+                if (config.roleMapping === "By Index") {
                   const isDarkMode = modeName === "dark";
                   const baseIndexSource = isDarkMode && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
                   baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
@@ -715,7 +715,7 @@
                     <input type="text" id="${gId}-name" value="${group.name}" oninput="updateGroup(${idx}, 'name', this.value)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
                   </div>
                   <div class="flex-[4] space-y-1">
-                    <label for="${gId}-hex" class="text-[var(--text-muted)] text-[12px] font-medium">Seed Hex</label>
+                    <label for="${gId}-hex" class="text-[var(--text-muted)] text-[12px] font-medium">Source Color</label>
                     <div class="flex items-center gap-2 w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 pl-1 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px]">
                         <input type="color" value="${hexValue}" onchange="updateGroup(${idx}, 'value', this.value)" class="cursor-pointer size- bg-transparent border-none rounded-[8px]">
                         <input type="text" id="${gId}-hex" value="${group.value}" oninput="updateGroup(${idx}, 'value', this.value, this)" class="w-full bg-transparent text-[13px] uppercase outline-none text-[var(--text-primary)]">
@@ -731,14 +731,14 @@
                     <input type="text" id="${gId}-short" value="${group.shortName}" oninput="updateGroup(${idx}, 'shortName', this.value)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
                   </div>
                   <div class="flex-[3.5] space-y-1">
-                    <span class="text-[var(--text-muted)] text-[12px] font-medium">Contrast- Light</span>
+                    <span class="text-[var(--text-muted)] text-[12px] font-medium">Light Contrast</span>
                     <div class="h-[40px] bg-[var(--bg-input)]/30 border border-[var(--border)] rounded-[8px] px-2 flex items-center justify-between text-[12px] text-[var(--text-primary)]">
                       <span>${lightC.toFixed(2)}:1</span>
                       <span class="font-bold ${lightC >= 4.5 ? "text-[var(--success)]" : lightC >= 3 ? "text-[var(--warning)]" : "text-[var(--danger)]"}">${contrastRating(hexValue, lightBgHex)}</span>
                     </div>
                   </div>
                   <div class="flex-[3.5] space-y-1">
-                    <span class="text-[var(--text-muted)] text-[12px] font-medium">Contrast- Dark</span>
+                    <span class="text-[var(--text-muted)] text-[12px] font-medium">Dark Contrast</span>
                     <div class="h-[40px] bg-[var(--bg-input)]/30 border border-[var(--border)] rounded-[8px] px-2 flex items-center justify-between text-[12px] text-[var(--text-primary)]">
                       <span>${darkC.toFixed(2)}:1</span>
                       <span class="font-bold ${darkC >= 4.5 ? "text-[var(--success)]" : darkC >= 3 ? "text-[var(--warning)]" : "text-[var(--danger)]"}">${contrastRating(hexValue, darkBgHex)}</span>
@@ -747,13 +747,13 @@
                 </div>
                 ${appState.pluginMode === "direct" ? `
                 <div class="space-y-1">
-                  <label class="text-[var(--text-muted)] text-[12px] font-medium">Solver Mode</label>
+                  <label class="text-[var(--text-muted)] text-[12px] font-medium">Contrast Method</label>
                   <select onchange="updateGroup(${idx}, 'solverMode', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
-                    <option value="natural"          ${(group.solverMode||"natural")==="natural"           ? "selected":""}>Natural — scales chroma with lightness</option>
-                    <option value="saturated"        ${(group.solverMode||"natural")==="saturated"         ? "selected":""}>Saturated — holds source chroma, moves L only</option>
-                    <option value="luminance"        ${(group.solverMode||"natural")==="luminance"         ? "selected":""}>Luminance — fades toward neutral gray at extremes</option>
-                    <option value="hue-locked"       ${(group.solverMode||"natural")==="hue-locked"        ? "selected":""}>Hue Locked — fixes H absolutely, co-adjusts L+C</option>
-                    <option value="chroma-maximized" ${(group.solverMode||"natural")==="chroma-maximized"  ? "selected":""}>Chroma Max — most vivid possible at required contrast</option>
+                    <option value="natural"          ${(group.solverMode||"natural")==="natural"           ? "selected":""}>Balanced — adjusts hue and vibrancy naturally</option>
+                    <option value="saturated"        ${(group.solverMode||"natural")==="saturated"         ? "selected":""}>Vivid — preserves saturation, adjusts brightness only</option>
+                    <option value="luminance"        ${(group.solverMode||"natural")==="luminance"         ? "selected":""}>Muted — fades toward neutral at low/high lightness</option>
+                    <option value="hue-locked"       ${(group.solverMode||"natural")==="hue-locked"        ? "selected":""}>Hue Faithful — locks hue angle, adjusts brightness and vibrancy</option>
+                    <option value="chroma-maximized" ${(group.solverMode||"natural")==="chroma-maximized"  ? "selected":""}>Max Vibrancy — most saturated color that meets contrast</option>
                   </select>
                 </div>` : ""}
               `;
@@ -827,7 +827,7 @@
             });
 
             const isDirectMode = appState.pluginMode === "direct";
-            const mappingMethod = isDirectMode ? "Direct Contrast" : (appState.roleMapping || "Contrast Based");
+            const mappingMethod = isDirectMode ? "Direct Contrast" : (appState.baseSelection || "By Contrast");
             const mid = Math.floor(appState.colorSteps / 2);
 
             let secondRowHtml = "";
@@ -856,7 +856,7 @@
               secondRowHtml = `
                 <div class="grid grid-cols-5 gap-1.5">${inputRow}</div>
                 ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase: weakest → weak → base → strong → stronger.</p>` : ""}`;
-            } else if (mappingMethod === "Contrast Based") {
+            } else if (mappingMethod === "By Contrast") {
               secondRowHtml = `
                 <div class="grid grid-cols-2 gap-2">
                   <div class="space-y-1">
@@ -874,11 +874,11 @@
               secondRowHtml = `
                 <div class="grid grid-cols-3 gap-2">
                   <div class="space-y-1">
-                    <label for="role-${idx}-base" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Base ☀️</label>
+                    <label for="role-${idx}-base" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Light Base</label>
                     <input type="number" id="role-${idx}-base" value="${lightBase}" min="1" max="${appState.colorSteps}" onchange="updateRole(${idx}, 'baseIndex', parseInt(this.value) - 1)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                   </div>
                   <div class="space-y-1">
-                    <label for="role-${idx}-darkbase" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Base 🌙</label>
+                    <label for="role-${idx}-darkbase" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Dark Base</label>
                     <input type="number" id="role-${idx}-darkbase" value="${darkBase}" min="1" max="${appState.colorSteps}" onchange="updateRole(${idx}, 'darkBaseIndex', parseInt(this.value) - 1)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                   </div>
                   <div class="space-y-1">
@@ -1040,14 +1040,14 @@
       }
 
       function setTokenGrouping(val) {
-        appState.tokenGrouping = val;
+        appState.variableStructure = val;
         syncOutputToggles();
       }
 
       function syncOutputToggles() {
-        const tg = appState.tokenGrouping || "color";
+        const tg = appState.variableStructure || "color";
         // Sync all toggle pills (settings sheet + run dialog)
-        ["skipColorRamps", "useShortColorNames", "useShortRoleNames", "includeConstants", "includeConstantOpacities"].forEach((key) => {
+        ["embedDirectly", "useShortColorNames", "useShortRoleNames", "includeGlobalColors", "includeAlphaTints"].forEach((key) => {
           ["toggle-" + key, "rd-toggle-" + key].forEach((id) => {
             const btn = document.getElementById(id);
             if (btn) btn.classList.toggle("on", !!appState[key]);
@@ -1055,9 +1055,9 @@
         });
         // Show/hide constants sub-options
         const constOpts = document.getElementById("constants-options");
-        if (constOpts) constOpts.classList.toggle("hidden", !appState.includeConstants);
+        if (constOpts) constOpts.classList.toggle("hidden", !appState.includeGlobalColors);
         const opacRow = document.getElementById("opacity-values-row");
-        if (opacRow) opacRow.classList.toggle("hidden", !appState.includeConstantOpacities);
+        if (opacRow) opacRow.classList.toggle("hidden", !appState.includeAlphaTints);
         // Sync grouping segment buttons
         [
           ["seg-group-color", "rd-seg-group-color"],
@@ -1086,9 +1086,9 @@
         const rampSection = document.getElementById("settings-ramp-section");
         if (rampSection) rampSection.classList.toggle("hidden", isDirect);
 
-        // Update "Color Ramps" preview tab label contextually
+        // Update preview tab label contextually
         const previewTabColors = document.getElementById("preview-tab-colors");
-        if (previewTabColors) previewTabColors.textContent = isDirect ? "Solved Colors" : "Color Ramps";
+        if (previewTabColors) previewTabColors.textContent = isDirect ? "Solved Colors" : "Tonal Scale";
 
         // Update settings-sheet name format preview
         const sampleColor = appState.colors && appState.colors[0];
@@ -1113,8 +1113,8 @@
 
       function updateSettingsFromInputs() {
         appState.name = document.getElementById("setting-name").value;
-        appState.colorsCollectionName = document.getElementById("setting-colorsCollectionName").value.trim() || "_Colors";
-        appState.contextualCollectionName = document.getElementById("setting-tokensCollectionName").value.trim() || "contextual";
+        appState.tonalScaleCollectionName = document.getElementById("setting-tonalScaleCollectionName").value.trim() || "_scale";
+        appState.tokenCollectionName = document.getElementById("setting-tokenCollectionName").value.trim() || "contextual";
         const sanitizeHex = (id) => {
           const el = document.getElementById(id);
           const clean = el.value
@@ -1135,17 +1135,17 @@
         // Color Settings
         let wCount = parseInt(document.getElementById("setting-colorSteps").value);
         appState.colorSteps = isNaN(wCount) ? 25 : Math.max(1, Math.min(100, wCount));
-        appState.rampType = document.getElementById("setting-rampType").value;
+        appState.scaleAlgorithm = document.getElementById("setting-scaleAlgorithm").value;
         appState.colorStepNames = document.getElementById("setting-colorStepNames").value;
 
         // Role Settings
         appState.roleSteps = 5; // fixed at 5 — variations count is not configurable
-        appState.roleMapping = document.getElementById("setting-roleMapping").value;
+        appState.baseSelection = document.getElementById("setting-baseSelection").value;
         appState.roleStepNames = document.getElementById("setting-roleStepNames").value;
 
         // Constants
-        appState.constantsCollectionName = document.getElementById("setting-constantsCollectionName").value.trim() || "_constants";
-        appState.constantOpacities = document.getElementById("setting-constantOpacities").value;
+        appState.globalColorsCollectionName = document.getElementById("setting-globalColorsCollectionName").value.trim() || "_constants";
+        appState.alphaValues = document.getElementById("setting-alphaValues").value;
 
         renderColorGroups();
         renderRoles();
@@ -1160,8 +1160,8 @@
 
       function syncInputsFromState() {
         document.getElementById("setting-name").value = appState.name || "";
-        document.getElementById("setting-colorsCollectionName").value = appState.colorsCollectionName || "_Colors";
-        document.getElementById("setting-tokensCollectionName").value = appState.contextualCollectionName || "contextual";
+        document.getElementById("setting-tonalScaleCollectionName").value = appState.tonalScaleCollectionName || "_scale";
+        document.getElementById("setting-tokenCollectionName").value = appState.tokenCollectionName || "contextual";
         syncOutputToggles();
         const themes = appState.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
         document.getElementById("setting-light-bg").value = themes[0].bg;
@@ -1169,16 +1169,16 @@
 
         // Color Settings
         document.getElementById("setting-colorSteps").value = appState.colorSteps;
-        document.getElementById("setting-rampType").value = appState.rampType || "Natural";
+        document.getElementById("setting-scaleAlgorithm").value = appState.scaleAlgorithm || "Natural";
         document.getElementById("setting-colorStepNames").value = appState.colorStepNames || "";
 
         // Role Settings (roleSteps is fixed at 5, no DOM sync needed)
-        document.getElementById("setting-roleMapping").value = appState.roleMapping || "Contrast Based";
+        document.getElementById("setting-baseSelection").value = appState.baseSelection || "By Contrast";
         document.getElementById("setting-roleStepNames").value = appState.roleStepNames;
 
         // Constants
-        document.getElementById("setting-constantsCollectionName").value = appState.constantsCollectionName || "_constants";
-        document.getElementById("setting-constantOpacities").value = appState.constantOpacities || "10, 25, 50, 75, 90";
+        document.getElementById("setting-globalColorsCollectionName").value = appState.globalColorsCollectionName || "_constants";
+        document.getElementById("setting-alphaValues").value = appState.alphaValues || "10, 25, 50, 75, 90";
       }
 
       /**
@@ -1215,8 +1215,8 @@
           {
             pluginMessage: {
               type: "check-collections",
-              colorName: appState.colorsCollectionName || "_Colors",
-              contextualName: appState.contextualCollectionName || "contextual",
+              colorName: appState.tonalScaleCollectionName || "_scale",
+              contextualName: appState.tokenCollectionName || "contextual",
               state: appState,
               savedState: savedState,
             },
@@ -1240,7 +1240,7 @@
         const colorEl = document.getElementById("preview-colors");
         colorEl.innerHTML = "";
         if (Object.keys(result.colorRamps).length === 0) {
-          colorEl.innerHTML = `<p class="text-[12px] text-[var(--text-muted)] px-1 py-4 text-center">Color ramps are not generated in Direct Contrast mode.<br>Tokens are solved directly per role variation.</p>`;
+          colorEl.innerHTML = `<p class="text-[12px] text-[var(--text-muted)] px-1 py-4 text-center">No tonal scale in Direct Contrast mode. Colors are solved directly per variation target.</p>`;
         } else {
           for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
             const baseColor = ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value;
@@ -1698,11 +1698,11 @@
 
       function refreshRunDialog() {
         const existing = lastCollectionCheckResult;
-        const colorName = appState.colorsCollectionName || "_Colors";
-        const ctxName = appState.contextualCollectionName || "contextual";
+        const colorName = appState.tonalScaleCollectionName || "_scale";
+        const ctxName = appState.tokenCollectionName || "contextual";
         const isDirect = appState.pluginMode === "direct";
-        const skipRamps = appState.skipColorRamps || isDirect;
-        const tg = appState.tokenGrouping || "color";
+        const skipRamps = appState.embedDirectly || isDirect;
+        const tg = appState.variableStructure || "color";
         const shortC = appState.useShortColorNames;
         const shortR = appState.useShortRoleNames;
         const scope = pendingScope || "all";
@@ -1728,8 +1728,8 @@
             const ctxExists = existing.includes(ctxName);
             rows.push(collectionRow(ctxName, ctxExists ? "UPDATE" : "CREATE", ctxExists));
           }
-          if (appState.includeConstants) {
-            const constName = appState.constantsCollectionName || "_constants";
+          if (appState.includeGlobalColors) {
+            const constName = appState.globalColorsCollectionName || "_constants";
             const constExists = existing.includes(constName);
             rows.push(collectionRow(constName, constExists ? "UPDATE" : "CREATE", constExists));
           }
@@ -1758,7 +1758,7 @@
 
           if (totalRenames > 0 && changes.length > 0) {
             renameEl.classList.remove("hidden");
-            const typeLabels = { color: "Color", role: "Role", stepNames: "Scale Steps", roleStepNames: "Role Steps", grouping: "Grouping" };
+            const typeLabels = { color: "Color", role: "Role", stepNames: "Scale Steps", roleStepNames: "Variation Levels", grouping: "Grouping" };
             let html = "";
             for (const ch of changes) {
               const label = typeLabels[ch.type] || ch.type;
@@ -1790,9 +1790,9 @@
             summaryRow("Roles", `${appState.roles.length}: ${roleList}`),
             summaryRow("Mode", appState.pluginMode === "direct" ? "Direct Contrast" : "Tonal Scale"),
             ...(appState.pluginMode === "direct" ? [] : [
-              summaryRow("Role Mapping", appState.roleMapping || "Contrast Based"),
+              summaryRow("Base Selection", appState.baseSelection || "By Contrast"),
               summaryRow("Color Steps", String(appState.colorSteps || 25)),
-              summaryRow("Scale Type", appState.rampType || "Natural"),
+              summaryRow("Scale Algorithm", appState.scaleAlgorithm || "Natural"),
             ]),
           ].join("");
         }
@@ -1875,7 +1875,7 @@
               {
                 id: "cap-multimode",
                 title: "Figma Plan Restriction",
-                detail: "Only the light theme will be written to the contextual collection. Dark theme variables will be skipped to avoid overwriting light values in the wrong mode. Upgrade to a paid Figma plan to unlock both themes.",
+                detail: "Only the light theme will be written to the token collection. Dark theme variables will be skipped to avoid overwriting light values in the wrong mode. Upgrade to a paid Figma plan to unlock both themes.",
                 dismissable: true,
               }
             );

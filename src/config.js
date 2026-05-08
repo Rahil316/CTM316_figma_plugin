@@ -22,7 +22,7 @@ function translateConfig(appState) {
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
-  const defaultVarNames = ["weakest", "weak", "base", "strong", "stronger"];
+  const defaultVarNames = ["decorative", "subtle", "default", "emphasized", "prominent"];
   const roleStepNames = defaultVarNames.map((def, i) => userVarNames[i] || def);
 
   // themes array → light/dark backgrounds
@@ -49,23 +49,23 @@ function translateConfig(appState) {
       variations: role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 },
     })),
     colorSteps: count,
-    rampType: appState.rampType || "Natural",
+    scaleAlgorithm: appState.scaleAlgorithm || "Natural",
     pluginMode: appState.pluginMode || "ramp",
-    roleMapping: appState.pluginMode === "direct" ? "Direct Contrast" : (appState.roleMapping || "Contrast Based"),
+    roleMapping: appState.pluginMode === "direct" ? "Direct Contrast" : (appState.baseSelection || "By Contrast"),
     colorStepNames: stepNames,
     roleStepNames,
     themes: [
       { name: "light", bg: themes[0].bg || "FFFFFF" },
       { name: "dark", bg: themes[1].bg || "000000" },
     ],
-    skipColorRamps: appState.skipColorRamps || false,
-    tokenGrouping: appState.tokenGrouping || "color",
+    embedDirectly: appState.embedDirectly || false,
+    variableStructure: appState.variableStructure || "color",
     useShortColorNames: appState.useShortColorNames || false,
     useShortRoleNames: appState.useShortRoleNames || false,
-    includeConstants: appState.includeConstants || false,
-    constantsCollectionName: appState.constantsCollectionName || "_constants",
-    includeConstantOpacities: appState.includeConstantOpacities || false,
-    constantOpacities: (appState.constantOpacities || "10, 25, 50, 75, 90")
+    includeGlobalColors: appState.includeGlobalColors || false,
+    globalColorsCollectionName: appState.globalColorsCollectionName || "_constants",
+    includeAlphaTints: appState.includeAlphaTints || false,
+    alphaValues: (appState.alphaValues || "10, 25, 50, 75, 90")
       .split(",")
       .map((v) => Math.max(0, Math.min(100, parseInt(v.trim()))))
       .filter((v) => !isNaN(v)),
@@ -95,8 +95,8 @@ function buildVariableRenameMap(savedAppState, newAppState) {
   const oldRoleSteps = oldCfg.roleStepNames || REF_VAR_KEYS;
   const newRoleSteps = newCfg.roleStepNames || REF_VAR_KEYS;
   const stepCount = Math.min(oldCfg.colorSteps, newCfg.colorSteps);
-  const oldTG = oldCfg.tokenGrouping || "color";
-  const newTG = newCfg.tokenGrouping || "color";
+  const oldTG = oldCfg.variableStructure || "color";
+  const newTG = newCfg.variableStructure || "color";
 
   // Build _id → display-label maps for each side.
   // Items without _id are excluded — index-based guessing is not safe.

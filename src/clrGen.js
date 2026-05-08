@@ -142,7 +142,7 @@ function variableMaker(config) {
   const inputHash = JSON.stringify({
     colors: config.colors.map((g) => Object.assign({}, g, { value: normalizeHex(g.value) })),
     rampLength: config.colorSteps,
-    rampType: config.rampType,
+    scaleAlgorithm: config.scaleAlgorithm,
     lightBg: normalizeHex(config.themes[0].bg),
     darkBg: normalizeHex(config.themes[1].bg),
     roles: config.roles,
@@ -166,7 +166,7 @@ function variableMaker(config) {
 
   if (config.pluginMode !== "direct") {
     for (const color of colors) {
-      const colorRamp = colorRampMaker(color.value, rampLength, config.rampType);
+      const colorRamp = colorRampMaker(color.value, rampLength, config.scaleAlgorithm);
       const ramp = Object.create(null);
       clrRampsCollection[color.name] = ramp;
 
@@ -199,7 +199,7 @@ function variableMaker(config) {
       conTheme[clrName] = conGroup;
       const roleNames = roles.map((_, i) => i);
 
-      if (config.roleMapping === "Contrast Based") {
+      if (config.roleMapping === "By Contrast") {
         for (const roleName of roleNames) {
           const role = roles[roleName];
           const spread = role.spread;
@@ -329,7 +329,7 @@ function variableMaker(config) {
             }
           }
         }
-      } else if (config.roleMapping === "Manual Base Index") {
+      } else if (config.roleMapping === "By Index") {
         for (const roleName of roleNames) {
           const role = roles[roleName];
           const spread = role.spread;
