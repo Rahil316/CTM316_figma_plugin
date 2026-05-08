@@ -49,8 +49,8 @@ function translateConfig(appState) {
         ),
       description: role.description || "",
       variationOverride: role.variationOverride || false,
-      roleVariations: (role.variationOverride && role.roleVariations?.length > 0)
-        ? role.roleVariations.map(v => ({ ...v }))
+      roleVariations: (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
+        ? role.roleVariations.map(v => Object.assign({}, v))
         : [],
     })),
     colorSteps: count,
@@ -63,7 +63,7 @@ function translateConfig(appState) {
       : (appState.baseSelection || "By Contrast"),
     colorStepNames: stepNames,
     roleStepNames,
-    variations: variations.map((v) => ({ ...v })),
+    variations: variations.map(function(v) { return Object.assign({}, v); }),
     themes: [
       { name: "light", bg: themes[0].bg || "FFFFFF" },
       { name: "dark", bg: themes[1].bg || "000000" },

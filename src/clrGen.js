@@ -211,7 +211,7 @@ function variableMaker(config) {
             conGroup[roleName] = conRole;
 
             // Determine which variations array applies to this role
-            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+            const roleVariations = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
               ? role.roleVariations
               : config.variations;
             const varCount = roleVariations.length;
@@ -271,7 +271,7 @@ function variableMaker(config) {
             const bgHex = mode.bg;
             const solverMode = color.solverMode || "natural";
             // Determine which variations array applies to this role
-            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+            const roleVariations = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
               ? role.roleVariations
               : config.variations;
             const varCount = roleVariations.length;
@@ -307,7 +307,7 @@ function variableMaker(config) {
             const conRole = Object.create(null);
             conGroup[roleName] = conRole;
             // Determine which variations array applies to this role
-            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+            const roleVariations = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
               ? role.roleVariations
               : config.variations;
             const varCount = roleVariations.length;
@@ -363,7 +363,7 @@ function variableMaker(config) {
             }
 
             // Determine which variations array applies to this role
-            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+            const roleVariations = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
               ? role.roleVariations
               : config.variations;
             const varCount = roleVariations.length;
@@ -503,7 +503,7 @@ function variableMaker(config) {
               let baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
 
               // Determine which variations array applies to this role
-              const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+              const roleVariations = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
                 ? role.roleVariations
                 : config.variations;
               const varCount = roleVariations.length;

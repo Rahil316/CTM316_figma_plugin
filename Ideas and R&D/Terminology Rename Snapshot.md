@@ -40,12 +40,12 @@ This table records every rename made so future contributors and export/import co
 | colors Collection Name | Tonal Scale Collection | Settings · Variable Collections |
 | Tokens collection Name | Token Collection | Settings · Variable Collections |
 | Figma Collections (section) | Variable Collections | Settings sheet |
-| Solver Mode (color card) | Contrast Method | Color card (Direct Contrast mode) |
-| Natural — scales chroma with lightness | Balanced — adjusts hue and vibrancy naturally | Contrast Method option |
-| Saturated — holds source chroma, moves L only | Vivid — preserves saturation, adjusts brightness only | Contrast Method option |
-| Luminance — fades toward neutral gray at extremes | Muted — fades toward neutral at low/high lightness | Contrast Method option |
-| Hue Locked — fixes H absolutely, co-adjusts L+C | Hue Faithful — locks hue angle, adjusts brightness and vibrancy | Contrast Method option |
-| Chroma Max — most vivid possible at required contrast | Max Vibrancy — most saturated color that meets contrast | Contrast Method option |
+| Solver Mode (color card) | Color Solver | Color card (Direct Contrast mode) |
+| Natural — scales chroma with lightness | Balanced — adjusts hue and vibrancy naturally | Color Solver option |
+| Saturated — holds source chroma, moves L only | Vivid — preserves saturation, adjusts brightness only | Color Solver option |
+| Luminance — fades toward neutral gray at extremes | Muted — fades toward neutral at low/high lightness | Color Solver option |
+| Hue Locked — fixes H absolutely, co-adjusts L+C | Hue Faithful — locks hue angle, adjusts brightness and vibrancy | Color Solver option |
+| Chroma Max — most vivid possible at required contrast | Max Vibrancy — most saturated color that meets contrast | Color Solver option |
 | Seed Hex (color card column) | Source Color | Color card header |
 | Contrast- Light | Light Contrast | Color card column header |
 | Contrast- Dark | Dark Contrast | Color card column header |

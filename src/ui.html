@@ -449,40 +449,13 @@
           <div class="space-y-2">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Generation Mode</h3>
             <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-              <button id="mode-btn-ramp"   onclick="setPluginMode('ramp')"   class="seg-btn active flex-1">Tonal Scale</button>
+              <button id="mode-btn-ramp" onclick="setPluginMode('ramp')" class="seg-btn active flex-1">Tonal Scale</button>
               <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1">Direct Contrast</button>
             </div>
           </div>
 
-          <!-- UI Settings Section -->
           <div class="space-y-3">
-            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">UI Settings</h3>
-            <div class="flex gap-3">
-              <div class="flex-1 space-y-1">
-                <label for="setting-ui-scale" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">UI Scale</label>
-                <select id="setting-ui-scale" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
-                  <option value="0.7">70%</option>
-                  <option value="0.8">80%</option>
-                  <option value="0.9">90%</option>
-                  <option value="1.0" selected>100% (default)</option>
-                  <option value="1.1">110%</option>
-                  <option value="1.25">125%</option>
-                  <option value="1.5">150%</option>
-                </select>
-              </div>
-              <div class="flex-1 space-y-1">
-                <label for="setting-ui-theme" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">UI Theme</label>
-                <select id="setting-ui-theme" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
-                  <option value="figma" selected>Follow Figma</option>
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Basic</h3>
+            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Project Settings</h3>
             <div class="space-y-1">
               <label for="setting-name" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Project Name</label>
               <input type="text" id="setting-name" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
@@ -503,13 +476,13 @@
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Variable Collections</h3>
             <div class="flex gap-3">
-              <div class="flex-1 space-y-1">
+              <div id="settings-tonal-collection-row" class="flex-1 space-y-1">
                 <label for="setting-tonalScaleCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Tonal Scale Collection</label>
                 <input type="text" id="setting-tonalScaleCollectionName" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="_scale" />
               </div>
               <div class="flex-1 space-y-1">
-                <label for="setting-tokenCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Token Collection</label>
-                <input type="text" id="setting-tokenCollectionName" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="contextual" />
+                <label for="setting-tokenCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Color Roles Collection</label>
+                <input type="text" id="setting-tokenCollectionName" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="Color Roles Tokens" />
               </div>
             </div>
           </div>
@@ -544,6 +517,13 @@
           <!-- Role Settings Section -->
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Role Settings</h3>
+            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Role Specific Variations</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Allow each role to define its own variation labels</p>
+              </div>
+              <button id="toggle-allowRoleVariations" class="toggle-pill" onclick="toggleBoolSetting('allowRoleVariations')"></button>
+            </div>
             <div class="space-y-1">
               <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
               <select id="setting-baseSelection" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
@@ -555,7 +535,7 @@
             <div id="settings-spread-unit-row" class="space-y-1">
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Spread Unit</label>
               <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-                <button id="su-btn-steps"    onclick="setSpreadUnit('steps')"    class="seg-btn active flex-1">Steps</button>
+                <button id="su-btn-steps" onclick="setSpreadUnit('steps')" class="seg-btn active flex-1">Steps</button>
                 <button id="su-btn-contrast" onclick="setSpreadUnit('contrast')" class="seg-btn flex-1">Contrast</button>
               </div>
               <p class="text-[11px] text-[var(--text-muted)] px-1">How variation distance is measured from the base.</p>
@@ -575,7 +555,7 @@
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Output Options</h3>
 
             <!-- Skip colors ramps -->
-            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+            <div id="settings-embed-directly-row" class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
               <div>
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Embed Colors Directly</p>
                 <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Write hex values into tokens instead of referencing the Tonal Scale collection</p>
@@ -612,9 +592,9 @@
             <!-- Token grouping -->
             <div class="space-y-1">
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variable Structure</label>
-              <div class="flex gap-2">
-                <button id="seg-group-color" class="seg-btn" onclick="setTokenGrouping('color')">Color-first&nbsp;&nbsp;color/role/step</button>
-                <button id="seg-group-role" class="seg-btn" onclick="setTokenGrouping('role')">Role-first&nbsp;&nbsp;role/color/step</button>
+              <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
+                <button id="seg-group-color" class="seg-btn flex-1" onclick="setTokenGrouping('color')">Color-first&nbsp;&nbsp;color/role/step</button>
+                <button id="seg-group-role" class="seg-btn flex-1" onclick="setTokenGrouping('role')">Role-first&nbsp;&nbsp;role/color/step</button>
               </div>
             </div>
 
@@ -650,6 +630,33 @@
           <button id="close-more" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] py-1.5 px-4 rounded-[8px] text-[13px] font-bold transition-colors text-[var(--text-primary)]">Done</button>
         </div>
         <div class="p-2 overflow-y-auto space-y-4">
+          <!-- UI Settings -->
+          <div class="space-y-2 px-1">
+            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-2">UI Settings</h3>
+            <div class="flex gap-3">
+              <div class="flex-1 space-y-1">
+                <label for="setting-ui-scale" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">UI Scale</label>
+                <select id="setting-ui-scale" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+                  <option value="1.0" selected>100% (default)</option>
+                  <option value="0.7">70%</option>
+                  <option value="0.8">80%</option>
+                  <option value="0.9">90%</option>
+                  <option value="1.1">110%</option>
+                  <option value="1.25">125%</option>
+                  <option value="1.5">150%</option>
+                </select>
+              </div>
+              <div class="flex-1 space-y-1">
+                <label for="setting-ui-theme" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">UI Theme</label>
+                <select id="setting-ui-theme" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+                  <option value="figma" selected>Follow Figma</option>
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- Export Options -->
           <div class="space-y-1">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-3 mb-2">Export</h3>
@@ -854,27 +861,17 @@
             </div>
             <div class="space-y-1">
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variable Structure</label>
-              <div class="flex gap-2">
+              <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
                 <button
                   id="rd-seg-group-color"
-                  class="seg-btn"
-                  onclick="
-                    setTokenGrouping('color');
-                    refreshRunDialog();
-                  "
-                >
-                  Color-first&nbsp;color/role/step
-                </button>
+                  class="seg-btn flex-1"
+                  onclick="setTokenGrouping('color'); refreshRunDialog();"
+                >Color-first&nbsp;color/role/step</button>
                 <button
                   id="rd-seg-group-role"
-                  class="seg-btn"
-                  onclick="
-                    setTokenGrouping('role');
-                    refreshRunDialog();
-                  "
-                >
-                  Role-first&nbsp;role/color/step
-                </button>
+                  class="seg-btn flex-1"
+                  onclick="setTokenGrouping('role'); refreshRunDialog();"
+                >Role-first&nbsp;role/color/step</button>
               </div>
             </div>
             <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
