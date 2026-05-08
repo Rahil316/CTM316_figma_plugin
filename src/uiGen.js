@@ -71,6 +71,7 @@
         colorStepNames: "",
         pluginMode: "ramp",
         baseSelection: "By Contrast",
+        spreadUnit: "steps",
         roleSteps: 5,
         variations: null,
         colors: [
@@ -331,7 +332,11 @@
           colorSteps: count,
           scaleAlgorithm: state.scaleAlgorithm || "Natural",
           pluginMode: state.pluginMode || "ramp",
-          roleMapping: state.pluginMode === "direct" ? "Direct Contrast" : (state.baseSelection || "By Contrast"),
+          spreadUnit: state.spreadUnit || "steps",
+          baseSelectionMode: state.baseSelection || "By Contrast",
+          roleMapping: state.pluginMode === "direct"
+            ? (state.baseSelection === "Manual" ? "Direct Manual" : "Direct Contrast")
+            : (state.baseSelection || "By Contrast"),
           colorStepNames: stepNames,
           variations,
           themes: [
@@ -643,13 +648,20 @@
       // Ensures appState.variations exists and all roles have matching variationTargets arrays.
       function ensureVariations() {
         if (!appState.variations || appState.variations.length === 0) {
-          appState.variations = [1,2,3,4,5].map(n => ({
+          appState.variations = [1,2,3,4,5].map((n, i) => ({
             _id: generateId(),
             name: String(n),
             shortName: String(n),
             description: "",
+            defaultContrastTarget: [1.5, 3.0, 4.5, 7.0, 12.0][i],
           }));
         }
+        const count = appState.variations.length;
+        appState.variations.forEach((v, i) => {
+          if (v.defaultContrastTarget === undefined) {
+            v.defaultContrastTarget = [1.5, 3.0, 4.5, 7.0, 12.0][i] || (1.5 + i * ((12.0 - 1.5) / Math.max(1, count - 1)));
+          }
+        });
         const vLen = appState.variations.length;
         for (const role of appState.roles) {
           if (!role.variationTargets || role.variationTargets.length !== vLen) {
@@ -849,13 +861,33 @@
             });
 
             const isDirectMode = appState.pluginMode === "direct";
-            const mappingMethod = isDirectMode ? "Direct Contrast" : (appState.baseSelection || "By Contrast");
+            const bSel = appState.baseSelection || "By Contrast";
+            const sUnit = appState.spreadUnit || "steps";
             const mid = Math.floor(appState.colorSteps / 2);
 
             let secondRowHtml = "";
-            if (isDirectMode) {
-              const varTargets = role.variationTargets || appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5);
-              // Cardinality errors for inline display
+            if (isDirectMode && bSel === "By Contrast") {
+              // Direct Contrast + By Contrast: base contrast + contrast gap
+              const varCount = appState.variations.length;
+              const baseVarIdx = Math.floor(varCount / 2);
+              const baseC = role.baseContrast || 4.5;
+              const gap = role.contrastGap || 1.5;
+              const previewTargets = appState.variations.map((_, vi) => Math.max(1.01, baseC + (vi - baseVarIdx) * gap).toFixed(2));
+              secondRowHtml = `
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="space-y-1">
+                    <label for="role-${idx}-baseContrast" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Base Contrast</label>
+                    <input type="number" id="role-${idx}-baseContrast" step="0.1" min="1" max="21" value="${baseC}" onchange="updateRole(${idx}, 'baseContrast', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                  <div class="space-y-1">
+                    <label for="role-${idx}-contrastGap" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Contrast Gap</label>
+                    <input type="number" id="role-${idx}-contrastGap" step="0.1" value="${gap}" onchange="updateRole(${idx}, 'contrastGap', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                </div>
+                <p class="text-[10px] text-[var(--text-muted)] px-1">Targets: ${previewTargets.join(" · ")}</p>`;
+            } else if (isDirectMode && bSel === "Manual") {
+              // Direct + Manual: N contrast target inputs
+              const varTargets = role.variationTargets || appState.variations.map((v, i) => v.defaultContrastTarget || ([1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5));
               const cardErrors = [];
               for (let vi = 1; vi < varTargets.length; vi++) {
                 if (varTargets[vi] <= varTargets[vi - 1]) cardErrors.push(vi);
@@ -867,7 +899,7 @@
                     <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">${varDef.name}</label>
                     <div class="relative">
                       <input type="number" step="0.1" min="1" max="21" value="${varTargets[vi] || ""}"
-                        onchange="updateRole(${idx}, 'variationTarget:${vi}', parseFloat(this.value))"
+                        onchange="updateRoleVariationTarget(${idx}, ${vi}, parseFloat(this.value))"
                         class="w-full h-[40px] bg-[var(--bg-input)] border ${isErr ? "border-[var(--danger)]" : "border-[var(--border)]"} rounded-[8px] p-2 pr-6 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                       <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-dim)] pointer-events-none">:1</span>
                     </div>
@@ -875,8 +907,37 @@
               }).join("");
               secondRowHtml = `
                 <div class="grid gap-1.5" style="grid-template-columns: repeat(${appState.variations.length}, 1fr)">${inputRow}</div>
-                ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase across all variations.</p>` : ""}`;
-            } else if (mappingMethod === "By Contrast") {
+                ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase across all variations.</p>` : ""}
+                <button onclick="resetRoleToVariationDefaults(${idx})" class="text-[11px] text-[var(--accent)] hover:underline px-1">↺ Defaults</button>`;
+            } else if (!isDirectMode && bSel === "Manual") {
+              // Tonal Scale + Manual: N step index inputs
+              const varTargets = role.variationTargets || appState.variations.map((_, i) => Math.floor((appState.colorSteps || 25) / 2));
+              const maxStep = (appState.colorSteps || 25) - 1;
+              const inputRow = appState.variations.map((varDef, vi) => {
+                return `
+                  <div class="space-y-1">
+                    <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">${varDef.name}</label>
+                    <input type="number" min="0" max="${maxStep}" value="${varTargets[vi] !== undefined ? varTargets[vi] : Math.floor((appState.colorSteps || 25) / 2)}"
+                      oninput="updateRoleVariationTarget(${idx}, ${vi}, this.value)"
+                      class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>`;
+              }).join("");
+              secondRowHtml = `
+                <div class="grid gap-1.5" style="grid-template-columns: repeat(${appState.variations.length}, 1fr)">${inputRow}</div>
+                <p class="text-[10px] text-[var(--text-muted)] px-1">Step indices (0–${maxStep})</p>`;
+            } else if (!isDirectMode && bSel === "By Contrast" && sUnit === "contrast") {
+              secondRowHtml = `
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="space-y-1">
+                    <label for="role-${idx}-contrast" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Min Contrast</label>
+                    <input type="number" id="role-${idx}-contrast" step="0.1" value="${role.minContrast || "4.5"}" onchange="updateRole(${idx}, 'minContrast', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                  <div class="space-y-1">
+                    <label for="role-${idx}-contrastGap" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Contrast Gap</label>
+                    <input type="number" id="role-${idx}-contrastGap" step="0.1" value="${role.contrastGap || 1.5}" onchange="updateRole(${idx}, 'contrastGap', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                </div>`;
+            } else if (!isDirectMode && bSel === "By Contrast" && sUnit === "steps") {
               secondRowHtml = `
                 <div class="grid grid-cols-2 gap-2">
                   <div class="space-y-1">
@@ -888,7 +949,26 @@
                     <input type="number" id="role-${idx}-spread" value="${role.spread || 1}" onchange="updateRole(${idx}, 'spread', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                   </div>
                 </div>`;
+            } else if (!isDirectMode && bSel === "By Index" && sUnit === "contrast") {
+              const lightBase = (role.baseIndex !== undefined ? role.baseIndex : mid) + 1;
+              const darkBase = (role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex !== undefined ? role.baseIndex : mid) + 1;
+              secondRowHtml = `
+                <div class="grid grid-cols-3 gap-2">
+                  <div class="space-y-1">
+                    <label for="role-${idx}-base" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Light Base</label>
+                    <input type="number" id="role-${idx}-base" value="${lightBase}" min="1" max="${appState.colorSteps}" onchange="updateRole(${idx}, 'baseIndex', parseInt(this.value) - 1)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                  <div class="space-y-1">
+                    <label for="role-${idx}-darkbase" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Dark Base</label>
+                    <input type="number" id="role-${idx}-darkbase" value="${darkBase}" min="1" max="${appState.colorSteps}" onchange="updateRole(${idx}, 'darkBaseIndex', parseInt(this.value) - 1)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                  <div class="space-y-1">
+                    <label for="role-${idx}-contrastGap" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Contrast Gap</label>
+                    <input type="number" id="role-${idx}-contrastGap" step="0.1" value="${role.contrastGap || 1.5}" onchange="updateRole(${idx}, 'contrastGap', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  </div>
+                </div>`;
             } else {
+              // By Index + Steps (default fallback)
               const lightBase = (role.baseIndex !== undefined ? role.baseIndex : mid) + 1;
               const darkBase = (role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex !== undefined ? role.baseIndex : mid) + 1;
               secondRowHtml = `
@@ -955,6 +1035,7 @@
 
           const trashSvg = `<svg width="14" height="14" viewBox="0 0 12 14" fill="none"><path d="M8.00021 1.98568C8.00021 1.4562 7.5944 1.03371 7.09136 1.01758C6.72911 1.00599 6.36531 1 6.00021 1C5.63511 1 5.27131 1.00599 4.90906 1.01758C4.40602 1.03371 4.00021 1.4562 4.00021 1.98568V2.0612C4.6618 2.02102 5.32864 2 6.00021 2C6.67179 2 7.33862 2.02102 8.00021 2.0612V1.98568ZM6.00021 3C5.17177 3 4.35078 3.03229 3.53862 3.09505C2.92606 3.14239 2.31853 3.20784 1.71636 3.28971L2.39214 12.0768C2.43227 12.5978 2.86704 13 3.38953 13H8.61089C9.13338 13 9.56815 12.5978 9.60828 12.0768L10.2834 3.28971C9.68144 3.20789 9.07415 3.14237 8.4618 3.09505C7.64964 3.03229 6.82865 3 6.00021 3ZM4.15386 4.50065C4.42969 4.49004 4.66196 4.70468 4.67274 4.98047L4.90386 10.9805C4.91447 11.2564 4.69927 11.4887 4.42339 11.4993C4.14756 11.51 3.91529 11.2953 3.90451 11.0195L3.67339 5.01953C3.66278 4.74367 3.87803 4.51138 4.15386 4.50065ZM7.84656 4.50065C8.12239 4.51138 8.33764 4.74367 8.32703 5.01953L8.09591 11.0195C8.08513 11.2953 7.85287 11.51 7.57703 11.4993C7.30115 11.4887 7.08595 11.2564 7.09656 10.9805L7.32768 4.98047C7.33846 4.70468 7.57073 4.49004 7.84656 4.50065Z" fill="currentColor"/></svg>`;
 
+          const isDirect = appState.pluginMode === "direct";
           appState.variations.forEach((varDef, idx) => {
             const card = document.createElement("div");
             card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2";
@@ -974,6 +1055,13 @@
                   <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Short</label>
                   <input type="text" value="${(varDef.shortName || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'shortName', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                 </div>
+                ${isDirect ? `
+                <div class="w-[88px] space-y-1">
+                  <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Def. Contrast</label>
+                  <input type="number" step="0.1" min="1.0" max="21" value="${varDef.defaultContrastTarget || 4.5}"
+                    oninput="updateVariation(${idx}, 'defaultContrastTarget', parseFloat(this.value) || 4.5)"
+                    class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                </div>` : ""}
                 <button onclick="removeVariation(${idx})" ${!canDelete ? "disabled" : ""} class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 size-[40px] shrink-0 flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed">${trashSvg}</button>
               </div>
               <div class="space-y-1">
@@ -1191,6 +1279,27 @@
         const rampSection = document.getElementById("settings-ramp-section");
         if (rampSection) rampSection.classList.toggle("hidden", isDirect);
 
+        // Spread Unit visibility: hidden in Direct mode or when Manual is selected
+        const spreadUnitRow = document.getElementById("settings-spread-unit-row");
+        if (spreadUnitRow) spreadUnitRow.classList.toggle("hidden",
+          isDirect || appState.baseSelection === "Manual");
+
+        // Sync spread unit buttons
+        const suSteps = document.getElementById("su-btn-steps");
+        const suContrast = document.getElementById("su-btn-contrast");
+        if (suSteps) suSteps.classList.toggle("active", (appState.spreadUnit || "steps") === "steps");
+        if (suContrast) suContrast.classList.toggle("active", appState.spreadUnit === "contrast");
+
+        // In Direct mode, force Base Selection away from incompatible options
+        if (isDirect && appState.baseSelection === "By Index") {
+          appState.baseSelection = "By Contrast";
+          const bsEl = document.getElementById("setting-baseSelection");
+          if (bsEl) bsEl.value = "By Contrast";
+        }
+        // Hide "By Index" option in Base Selection select when in Direct mode
+        const byIndexOpt = document.getElementById("base-selection-opt-byindex");
+        if (byIndexOpt) byIndexOpt.hidden = isDirect;
+
         // Update preview tab label contextually
         const previewTabColors = document.getElementById("preview-tab-colors");
         if (previewTabColors) previewTabColors.textContent = isDirect ? "Solved Colors" : "Tonal Scale";
@@ -1214,6 +1323,31 @@
         syncOutputToggles();
         renderColorGroups();
         renderRoles();
+      }
+
+      // schedulePreview: no-op placeholder (preview is rendered on demand via btn-preview)
+      function schedulePreview() {}
+
+      function setSpreadUnit(unit) {
+        appState.spreadUnit = unit;
+        syncOutputToggles();
+        renderRoles();
+      }
+
+      function updateRoleVariationTarget(roleIdx, varIdx, value) {
+        if (!appState.roles[roleIdx].variationTargets) {
+          appState.roles[roleIdx].variationTargets = appState.variations.map((v, i) =>
+            appState.pluginMode === "direct" ? (v.defaultContrastTarget || 4.5) : Math.floor((appState.colorSteps || 25) / 2)
+          );
+        }
+        appState.roles[roleIdx].variationTargets[varIdx] = parseFloat(value) || 0;
+        schedulePreview();
+      }
+
+      function resetRoleToVariationDefaults(roleIdx) {
+        appState.roles[roleIdx].variationTargets = appState.variations.map(v => v.defaultContrastTarget || 4.5);
+        renderRoles();
+        schedulePreview();
       }
 
       function updateSettingsFromInputs() {
@@ -1894,6 +2028,9 @@
             summaryRow("Mode", appState.pluginMode === "direct" ? "Direct Contrast" : "Tonal Scale"),
             ...(appState.pluginMode === "direct" ? [] : [
               summaryRow("Base Selection", appState.baseSelection || "By Contrast"),
+              ...(appState.baseSelection !== "Manual" ? [
+                summaryRow("Spread Unit", (appState.spreadUnit || "steps") === "contrast" ? "Contrast Gap" : "Steps"),
+              ] : []),
               summaryRow("Color Steps", String(appState.colorSteps || 25)),
               summaryRow("Scale Algorithm", appState.scaleAlgorithm || "Natural"),
             ]),

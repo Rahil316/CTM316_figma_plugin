@@ -43,16 +43,26 @@ function translateConfig(appState) {
       contrastGap:    parseFloat(role.contrastGap)  || 1.5,
       useContrastGap: !!role.useContrastGap,
       variationTargets: role.variationTargets ||
-        (role.variations ? Object.values(role.variations) : variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5)),
+        (appState.pluginMode === "direct"
+          ? (variations).map((v, i) => v.defaultContrastTarget || (1.5 + i * 1.5))
+          : (variations).map((_, i) => Math.floor((count / 2) + (i - Math.floor(variations.length / 2))))
+        ),
       description: role.description || "",
     })),
     colorSteps: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",
     pluginMode: appState.pluginMode || "ramp",
-    roleMapping: appState.pluginMode === "direct" ? "Direct Contrast" : (appState.baseSelection || "By Contrast"),
+    spreadUnit: appState.spreadUnit || "steps",
+    baseSelectionMode: appState.baseSelection || "By Contrast",
+    roleMapping: appState.pluginMode === "direct"
+      ? (appState.baseSelection === "Manual" ? "Direct Manual" : "Direct Contrast")
+      : (appState.baseSelection || "By Contrast"),
     colorStepNames: stepNames,
     roleStepNames,
-    variations,
+    variations: variations.map((v) => ({
+      ...v,
+      defaultContrastTarget: v.defaultContrastTarget || 4.5,
+    })),
     themes: [
       { name: "light", bg: themes[0].bg || "FFFFFF" },
       { name: "dark", bg: themes[1].bg || "000000" },

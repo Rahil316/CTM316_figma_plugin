@@ -549,8 +549,17 @@
               <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
               <select id="setting-baseSelection" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
                 <option value="By Contrast">By Contrast</option>
-                <option value="By Index">By Index</option>
+                <option value="By Index" id="base-selection-opt-byindex">By Index</option>
+                <option value="Manual">Manual</option>
               </select>
+            </div>
+            <div id="settings-spread-unit-row" class="space-y-1">
+              <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Spread Unit</label>
+              <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
+                <button id="su-btn-steps"    onclick="setSpreadUnit('steps')"    class="seg-btn active flex-1">Steps</button>
+                <button id="su-btn-contrast" onclick="setSpreadUnit('contrast')" class="seg-btn flex-1">Contrast</button>
+              </div>
+              <p class="text-[11px] text-[var(--text-muted)] px-1">How variation distance is measured from the base.</p>
             </div>
             <p class="text-[11px] text-[var(--text-muted)] px-1">Variation count and labels are managed in the <strong>Variations</strong> sidebar tab.</p>
           </div>

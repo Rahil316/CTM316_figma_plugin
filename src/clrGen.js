@@ -149,6 +149,8 @@ function variableMaker(config) {
     roleMapping: config.roleMapping,
     colorStepNames: config.colorStepNames,
     variations: config.variations,
+    spreadUnit: config.spreadUnit,
+    baseSelectionMode: config.baseSelectionMode,
   });
 
   if (inputHash === lastInputHash && cachedOutput) {
@@ -199,269 +201,328 @@ function variableMaker(config) {
       conTheme[clrName] = conGroup;
       const roleNames = roles.map((_, i) => i);
 
-      if (config.roleMapping === "By Contrast") {
-        for (const roleName of roleNames) {
-          const role = roles[roleName];
-          const spread = role.spread;
-          const minC = parseFloat(role.minContrast);
-          const conRole = Object.create(null);
-          conGroup[roleName] = conRole;
+      if (config.pluginMode === "direct") {
+        // --- DIRECT CONTRAST MODE ---
+        if (config.baseSelectionMode === "Manual") {
+          // Manual: use role.variationTargets[i] as explicit contrast targets
+          for (const roleName of roleNames) {
+            const role = roles[roleName];
+            const conRole = Object.create(null);
+            conGroup[roleName] = conRole;
 
-          let baseIdx = -1;
-          const highestWeight = stepNames[rampLength - 1];
-          const lowestWeight = stepNames[0];
-          const cEnd = clrRampsCollection[clrName][highestWeight].contrast[modeName].ratio;
-          const cStart = clrRampsCollection[clrName][lowestWeight].contrast[modeName].ratio;
-          // +1: higher ramp index = more contrast (light bg). -1: lower index = more contrast (dark bg).
-          // Applied as a multiplier on spread offsets so "stronger" always means more contrast.
-          const contrastGrowthDir = cEnd > cStart ? 1 : -1;
-          const isDarkTheme = modeName === "dark";
+            const bgHex = mode.bg;
+            const solverMode = color.solverMode || "natural";
+            const variationTargets = role.variationTargets || config.variations.map((v, i) => v.defaultContrastTarget || (1.5 + i * 1.5));
 
-          if (isDarkTheme) {
-            for (let i = rampLength - 1; i >= 0; i--) {
-              const weight = stepNames[i];
-              const c = clrRampsCollection[clrName][weight].contrast[modeName].ratio;
-              if (c >= minC) {
-                baseIdx = i;
-                break;
+            // Pre-validate cardinality; skip solving if invalid.
+            const cardinalityCheck = validateVariationContrasts(variationTargets);
+            if (!cardinalityCheck.valid) {
+              for (const err of cardinalityCheck.errors) {
+                errors.critical.push({ color: clrName, role: role.name, theme: modeName, error: err });
               }
+              continue;
             }
-          } else {
-            for (let i = 0; i < rampLength; i++) {
-              const weight = stepNames[i];
-              const c = clrRampsCollection[clrName][weight].contrast[modeName].ratio;
-              if (c >= minC) {
-                baseIdx = i;
-                break;
+
+            for (let vi = 0; vi < config.variations.length; vi++) {
+              const variation = String(vi);
+              const targetContrast = parseFloat(variationTargets[vi]) || 4.5;
+
+              const solved = solveColorForContrast(color.value, targetContrast, bgHex, solverMode);
+
+              if (solved.warning) {
+                errors.warnings.push({ color: clrName, role: role.name, variation, theme: modeName, warning: solved.warning });
               }
+              if (solved.chromaReduced) {
+                errors.notices.push({ color: clrName, role: role.name, variation, theme: modeName, notice: `Chroma reduced to fit gamut at target contrast ${targetContrast}.` });
+              }
+
+              conRole[variation] = {
+                tknName:  `${clrName}-${role.name}-${variation}`,
+                color:    clrName,
+                role:     role.name,
+                variation,
+                tknRef:   null,
+                value:    solved.hex,
+                contrast: {
+                  ratio:  solved.achievedContrast,
+                  rating: contrastRating(solved.hex, bgHex),
+                },
+                contrastTarget:  targetContrast,
+                achievedContrast: solved.achievedContrast,
+                solverMode,
+                chromaReduced: solved.chromaReduced,
+                isAdjusted: solved.clipped || solved.achievedContrast > targetContrast + 0.3,
+              };
+            }
+          }
+        } else {
+          // Direct Contrast + By Contrast + Spread Contrast
+          // Use role.baseContrast + (i - baseVarIdx) * role.contrastGap
+          for (const roleName of roleNames) {
+            const role = roles[roleName];
+            const conRole = Object.create(null);
+            conGroup[roleName] = conRole;
+            const bgHex = mode.bg;
+            const solverMode = color.solverMode || "natural";
+            const varCount = config.variations.length;
+            const baseVarIdx = Math.floor(varCount / 2);
+
+            for (let vi = 0; vi < varCount; vi++) {
+              const variation = String(vi);
+              const targetContrast = Math.max(1.01, role.baseContrast + (vi - baseVarIdx) * role.contrastGap);
+              const solved = solveColorForContrast(color.value, targetContrast, bgHex, solverMode);
+              if (solved.warning) errors.warnings.push({ color: clrName, role: role.name, variation, theme: modeName, warning: solved.warning });
+              if (solved.chromaReduced) errors.notices.push({ color: clrName, role: role.name, variation, theme: modeName, notice: `Chroma reduced at contrast target ${targetContrast.toFixed(2)}.` });
+              conRole[variation] = {
+                tknName: `${clrName}-${role.name}-${variation}`,
+                color: clrName, role: role.name, variation,
+                tknRef: null,
+                value: solved.hex,
+                contrast: { ratio: solved.achievedContrast, rating: contrastRating(solved.hex, bgHex) },
+                contrastTarget: targetContrast,
+                achievedContrast: solved.achievedContrast,
+                solverMode,
+                isAdjusted: solved.clipped || solved.achievedContrast > targetContrast + 0.3,
+              };
+            }
+          }
+        }
+      } else {
+        // --- TONAL SCALE MODE ---
+
+        if (config.baseSelectionMode === "Manual") {
+          // Manual step indices — role.variationTargets[i] is a 0-based step index
+          for (const roleName of roleNames) {
+            const role = roles[roleName];
+            const conRole = Object.create(null);
+            conGroup[roleName] = conRole;
+            const varTargets = role.variationTargets || config.variations.map((_, i) => Math.floor(rampLength * i / Math.max(1, config.variations.length - 1)));
+
+            for (let vi = 0; vi < config.variations.length; vi++) {
+              const variation = String(vi);
+              const rawIdx = parseInt(varTargets[vi]);
+              const idx = Math.max(0, Math.min(rampLength - 1, isNaN(rawIdx) ? rampLength >> 1 : rawIdx));
+              const weight = stepNames[idx];
+              const data = clrRampsCollection[clrName][weight];
+              conRole[variation] = {
+                tknName: `${clrName}-${role.name}-${variation}`,
+                color: clrName, role: role.name, variation,
+                tknRef: data.stepName,
+                value: data.value,
+                contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
+                manualStepIndex: idx,
+                isAdjusted: false,
+              };
             }
           }
 
-          if (baseIdx === -1) {
-            let bestIdx = -1;
-            let maxContrast = -1;
-            for (let i = 0; i < rampLength; i++) {
-              const weight = stepNames[i];
-              const c = clrRampsCollection[clrName][weight].contrast[modeName].ratio;
-              if (c > maxContrast) {
-                bestIdx = i;
-                maxContrast = c;
-              }
-            }
-            if (bestIdx !== -1) {
-              baseIdx = bestIdx;
-              errors.critical.push({
-                color: clrName,
-                role: roleName,
-                theme: modeName,
-                error: `Cannot meet minimum contrast ${minC}. using closest available (${maxContrast.toFixed(2)}).`,
-              });
+        } else if (config.spreadUnit === "contrast") {
+          // Spread Contrast — find steps closest to computed contrast targets
+          for (const roleName of roleNames) {
+            const role = roles[roleName];
+            const conRole = Object.create(null);
+            conGroup[roleName] = conRole;
+            const isDark = modeName === "dark";
+
+            // Find base contrast value
+            let baseContrast;
+            if (config.baseSelectionMode === "By Index") {
+              const baseIndexSource = isDark && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
+              const baseIdx = Math.max(0, Math.min(rampLength - 1, baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1));
+              baseContrast = clrRampsCollection[clrName][stepNames[baseIdx]].contrast[modeName].ratio;
             } else {
-              baseIdx = rampLength >> 1;
-              errors.critical.push({
-                color: clrName,
-                role: roleName,
-                theme: modeName,
-                error: "Cannot evaluate contrast for any weight.",
-              });
+              // "By Contrast": find first step meeting minContrast
+              const minC = parseFloat(role.minContrast);
+              let baseIdx = -1;
+              if (isDark) {
+                for (let i = rampLength - 1; i >= 0; i--) {
+                  if (clrRampsCollection[clrName][stepNames[i]].contrast[modeName].ratio >= minC) { baseIdx = i; break; }
+                }
+              } else {
+                for (let i = 0; i < rampLength; i++) {
+                  if (clrRampsCollection[clrName][stepNames[i]].contrast[modeName].ratio >= minC) { baseIdx = i; break; }
+                }
+              }
+              if (baseIdx === -1) baseIdx = rampLength >> 1;
+              baseContrast = clrRampsCollection[clrName][stepNames[baseIdx]].contrast[modeName].ratio;
+            }
+
+            const varCount = config.variations.length;
+            const baseVarIdx = Math.floor(varCount / 2);
+
+            for (let vi = 0; vi < varCount; vi++) {
+              const variation = String(vi);
+              const targetContrast = baseContrast + (vi - baseVarIdx) * role.contrastGap;
+
+              // Find step whose contrast is closest to targetContrast
+              let bestIdx = 0;
+              let bestDiff = Infinity;
+              for (let si = 0; si < rampLength; si++) {
+                const diff = Math.abs(clrRampsCollection[clrName][stepNames[si]].contrast[modeName].ratio - targetContrast);
+                if (diff < bestDiff) { bestDiff = diff; bestIdx = si; }
+              }
+
+              const weight = stepNames[bestIdx];
+              const data = clrRampsCollection[clrName][weight];
+              const isAdjusted = bestDiff > 0.5;
+              conRole[variation] = {
+                tknName: `${clrName}-${role.name}-${variation}`,
+                color: clrName, role: role.name, variation,
+                tknRef: data.stepName,
+                value: data.value,
+                contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
+                contrastTarget: targetContrast,
+                isAdjusted,
+              };
+              if (isAdjusted) errors.warnings.push({ color: clrName, role: roleName, variation, theme: modeName, warning: `Target contrast ${targetContrast.toFixed(2)} not exactly available; closest step used (${data.contrast[modeName].ratio.toFixed(2)}).` });
             }
           }
 
-          const varCount = config.variations.length;
-          const baseVarIdx = Math.floor(varCount / 2);
-          const maxOffset = baseVarIdx * spread;
-          const minAllowed = maxOffset;
-          const maxAllowed = rampLength - 1 - maxOffset;
-          let adjustedBase = false;
-          if (minAllowed > maxAllowed) {
-            // spread is too large for this ramp length — pin to midpoint so all offsets clamp symmetrically
-            baseIdx = Math.floor((rampLength - 1) / 2);
-            adjustedBase = true;
-          } else {
-            if (baseIdx < minAllowed) { baseIdx = minAllowed; adjustedBase = true; }
-            if (baseIdx > maxAllowed) { baseIdx = maxAllowed; adjustedBase = true; }
-          }
-          if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
+        } else {
+          // Spread Steps (existing "By Contrast" and "By Index" code paths)
+          if (config.roleMapping === "By Contrast") {
+            for (const roleName of roleNames) {
+              const role = roles[roleName];
+              const spread = role.spread;
+              const minC = parseFloat(role.minContrast);
+              const conRole = Object.create(null);
+              conGroup[roleName] = conRole;
 
-          const offsetValues = config.variations.map((v, i) => ({
-            key: String(i),
-            offset: (i - baseVarIdx) * spread,
-          }));
+              let baseIdx = -1;
+              const highestWeight = stepNames[rampLength - 1];
+              const lowestWeight = stepNames[0];
+              const cEnd = clrRampsCollection[clrName][highestWeight].contrast[modeName].ratio;
+              const cStart = clrRampsCollection[clrName][lowestWeight].contrast[modeName].ratio;
+              const contrastGrowthDir = cEnd > cStart ? 1 : -1;
+              const isDarkTheme = modeName === "dark";
 
-          for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
-            const { key: variation, offset: pureOffset } = offsetValues[vIdx];
-            let idx = baseIdx + pureOffset * contrastGrowthDir;
-            let adjusted = false;
-            if (idx < 0) {
-              idx = 0;
-              adjusted = true;
-            } else if (idx >= rampLength) {
-              idx = rampLength - 1;
-              adjusted = true;
+              if (isDarkTheme) {
+                for (let i = rampLength - 1; i >= 0; i--) {
+                  const weight = stepNames[i];
+                  const c = clrRampsCollection[clrName][weight].contrast[modeName].ratio;
+                  if (c >= minC) { baseIdx = i; break; }
+                }
+              } else {
+                for (let i = 0; i < rampLength; i++) {
+                  const weight = stepNames[i];
+                  const c = clrRampsCollection[clrName][weight].contrast[modeName].ratio;
+                  if (c >= minC) { baseIdx = i; break; }
+                }
+              }
+
+              if (baseIdx === -1) {
+                let bestIdx = -1;
+                let maxContrast = -1;
+                for (let i = 0; i < rampLength; i++) {
+                  const weight = stepNames[i];
+                  const c = clrRampsCollection[clrName][weight].contrast[modeName].ratio;
+                  if (c > maxContrast) { bestIdx = i; maxContrast = c; }
+                }
+                if (bestIdx !== -1) {
+                  baseIdx = bestIdx;
+                  errors.critical.push({ color: clrName, role: roleName, theme: modeName, error: `Cannot meet minimum contrast ${minC}. using closest available (${maxContrast.toFixed(2)}).` });
+                } else {
+                  baseIdx = rampLength >> 1;
+                  errors.critical.push({ color: clrName, role: roleName, theme: modeName, error: "Cannot evaluate contrast for any weight." });
+                }
+              }
+
+              const varCount = config.variations.length;
+              const baseVarIdx = Math.floor(varCount / 2);
+              const maxOffset = baseVarIdx * spread;
+              const minAllowed = maxOffset;
+              const maxAllowed = rampLength - 1 - maxOffset;
+              let adjustedBase = false;
+              if (minAllowed > maxAllowed) {
+                baseIdx = Math.floor((rampLength - 1) / 2);
+                adjustedBase = true;
+              } else {
+                if (baseIdx < minAllowed) { baseIdx = minAllowed; adjustedBase = true; }
+                if (baseIdx > maxAllowed) { baseIdx = maxAllowed; adjustedBase = true; }
+              }
+              if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
+
+              const offsetValues = config.variations.map((v, i) => ({ key: String(i), offset: (i - baseVarIdx) * spread }));
+
+              for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
+                const { key: variation, offset: pureOffset } = offsetValues[vIdx];
+                let idx = baseIdx + pureOffset * contrastGrowthDir;
+                let adjusted = false;
+                if (idx < 0) { idx = 0; adjusted = true; }
+                else if (idx >= rampLength) { idx = rampLength - 1; adjusted = true; }
+
+                const weight = stepNames[idx];
+                const data = clrRampsCollection[clrName][weight];
+
+                conRole[variation] = {
+                  tknName: `${clrName}-${role.name}-${variation}`,
+                  color: clrName, role: role.name, variation,
+                  tknRef: data.stepName,
+                  value: data.value,
+                  contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
+                  variationOffset: pureOffset,
+                  isAdjusted: adjusted,
+                };
+                if (adjusted) errors.warnings.push({ color: clrName, role: roleName, variation, theme: modeName, warning: `Variation '${variation}' clamped due to overflow` });
+              }
             }
+          } else if (config.roleMapping === "By Index") {
+            for (const roleName of roleNames) {
+              const role = roles[roleName];
+              const spread = role.spread;
+              const conRole = Object.create(null);
+              conGroup[roleName] = conRole;
 
-            const weight = stepNames[idx];
-            const data = clrRampsCollection[clrName][weight];
+              const highestWeight = stepNames[rampLength - 1];
+              const lowestWeight = stepNames[0];
+              const cEnd = clrRampsCollection[clrName][highestWeight].contrast[modeName].ratio;
+              const cStart = clrRampsCollection[clrName][lowestWeight].contrast[modeName].ratio;
+              const contrastGrowthDir = cEnd > cStart ? 1 : -1;
 
-            conRole[variation] = {
-              tknName: `${clrName}-${role.name}-${variation}`,
-              color: clrName,
-              role: role.name,
-              variation: variation,
-              tknRef: data.stepName,
-              value: data.value,
-              contrast: {
-                ratio: data.contrast[modeName].ratio,
-                rating: data.contrast[modeName].rating,
-              },
-              variationOffset: pureOffset,
-              isAdjusted: adjusted,
-            };
-            if (adjusted) {
-              errors.warnings.push({
-                color: clrName,
-                role: roleName,
-                variation,
-                theme: modeName,
-                warning: `Variation '${variation}' clamped due to overflow`,
-              });
+              const isDark = modeName === "dark";
+              const baseIndexSource = isDark && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
+              let baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
+
+              const varCount = config.variations.length;
+              const baseVarIdx = Math.floor(varCount / 2);
+              const maxOffset = baseVarIdx * spread;
+              const minAllowed = maxOffset;
+              const maxAllowed = rampLength - 1 - maxOffset;
+              let adjustedBase = false;
+              if (minAllowed > maxAllowed) {
+                baseIdx = Math.floor((rampLength - 1) / 2);
+                adjustedBase = true;
+              } else {
+                if (baseIdx < minAllowed) { baseIdx = minAllowed; adjustedBase = true; }
+                if (baseIdx > maxAllowed) { baseIdx = maxAllowed; adjustedBase = true; }
+              }
+              if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
+
+              const offsetValues = config.variations.map((v, i) => ({ key: String(i), offset: (i - baseVarIdx) * spread }));
+
+              for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
+                const { key: variation, offset: pureOffset } = offsetValues[vIdx];
+                let idx = baseIdx + pureOffset * contrastGrowthDir;
+                let adjusted = false;
+                if (idx < 0) { idx = 0; adjusted = true; }
+                else if (idx >= rampLength) { idx = rampLength - 1; adjusted = true; }
+
+                const weight = stepNames[idx];
+                const data = clrRampsCollection[clrName][weight];
+
+                conRole[variation] = {
+                  tknName: `${clrName}-${role.name}-${variation}`,
+                  color: clrName, role: role.name, variation,
+                  tknRef: data.stepName,
+                  value: data.value,
+                  contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
+                  variationOffset: pureOffset,
+                  isAdjusted: adjusted,
+                  manualBaseIndex: baseIdx,
+                };
+                if (adjusted) errors.warnings.push({ color: clrName, role: roleName, variation, theme: modeName, warning: `Variation '${variation}' clamped due to overflow` });
+              }
             }
-          }
-        }
-      } else if (config.roleMapping === "By Index") {
-        for (const roleName of roleNames) {
-          const role = roles[roleName];
-          const spread = role.spread;
-          const conRole = Object.create(null);
-          conGroup[roleName] = conRole;
-
-          const highestWeight = stepNames[rampLength - 1];
-          const lowestWeight = stepNames[0];
-          const cEnd = clrRampsCollection[clrName][highestWeight].contrast[modeName].ratio;
-          const cStart = clrRampsCollection[clrName][lowestWeight].contrast[modeName].ratio;
-          const contrastGrowthDir = cEnd > cStart ? 1 : -1;
-
-          const isDark = modeName === "dark";
-          const baseIndexSource = isDark && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
-          let baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
-
-          const varCount = config.variations.length;
-          const baseVarIdx = Math.floor(varCount / 2);
-          const maxOffset = baseVarIdx * spread;
-          const minAllowed = maxOffset;
-          const maxAllowed = rampLength - 1 - maxOffset;
-          let adjustedBase = false;
-          if (minAllowed > maxAllowed) {
-            baseIdx = Math.floor((rampLength - 1) / 2);
-            adjustedBase = true;
-          } else {
-            if (baseIdx < minAllowed) { baseIdx = minAllowed; adjustedBase = true; }
-            if (baseIdx > maxAllowed) { baseIdx = maxAllowed; adjustedBase = true; }
-          }
-          if (adjustedBase) {
-            errors.warnings.push({
-              color: clrName,
-              role: roleName,
-              theme: modeName,
-              warning: `Base index clamped to ${baseIdx} due to spread constraints.`,
-            });
-          }
-
-          const offsetValues = config.variations.map((v, i) => ({
-            key: String(i),
-            offset: (i - baseVarIdx) * spread,
-          }));
-
-          for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
-            const { key: variation, offset: pureOffset } = offsetValues[vIdx];
-            let idx = baseIdx + pureOffset * contrastGrowthDir;
-            let adjusted = false;
-            if (idx < 0) {
-              idx = 0;
-              adjusted = true;
-            } else if (idx >= rampLength) {
-              idx = rampLength - 1;
-              adjusted = true;
-            }
-
-            const weight = stepNames[idx];
-            const data = clrRampsCollection[clrName][weight];
-
-            conRole[variation] = {
-              tknName: `${clrName}-${role.name}-${variation}`,
-              color: clrName,
-              role: role.name,
-              variation: variation,
-              tknRef: data.stepName,
-              value: data.value,
-              contrast: {
-                ratio: data.contrast[modeName].ratio,
-                rating: data.contrast[modeName].rating,
-              },
-              variationOffset: pureOffset,
-              isAdjusted: adjusted,
-              manualBaseIndex: baseIdx,
-            };
-            if (adjusted) {
-              errors.warnings.push({
-                color: clrName,
-                role: roleName,
-                variation,
-                theme: modeName,
-                warning: `Variation '${variation}' clamped due to overflow`,
-              });
-            }
-          }
-        }
-      } else if (config.pluginMode === "direct") {
-        for (const roleName of roleNames) {
-          const role = roles[roleName];
-          const conRole = Object.create(null);
-          conGroup[roleName] = conRole;
-
-          const bgHex = mode.bg;
-          const solverMode = color.solverMode || "natural";
-          const variationTargets = role.variationTargets || config.variations.map(() => 4.5);
-
-          // Pre-validate cardinality; skip solving if invalid.
-          const cardinalityCheck = validateVariationContrasts(variationTargets);
-          if (!cardinalityCheck.valid) {
-            for (const err of cardinalityCheck.errors) {
-              errors.critical.push({ color: clrName, role: role.name, theme: modeName, error: err });
-            }
-            continue;
-          }
-
-          for (let vi = 0; vi < config.variations.length; vi++) {
-            const variation = String(vi);
-            const targetContrast = parseFloat(variationTargets[vi]) || 4.5;
-
-            const solved = solveColorForContrast(color.value, targetContrast, bgHex, solverMode);
-
-            if (solved.warning) {
-              errors.warnings.push({ color: clrName, role: role.name, variation, theme: modeName, warning: solved.warning });
-            }
-            if (solved.chromaReduced) {
-              errors.notices.push({ color: clrName, role: role.name, variation, theme: modeName, notice: `Chroma reduced to fit gamut at target contrast ${targetContrast}.` });
-            }
-
-            conRole[variation] = {
-              tknName:  `${clrName}-${role.name}-${variation}`,
-              color:    clrName,
-              role:     role.name,
-              variation,
-              tknRef:   null,
-              value:    solved.hex,
-              contrast: {
-                ratio:  solved.achievedContrast,
-                rating: contrastRating(solved.hex, bgHex),
-              },
-              contrastTarget:  targetContrast,
-              achievedContrast: solved.achievedContrast,
-              solverMode,
-              chromaReduced: solved.chromaReduced,
-              isAdjusted: solved.clipped || solved.achievedContrast > targetContrast + 0.3,
-            };
           }
         }
       }
