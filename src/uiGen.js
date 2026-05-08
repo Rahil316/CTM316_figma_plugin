@@ -326,8 +326,12 @@
             spread: Math.max(1, parseInt(role.spread) || 1),
             baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
             darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
+            baseContrast: parseFloat(role.baseContrast) || 4.5,
+            contrastGap: parseFloat(role.contrastGap) || 1.5,
             variationTargets: role.variationTargets ||
               (role.variations ? Object.values(role.variations) : variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5)),
+            variationOverride: role.variationOverride || false,
+            roleVariations: role.roleVariations || [],
           })),
           colorSteps: count,
           scaleAlgorithm: state.scaleAlgorithm || "Natural",
@@ -662,11 +666,14 @@
             v.defaultContrastTarget = [1.5, 3.0, 4.5, 7.0, 12.0][i] || (1.5 + i * ((12.0 - 1.5) / Math.max(1, count - 1)));
           }
         });
-        const vLen = appState.variations.length;
         for (const role of appState.roles) {
+          const roleVars = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
+            ? role.roleVariations
+            : appState.variations;
+          const vLen = roleVars.length;
           if (!role.variationTargets || role.variationTargets.length !== vLen) {
-            const oldVals = role.variations ? Object.values(role.variations) : [];
-            role.variationTargets = appState.variations.map((_, i) => oldVals[i] || (1.5 + i * 1.5));
+            const oldVals = role.variations ? Object.values(role.variations) : (Array.isArray(role.variationTargets) ? role.variationTargets : []);
+            role.variationTargets = roleVars.map((v, i) => oldVals[i] || (appState.pluginMode === "direct" ? (v.defaultContrastTarget || 4.5) : Math.floor(((appState.colorSteps || 25) / Math.max(1, vLen - 1)) * i)));
             delete role.variations;
           }
         }
@@ -988,6 +995,42 @@
                 </div>`;
             }
 
+            const roleVars = getRoleVariations(role);
+            const overrideSection = `
+              <div class="border-t border-[var(--border)] mt-2 pt-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] text-[var(--text-muted)]">Custom Variations</span>
+                  <button onclick="toggleRoleVariationOverride(${idx})"
+                    class="text-[11px] px-2 py-0.5 rounded-[6px] border transition-all ${role.variationOverride
+                      ? 'bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30 hover:bg-[var(--accent)]/25'
+                      : 'bg-[var(--bg-input)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]'}">
+                    ${role.variationOverride ? "✓ Override active" : "Override"}
+                  </button>
+                </div>
+                ${role.variationOverride ? `
+                <div class="mt-2 space-y-1.5">
+                  ${roleVars.map((v, vi) => `
+                    <div class="flex items-center gap-1.5">
+                      <div class="flex flex-col gap-0.5 shrink-0">
+                        <button onclick="moveRoleVariation(${idx},${vi},-1)" ${vi===0?"disabled":""} class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]">▲</button>
+                        <button onclick="moveRoleVariation(${idx},${vi},1)" ${vi===roleVars.length-1?"disabled":""} class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]">▼</button>
+                      </div>
+                      <input type="text" value="${(v.name||"").replace(/"/g,'&quot;')}" placeholder="Name"
+                        oninput="updateRoleVariation(${idx},${vi},'name',this.value)"
+                        class="flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                      <input type="text" value="${(v.shortName||"").replace(/"/g,'&quot;')}" placeholder="Short"
+                        oninput="updateRoleVariation(${idx},${vi},'shortName',this.value)"
+                        class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                      <button onclick="removeRoleVariation(${idx},${vi})" ${roleVars.length<=1?"disabled":""} class="w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]">✕</button>
+                    </div>
+                  `).join("")}
+                  <button onclick="addRoleVariation(${idx})" class="w-full h-[28px] text-[11px] text-[var(--accent)] border border-[var(--border)] rounded-[8px] hover:bg-[var(--bg-hover)] transition-all">+ Add variation</button>
+                  <button onclick="resetRoleVariationsToShared(${idx})" class="w-full h-[28px] text-[11px] text-[var(--text-muted)] border border-[var(--border)] rounded-[8px] hover:bg-[var(--bg-hover)] transition-all">↺ Reset to shared</button>
+                </div>
+                ` : ""}
+              </div>
+            `;
+
             card.innerHTML = `
               <div class="flex items-end gap-2">
                 <div class="flex flex-col gap-0.5 self-center flex-shrink-0">
@@ -997,8 +1040,10 @@
                 </div>
                 <div class="flex-1 space-y-1">
                   <label for="role-${idx}-name" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Role Name</label>
-
-                  <input type="text" id="role-${idx}-name" value="${role.name || ""}" oninput="updateRole(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                  <div class="flex items-center gap-1">
+                    <input type="text" id="role-${idx}-name" value="${role.name || ""}" oninput="updateRole(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                    ${role.variationOverride ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] whitespace-nowrap">custom</span>` : ""}
+                  </div>
                 </div>
                 <div class="w-[72px] space-y-1">
                   <label for="role-${idx}-short" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Short</label>
@@ -1010,65 +1055,10 @@
                 <label for="role-${idx}-desc" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Description</label>
                 <input type="text" id="role-${idx}-desc" value="${(role.description || "").replace(/"/g, '&quot;')}" oninput="updateRole(${idx}, 'description', this.value)" placeholder="Role description (optional)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
               </div>
-              ${secondRowHtml}`;
+              ${secondRowHtml}
+              ${overrideSection}`;
             // Prevent accidental drags from interactive children
             card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
-            fragment.appendChild(card);
-          });
-
-          container.innerHTML = "";
-          container.appendChild(fragment);
-        });
-      }, 50);
-
-      const renderVariations = debounce(() => {
-        if (activeSidebarTab !== "variations") return;
-        withPreservedFocus(() => {
-          const container = document.getElementById("sidebar-content-container");
-          const fragment = document.createDocumentFragment();
-
-          const addButton = document.createElement("button");
-          addButton.className = "w-full h-10 px-4 mb-2 bg-transparent text-[var(--accent)] border-2 border-dashed border-[var(--accent)] rounded-[8px] text-[13px] font-semibold cursor-pointer transition-colors duration-150 hover:bg-[var(--accent)]/10 flex items-center justify-center gap-2";
-          addButton.innerHTML = `<span>+ Add Variation</span>`;
-          addButton.onclick = addVariation;
-          fragment.appendChild(addButton);
-
-          const trashSvg = `<svg width="14" height="14" viewBox="0 0 12 14" fill="none"><path d="M8.00021 1.98568C8.00021 1.4562 7.5944 1.03371 7.09136 1.01758C6.72911 1.00599 6.36531 1 6.00021 1C5.63511 1 5.27131 1.00599 4.90906 1.01758C4.40602 1.03371 4.00021 1.4562 4.00021 1.98568V2.0612C4.6618 2.02102 5.32864 2 6.00021 2C6.67179 2 7.33862 2.02102 8.00021 2.0612V1.98568ZM6.00021 3C5.17177 3 4.35078 3.03229 3.53862 3.09505C2.92606 3.14239 2.31853 3.20784 1.71636 3.28971L2.39214 12.0768C2.43227 12.5978 2.86704 13 3.38953 13H8.61089C9.13338 13 9.56815 12.5978 9.60828 12.0768L10.2834 3.28971C9.68144 3.20789 9.07415 3.14237 8.4618 3.09505C7.64964 3.03229 6.82865 3 6.00021 3ZM4.15386 4.50065C4.42969 4.49004 4.66196 4.70468 4.67274 4.98047L4.90386 10.9805C4.91447 11.2564 4.69927 11.4887 4.42339 11.4993C4.14756 11.51 3.91529 11.2953 3.90451 11.0195L3.67339 5.01953C3.66278 4.74367 3.87803 4.51138 4.15386 4.50065ZM7.84656 4.50065C8.12239 4.51138 8.33764 4.74367 8.32703 5.01953L8.09591 11.0195C8.08513 11.2953 7.85287 11.51 7.57703 11.4993C7.30115 11.4887 7.08595 11.2564 7.09656 10.9805L7.32768 4.98047C7.33846 4.70468 7.57073 4.49004 7.84656 4.50065Z" fill="currentColor"/></svg>`;
-
-          const isDirect = appState.pluginMode === "direct";
-          appState.variations.forEach((varDef, idx) => {
-            const card = document.createElement("div");
-            card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2";
-            const canDelete = appState.variations.length > 1;
-            card.innerHTML = `
-              <div class="flex items-end gap-2">
-                <div class="flex flex-col gap-0.5 self-center flex-shrink-0">
-                  <button onclick="moveVariation(${idx}, -1)" ${idx === 0 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move up">▲</button>
-                  <span class="text-[var(--text-muted)] select-none text-[14px] leading-none text-center">⠿</span>
-                  <button onclick="moveVariation(${idx}, 1)" ${idx === appState.variations.length - 1 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move down">▼</button>
-                </div>
-                <div class="flex-1 space-y-1">
-                  <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Name</label>
-                  <input type="text" value="${(varDef.name || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                </div>
-                <div class="w-[80px] space-y-1">
-                  <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Short</label>
-                  <input type="text" value="${(varDef.shortName || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'shortName', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                </div>
-                ${isDirect ? `
-                <div class="w-[88px] space-y-1">
-                  <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Def. Contrast</label>
-                  <input type="number" step="0.1" min="1.0" max="21" value="${varDef.defaultContrastTarget || 4.5}"
-                    oninput="updateVariation(${idx}, 'defaultContrastTarget', parseFloat(this.value) || 4.5)"
-                    class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                </div>` : ""}
-                <button onclick="removeVariation(${idx})" ${!canDelete ? "disabled" : ""} class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 size-[40px] shrink-0 flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed">${trashSvg}</button>
-              </div>
-              <div class="space-y-1">
-                <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Description</label>
-                <input type="text" value="${(varDef.description || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'description', this.value)" placeholder="Variation description (optional)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-              </div>`;
-            card.querySelectorAll("input, button, label").forEach((el) => el.setAttribute("draggable", "false"));
             fragment.appendChild(card);
           });
 
@@ -1191,40 +1181,137 @@
       function addRole() {
         const n = appState.roles.length + 1;
         const mid = Math.floor(appState.colorSteps / 2);
-        appState.roles.unshift({ _id: generateId(), name: "Role " + n, shortName: `r-${n}`, spread: 2, minContrast: 4.5, baseIndex: mid, darkBaseIndex: mid, variationTargets: appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5), description: "" });
+        appState.roles.unshift({ _id: generateId(), name: "Role " + n, shortName: `r-${n}`, spread: 2, minContrast: 4.5, baseIndex: mid, darkBaseIndex: mid, variationTargets: appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5), description: "", variationOverride: false, roleVariations: [] });
         renderRoles();
       }
 
-      function addVariation() {
-        const n = appState.variations.length + 1;
-        appState.variations.push({ _id: generateId(), name: String(n), shortName: String(n), description: "" });
+      // --- SETTINGS-BASED SHARED VARIATION CRUD ---
+      function renderSettingsVariations() {
+        const container = document.getElementById("settings-variations-list");
+        if (!container) return;
+        const isDirect = appState.pluginMode === "direct";
+        const vars = appState.variations || [];
+        const canDelete = vars.length > 1;
+        container.innerHTML = vars.map((v, idx) => `
+          <div class="flex items-center gap-1.5">
+            <div class="flex flex-col gap-0.5 shrink-0">
+              <button onclick="moveSharedVariation(${idx},-1)" ${idx === 0 ? "disabled" : ""} class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]">▲</button>
+              <button onclick="moveSharedVariation(${idx},1)" ${idx === vars.length-1 ? "disabled" : ""} class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]">▼</button>
+            </div>
+            <input type="text" value="${(v.name||"").replace(/"/g,'&quot;')}" placeholder="Name"
+              oninput="updateSharedVariation(${idx},'name',this.value)"
+              class="flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+            <input type="text" value="${(v.shortName||"").replace(/"/g,'&quot;')}" placeholder="Short"
+              oninput="updateSharedVariation(${idx},'shortName',this.value)"
+              class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+            ${isDirect ? `<input type="number" step="0.1" min="1" max="21" value="${v.defaultContrastTarget||4.5}"
+              oninput="updateSharedVariation(${idx},'defaultContrastTarget',parseFloat(this.value)||4.5)"
+              class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]"
+              title="Default contrast target">` : ""}
+            <button onclick="removeSharedVariation(${idx})" ${!canDelete?"disabled":""} class="w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]">✕</button>
+          </div>
+        `).join("");
+      }
+
+      function addSharedVariation() {
         ensureVariations();
-        renderVariations();
+        const n = appState.variations.length + 1;
+        appState.variations.push({ _id: generateId(), name: String(n), shortName: String(n), description: "", defaultContrastTarget: 4.5 });
+        ensureVariations();
+        renderSettingsVariations();
         renderRoles();
+        schedulePreview();
       }
 
-      function removeVariation(idx) {
+      function removeSharedVariation(idx) {
         if (appState.variations.length <= 1) return;
         appState.variations.splice(idx, 1);
         ensureVariations();
-        renderVariations();
+        renderSettingsVariations();
         renderRoles();
+        schedulePreview();
       }
 
-      function moveVariation(idx, dir) {
-        const target = idx + dir;
-        if (target < 0 || target >= appState.variations.length) return;
-        const [item] = appState.variations.splice(idx, 1);
-        appState.variations.splice(target, 0, item);
+      function moveSharedVariation(idx, dir) {
+        const arr = appState.variations;
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= arr.length) return;
+        [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
         ensureVariations();
-        renderVariations();
+        renderSettingsVariations();
         renderRoles();
+        schedulePreview();
       }
 
-      function updateVariation(idx, field, value) {
+      function updateSharedVariation(idx, field, value) {
+        if (!appState.variations[idx]) return;
         appState.variations[idx][field] = value;
-        if (field === "name" || field === "shortName") renderRoles();
-        renderVariations();
+        if (field === "name" || field === "shortName") {
+          renderRoles();
+          schedulePreview();
+        }
+        if (field === "defaultContrastTarget") schedulePreview();
+      }
+
+      // --- PER-ROLE VARIATION OVERRIDE HELPERS ---
+      function getRoleVariations(role) {
+        return (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
+          ? role.roleVariations
+          : appState.variations;
+      }
+
+      function toggleRoleVariationOverride(roleIdx) {
+        const role = appState.roles[roleIdx];
+        role.variationOverride = !role.variationOverride;
+        if (role.variationOverride && (!role.roleVariations || role.roleVariations.length === 0)) {
+          role.roleVariations = appState.variations.map(v => ({ ...v, _id: generateId() }));
+        }
+        renderRoles();
+        schedulePreview();
+      }
+
+      function addRoleVariation(roleIdx) {
+        const role = appState.roles[roleIdx];
+        if (!role.roleVariations) role.roleVariations = [];
+        const n = role.roleVariations.length + 1;
+        role.roleVariations.push({ _id: generateId(), name: String(n), shortName: String(n), description: "", defaultContrastTarget: 4.5 });
+        ensureVariations();
+        renderRoles();
+        schedulePreview();
+      }
+
+      function removeRoleVariation(roleIdx, varIdx) {
+        const role = appState.roles[roleIdx];
+        if (!role.roleVariations || role.roleVariations.length <= 1) return;
+        role.roleVariations.splice(varIdx, 1);
+        ensureVariations();
+        renderRoles();
+        schedulePreview();
+      }
+
+      function moveRoleVariation(roleIdx, varIdx, dir) {
+        const arr = appState.roles[roleIdx].roleVariations;
+        if (!arr) return;
+        const newIdx = varIdx + dir;
+        if (newIdx < 0 || newIdx >= arr.length) return;
+        [arr[varIdx], arr[newIdx]] = [arr[newIdx], arr[varIdx]];
+        renderRoles();
+        schedulePreview();
+      }
+
+      function updateRoleVariation(roleIdx, varIdx, field, value) {
+        const role = appState.roles[roleIdx];
+        if (!role.roleVariations?.[varIdx]) return;
+        role.roleVariations[varIdx][field] = value;
+        schedulePreview();
+      }
+
+      function resetRoleVariationsToShared(roleIdx) {
+        const role = appState.roles[roleIdx];
+        role.variationOverride = false;
+        role.roleVariations = [];
+        renderRoles();
+        schedulePreview();
       }
 
       function toggleBoolSetting(key) {
@@ -1303,6 +1390,8 @@
         // Update preview tab label contextually
         const previewTabColors = document.getElementById("preview-tab-colors");
         if (previewTabColors) previewTabColors.textContent = isDirect ? "Solved Colors" : "Tonal Scale";
+
+        renderSettingsVariations();
 
         // Update settings-sheet name format preview
         const sampleColor = appState.colors && appState.colors[0];
@@ -1415,6 +1504,8 @@
         // Constants
         document.getElementById("setting-globalColorsCollectionName").value = appState.globalColorsCollectionName || "_constants";
         document.getElementById("setting-alphaValues").value = appState.alphaValues || "10, 25, 50, 75, 90";
+
+        renderSettingsVariations();
       }
 
       /**
@@ -1738,7 +1829,6 @@
           sidebarTabs.forEach((b) => b.classList.toggle("active", b.dataset.tab === activeSidebarTab));
           if (activeSidebarTab === "color-groups") renderColorGroups();
           else if (activeSidebarTab === "roles-config") renderRoles();
-          else if (activeSidebarTab === "variations") renderVariations();
         };
       });
 

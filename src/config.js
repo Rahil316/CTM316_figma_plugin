@@ -48,6 +48,10 @@ function translateConfig(appState) {
           : (variations).map((_, i) => Math.floor((count / 2) + (i - Math.floor(variations.length / 2))))
         ),
       description: role.description || "",
+      variationOverride: role.variationOverride || false,
+      roleVariations: (role.variationOverride && role.roleVariations?.length > 0)
+        ? role.roleVariations.map(v => ({ ...v }))
+        : [],
     })),
     colorSteps: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",

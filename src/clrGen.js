@@ -210,9 +210,15 @@ function variableMaker(config) {
             const conRole = Object.create(null);
             conGroup[roleName] = conRole;
 
+            // Determine which variations array applies to this role
+            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+              ? role.roleVariations
+              : config.variations;
+            const varCount = roleVariations.length;
+
             const bgHex = mode.bg;
             const solverMode = color.solverMode || "natural";
-            const variationTargets = role.variationTargets || config.variations.map((v, i) => v.defaultContrastTarget || (1.5 + i * 1.5));
+            const variationTargets = role.variationTargets || roleVariations.map((v, i) => v.defaultContrastTarget || (1.5 + i * 1.5));
 
             // Pre-validate cardinality; skip solving if invalid.
             const cardinalityCheck = validateVariationContrasts(variationTargets);
@@ -223,7 +229,7 @@ function variableMaker(config) {
               continue;
             }
 
-            for (let vi = 0; vi < config.variations.length; vi++) {
+            for (let vi = 0; vi < varCount; vi++) {
               const variation = String(vi);
               const targetContrast = parseFloat(variationTargets[vi]) || 4.5;
 
@@ -264,7 +270,11 @@ function variableMaker(config) {
             conGroup[roleName] = conRole;
             const bgHex = mode.bg;
             const solverMode = color.solverMode || "natural";
-            const varCount = config.variations.length;
+            // Determine which variations array applies to this role
+            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+              ? role.roleVariations
+              : config.variations;
+            const varCount = roleVariations.length;
             const baseVarIdx = Math.floor(varCount / 2);
 
             for (let vi = 0; vi < varCount; vi++) {
@@ -296,9 +306,14 @@ function variableMaker(config) {
             const role = roles[roleName];
             const conRole = Object.create(null);
             conGroup[roleName] = conRole;
-            const varTargets = role.variationTargets || config.variations.map((_, i) => Math.floor(rampLength * i / Math.max(1, config.variations.length - 1)));
+            // Determine which variations array applies to this role
+            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+              ? role.roleVariations
+              : config.variations;
+            const varCount = roleVariations.length;
+            const varTargets = role.variationTargets || roleVariations.map((_, i) => Math.floor(rampLength * i / Math.max(1, varCount - 1)));
 
-            for (let vi = 0; vi < config.variations.length; vi++) {
+            for (let vi = 0; vi < varCount; vi++) {
               const variation = String(vi);
               const rawIdx = parseInt(varTargets[vi]);
               const idx = Math.max(0, Math.min(rampLength - 1, isNaN(rawIdx) ? rampLength >> 1 : rawIdx));
@@ -347,7 +362,11 @@ function variableMaker(config) {
               baseContrast = clrRampsCollection[clrName][stepNames[baseIdx]].contrast[modeName].ratio;
             }
 
-            const varCount = config.variations.length;
+            // Determine which variations array applies to this role
+            const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+              ? role.roleVariations
+              : config.variations;
+            const varCount = roleVariations.length;
             const baseVarIdx = Math.floor(varCount / 2);
 
             for (let vi = 0; vi < varCount; vi++) {
@@ -442,7 +461,7 @@ function variableMaker(config) {
               }
               if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
 
-              const offsetValues = config.variations.map((v, i) => ({ key: String(i), offset: (i - baseVarIdx) * spread }));
+              const offsetValues = roleVariations.map((v, i) => ({ key: String(i), offset: (i - baseVarIdx) * spread }));
 
               for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
                 const { key: variation, offset: pureOffset } = offsetValues[vIdx];
@@ -483,7 +502,11 @@ function variableMaker(config) {
               const baseIndexSource = isDark && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
               let baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
 
-              const varCount = config.variations.length;
+              // Determine which variations array applies to this role
+              const roleVariations = (role.variationOverride && role.roleVariations?.length > 0)
+                ? role.roleVariations
+                : config.variations;
+              const varCount = roleVariations.length;
               const baseVarIdx = Math.floor(varCount / 2);
               const maxOffset = baseVarIdx * spread;
               const minAllowed = maxOffset;
@@ -498,7 +521,7 @@ function variableMaker(config) {
               }
               if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
 
-              const offsetValues = config.variations.map((v, i) => ({ key: String(i), offset: (i - baseVarIdx) * spread }));
+              const offsetValues = roleVariations.map((v, i) => ({ key: String(i), offset: (i - baseVarIdx) * spread }));
 
               for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
                 const { key: variation, offset: pureOffset } = offsetValues[vIdx];
