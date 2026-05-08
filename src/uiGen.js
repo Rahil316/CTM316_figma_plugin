@@ -1041,39 +1041,25 @@ const renderRoles = debounce(() => {
                   </div>
                   ${roleVars
                     .map((v, vi) => {
+                      const storedTarget = (role.variationTargets || [])[vi];
                       const varCount = roleVars.length;
                       const baseVarIdx = Math.floor(varCount / 2);
-                      const manualVal = (role.variationTargets || [])[vi];
-                      // Parse all numeric fields — inputs store strings after user edits
-                      const _baseContrast = parseFloat(role.baseContrast) || 4.5;
-                      const _minContrast  = parseFloat(role.minContrast)  || 4.5;
-                      const _contrastGap  = parseFloat(role.contrastGap)  || 1.5;
-                      const _spread       = Math.max(1, parseInt(role.spread) || 1);
-                      const _baseIndex    = role.baseIndex !== undefined ? parseInt(role.baseIndex) : mid;
-                      const maxSteps      = (appState.colorSteps || 25) - 1;
-                      // Compute rule-derived value for display
+                      // Direct: compute live (base contrast ± gap); Tonal: read from stored targets (needs solver)
                       var ruleVal;
                       if (isDirectMode) {
-                        if (bSel === "Manual") {
-                          ruleVal = manualVal !== undefined ? parseFloat(manualVal) : ([1.5, 3.0, 4.5, 7.0, 12.0][vi] || 4.5);
-                        } else {
-                          ruleVal = Math.max(1.01, _baseContrast + (vi - baseVarIdx) * _contrastGap);
-                        }
+                        const _bc = parseFloat(role.baseContrast) || 4.5;
+                        const _cg = parseFloat(role.contrastGap)  || 1.5;
+                        ruleVal = Math.max(1.01, _bc + (vi - baseVarIdx) * _cg);
                       } else {
-                        if (bSel === "Manual") {
-                          ruleVal = manualVal !== undefined ? parseFloat(manualVal) : Math.floor((appState.colorSteps || 25) / 2);
-                        } else if (bSel === "By Index") {
-                          ruleVal = Math.max(0, Math.min(maxSteps, _baseIndex + (vi - baseVarIdx) * (sUnit === "contrast" ? _contrastGap : _spread)));
-                        } else {
-                          ruleVal = Math.max(1.01, _minContrast + (vi - baseVarIdx) * (sUnit === "contrast" ? _contrastGap : _spread));
-                        }
+                        ruleVal = storedTarget !== undefined ? storedTarget : undefined;
                       }
-                      const displayVal = isManualInline
-                        ? (manualVal !== undefined ? manualVal : ruleVal)
+                      const rawVal = isManualInline
+                        ? (storedTarget !== undefined ? storedTarget : ruleVal)
                         : ruleVal;
+                      const displayVal = rawVal !== undefined ? parseFloat(parseFloat(rawVal).toFixed(2)) : "";
                       const tInput = `<input type="number" step="0.1"
                         min="${isDirectMode ? 1 : 0}" max="${isDirectMode ? 21 : (appState.colorSteps || 25) - 1}"
-                        value="${typeof displayVal === "number" ? parseFloat(displayVal.toFixed(2)) : displayVal}"
+                        value="${displayVal}"
                         ${isManualInline ? `oninput="updateRoleVariationTargetInline(${idx},${vi},this.value)"` : "disabled"}
                         class="w-[60px] h-[32px] border rounded-[8px] px-2 text-[12px] outline-none text-[var(--text-primary)]
                           ${isManualInline
@@ -1344,7 +1330,7 @@ function toggleRoleVariationOverride(roleIdx) {
   role.variationOverride = !role.variationOverride;
   if (role.variationOverride) {
     if (!role.roleVariations || role.roleVariations.length === 0) {
-      role.roleVariations = appState.variations.map((v) => ({ ...v, _id: generateId() }));
+      role.roleVariations = appState.variations.map(function(v) { return Object.assign({}, v, { _id: generateId() }); });
     }
   } else {
     role.variationManual = false;
