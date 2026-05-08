@@ -72,17 +72,17 @@
         pluginMode: "ramp",
         baseSelection: "By Contrast",
         roleSteps: 5,
-        roleStepNames: "decorative, subtle, default, emphasized, prominent",
+        variations: null,
         colors: [
-          { name: "Primary", shortName: "pr", value: "0067DD" },
-          { name: "Secondary", shortName: "sc", value: "EFEFF2" },
-          { name: "Gray", shortName: "gr", value: "808080" },
+          { name: "Primary", shortName: "pr", value: "0067DD", description: "" },
+          { name: "Secondary", shortName: "sc", value: "EFEFF2", description: "" },
+          { name: "Gray", shortName: "gr", value: "808080", description: "" },
         ],
         roles: [
-          { name: "Text", shortName: "tx", spread: 2, minContrast: 4.5, baseIndex: 14 },
-          { name: "Fill", shortName: "fi", spread: 1, minContrast: 3.0, baseIndex: 9 },
-          { name: "Background", shortName: "bg", spread: 1, minContrast: 1.2, baseIndex: 4 },
-          { name: "Border", shortName: "br", spread: 1, minContrast: 2.0, baseIndex: 11 },
+          { name: "Text", shortName: "tx", spread: 2, minContrast: 4.5, baseIndex: 14, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+          { name: "Fill", shortName: "fi", spread: 1, minContrast: 3.0, baseIndex: 9, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+          { name: "Background", shortName: "bg", spread: 1, minContrast: 1.2, baseIndex: 4, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+          { name: "Border", shortName: "br", spread: 1, minContrast: 2.0, baseIndex: 11, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
         ],
         themes: [
           { name: "light", bg: "FFFFFF" },
@@ -311,12 +311,9 @@
           while (names.length < count) names.push(String(names.length + 1));
           stepNames = names.slice(0, count);
         }
-        const userVarNames = (state.roleStepNames || "")
-          .split(",")
-          .map((v) => v.trim())
-          .filter(Boolean);
-        const defaultVarNames = ["decorative", "subtle", "default", "emphasized", "prominent"];
-        const roleStepNames = defaultVarNames.map((def, i) => userVarNames[i] || def);
+        const variations = state.variations && state.variations.length > 0
+          ? state.variations
+          : [1,2,3,4,5].map(n => ({ _id: String(n), name: String(n), shortName: String(n), description: "" }));
         const themes = state.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
         return {
           name: state.name || "ctm316",
@@ -328,14 +325,15 @@
             spread: Math.max(1, parseInt(role.spread) || 1),
             baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
             darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
-            variations: role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 },
+            variationTargets: role.variationTargets ||
+              (role.variations ? Object.values(role.variations) : variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5)),
           })),
           colorSteps: count,
           scaleAlgorithm: state.scaleAlgorithm || "Natural",
           pluginMode: state.pluginMode || "ramp",
           roleMapping: state.pluginMode === "direct" ? "Direct Contrast" : (state.baseSelection || "By Contrast"),
           colorStepNames: stepNames,
-          roleStepNames,
+          variations,
           themes: [
             { name: "light", bg: themes[0].bg || "FFFFFF" },
             { name: "dark", bg: themes[1].bg || "000000" },
@@ -485,7 +483,7 @@
       }
 
       function variableMakerUI(config) {
-        const inputHash = JSON.stringify({ colors: config.colors, steps: config.colorSteps, scaleAlgorithm: config.scaleAlgorithm, themes: config.themes, roles: config.roles, roleMapping: config.roleMapping, colorStepNames: config.colorStepNames, roleStepNames: config.roleStepNames });
+        const inputHash = JSON.stringify({ colors: config.colors, steps: config.colorSteps, scaleAlgorithm: config.scaleAlgorithm, themes: config.themes, roles: config.roles, roleMapping: config.roleMapping, colorStepNames: config.colorStepNames, variations: config.variations });
         if (inputHash === _previewLastHash && _previewCache) return _previewCache;
 
         const colors = config.colors;
@@ -531,15 +529,14 @@
             const roleNames = roles.map((_, i) => i);
 
             if (isDirectContrast) {
-              const variationKeys = config.roleStepNames || ["weakest", "weak", "base", "strong", "stronger"];
               for (const roleName of roleNames) {
                 const role = roles[roleName];
                 const conRole = Object.create(null);
                 conGroup[roleName] = conRole;
-                const variationTargets = role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 };
-                for (let vi = 0; vi < variationKeys.length; vi++) {
-                  const variation = variationKeys[vi];
-                  const targetContrast = parseFloat(variationTargets[variation]) || 4.5;
+                const variationTargets = role.variationTargets || config.variations.map(() => 4.5);
+                for (let vi = 0; vi < config.variations.length; vi++) {
+                  const variation = String(vi);
+                  const targetContrast = parseFloat(variationTargets[vi]) || 4.5;
                   const solved = solveColorForContrast(color.value, targetContrast, bgHex, color.solverMode || "natural");
                   if (solved.warning) errors.warnings.push({ color: clrName, role: role.name, variation, theme: modeName, warning: solved.warning });
                   conRole[variation] = {
@@ -563,7 +560,9 @@
                 const cEnd = clrRamps[clrName][stepNames[rampLength - 1]].contrast[modeName].ratio;
                 const cStart = clrRamps[clrName][stepNames[0]].contrast[modeName].ratio;
                 const growthDir = cEnd > cStart ? 1 : -1;
-                const maxOffset = 2 * spread;
+                const varCount = config.variations.length;
+                const baseVarIdx = Math.floor(varCount / 2);
+                const maxOffset = baseVarIdx * spread;
                 const minAllowed = maxOffset;
                 const maxAllowed = rampLength - 1 - maxOffset;
 
@@ -604,11 +603,10 @@
                 }
                 if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
 
-                const offsets = [
-                  { key: "weakest", offset: -2 * spread }, { key: "weak", offset: -spread },
-                  { key: "base", offset: 0 },
-                  { key: "strong", offset: spread }, { key: "stronger", offset: 2 * spread },
-                ];
+                const offsets = config.variations.map((v, i) => ({
+                  key: String(i),
+                  offset: (i - baseVarIdx) * spread,
+                }));
                 for (const { key: variation, offset } of offsets) {
                   let idx = baseIdx + offset * growthDir;
                   let adjusted = false;
@@ -641,6 +639,27 @@
        * These functions convert appState into interactive UI cards.
        * Uses document fragments for performance.
        */
+
+      // Ensures appState.variations exists and all roles have matching variationTargets arrays.
+      function ensureVariations() {
+        if (!appState.variations || appState.variations.length === 0) {
+          appState.variations = [1,2,3,4,5].map(n => ({
+            _id: generateId(),
+            name: String(n),
+            shortName: String(n),
+            description: "",
+          }));
+        }
+        const vLen = appState.variations.length;
+        for (const role of appState.roles) {
+          if (!role.variationTargets || role.variationTargets.length !== vLen) {
+            const oldVals = role.variations ? Object.values(role.variations) : [];
+            role.variationTargets = appState.variations.map((_, i) => oldVals[i] || (1.5 + i * 1.5));
+            delete role.variations;
+          }
+        }
+      }
+
       const renderColorGroups = debounce(() => {
         if (activeSidebarTab !== "color-groups") return;
         withPreservedFocus(() => {
@@ -756,6 +775,10 @@
                     <option value="chroma-maximized" ${(group.solverMode||"natural")==="chroma-maximized"  ? "selected":""}>Max Vibrancy — most saturated color that meets contrast</option>
                   </select>
                 </div>` : ""}
+                <div class="space-y-1">
+                  <label for="${gId}-desc" class="text-[var(--text-muted)] text-[12px] font-medium">Description</label>
+                  <input type="text" id="${gId}-desc" value="${(group.description || "").replace(/"/g, '&quot;')}" oninput="updateGroup(${idx}, 'description', this.value)" placeholder="Color description (optional)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
+                </div>
               `;
             // Prevent accidental drags from interactive children
             card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
@@ -779,7 +802,6 @@
           addButton.onclick = addRole;
           fragment.appendChild(addButton);
 
-          const variations = (appState.roleVariationsNames || "weakest, weak, base, strong, stronger").split(",").map((v) => v.trim());
 
           const trashSvg = `<svg width="14" height="14" viewBox="0 0 12 14" fill="none"><path d="M8.00021 1.98568C8.00021 1.4562 7.5944 1.03371 7.09136 1.01758C6.72911 1.00599 6.36531 1 6.00021 1C5.63511 1 5.27131 1.00599 4.90906 1.01758C4.40602 1.03371 4.00021 1.4562 4.00021 1.98568V2.0612C4.6618 2.02102 5.32864 2 6.00021 2C6.67179 2 7.33862 2.02102 8.00021 2.0612V1.98568ZM6.00021 3C5.17177 3 4.35078 3.03229 3.53862 3.09505C2.92606 3.14239 2.31853 3.20784 1.71636 3.28971L2.39214 12.0768C2.43227 12.5978 2.86704 13 3.38953 13H8.61089C9.13338 13 9.56815 12.5978 9.60828 12.0768L10.2834 3.28971C9.68144 3.20789 9.07415 3.14237 8.4618 3.09505C7.64964 3.03229 6.82865 3 6.00021 3ZM4.15386 4.50065C4.42969 4.49004 4.66196 4.70468 4.67274 4.98047L4.90386 10.9805C4.91447 11.2564 4.69927 11.4887 4.42339 11.4993C4.14756 11.51 3.91529 11.2953 3.90451 11.0195L3.67339 5.01953C3.66278 4.74367 3.87803 4.51138 4.15386 4.50065ZM7.84656 4.50065C8.12239 4.51138 8.33764 4.74367 8.32703 5.01953L8.09591 11.0195C8.08513 11.2953 7.85287 11.51 7.57703 11.4993C7.30115 11.4887 7.08595 11.2564 7.09656 10.9805L7.32768 4.98047C7.33846 4.70468 7.57073 4.49004 7.84656 4.50065ZM9.00021 2.13737C9.63667 2.19563 10.2681 2.27144 10.8934 2.36589C11.125 2.40085 11.3556 2.43869 11.5855 2.47852C11.8575 2.52564 12.04 2.78399 11.993 3.05599C11.9459 3.32806 11.687 3.51064 11.4149 3.46354C11.3684 3.45548 11.3216 3.44861 11.2749 3.44076L10.605 12.1536C10.5247 13.1955 9.65587 14 8.61089 14H3.38953C2.34455 14 1.47568 13.1955 1.39539 12.1536L0.72482 3.44076C0.678419 3.44858 0.631829 3.45552 0.585497 3.46354C0.313427 3.51064 0.0545012 3.32806 0.00737211 3.05599C-0.0396145 2.78399 0.142913 2.52563 0.414924 2.47852C0.644818 2.43869 0.875465 2.40085 1.10698 2.36589C1.73236 2.27144 2.36375 2.19563 3.00021 2.13737V1.98568C3.00021 0.9427 3.80857 0.0524197 4.87716 0.0182292C5.25006 0.00630041 5.62445 0 6.00021 0C6.37597 0 6.75036 0.00630037 7.12326 0.0182292C8.19185 0.0524197 9.00021 0.9427 9.00021 1.98568V2.13737Z" fill="currentColor"/></svg>`;
 
@@ -832,30 +854,28 @@
 
             let secondRowHtml = "";
             if (isDirectMode) {
-              const vars = role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 };
-              const varKeys = ["weakest", "weak", "base", "strong", "stronger"];
-              const vals = varKeys.map((k) => parseFloat(vars[k]) || 0);
+              const varTargets = role.variationTargets || appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5);
               // Cardinality errors for inline display
               const cardErrors = [];
-              for (let vi = 1; vi < varKeys.length; vi++) {
-                if (vals[vi] <= vals[vi - 1]) cardErrors.push(vi);
+              for (let vi = 1; vi < varTargets.length; vi++) {
+                if (varTargets[vi] <= varTargets[vi - 1]) cardErrors.push(vi);
               }
-              const inputRow = varKeys.map((k, vi) => {
+              const inputRow = appState.variations.map((varDef, vi) => {
                 const isErr = cardErrors.includes(vi) || cardErrors.includes(vi + 1);
                 return `
                   <div class="space-y-1">
-                    <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">${k}</label>
+                    <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">${varDef.name}</label>
                     <div class="relative">
-                      <input type="number" step="0.1" min="1" max="21" value="${vars[k] || ""}"
-                        onchange="updateRole(${idx}, 'variation:${k}', parseFloat(this.value))"
+                      <input type="number" step="0.1" min="1" max="21" value="${varTargets[vi] || ""}"
+                        onchange="updateRole(${idx}, 'variationTarget:${vi}', parseFloat(this.value))"
                         class="w-full h-[40px] bg-[var(--bg-input)] border ${isErr ? "border-[var(--danger)]" : "border-[var(--border)]"} rounded-[8px] p-2 pr-6 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                       <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-dim)] pointer-events-none">:1</span>
                     </div>
                   </div>`;
               }).join("");
               secondRowHtml = `
-                <div class="grid grid-cols-5 gap-1.5">${inputRow}</div>
-                ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase: weakest → weak → base → strong → stronger.</p>` : ""}`;
+                <div class="grid gap-1.5" style="grid-template-columns: repeat(${appState.variations.length}, 1fr)">${inputRow}</div>
+                ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase across all variations.</p>` : ""}`;
             } else if (mappingMethod === "By Contrast") {
               secondRowHtml = `
                 <div class="grid grid-cols-2 gap-2">
@@ -897,6 +917,7 @@
                 </div>
                 <div class="flex-1 space-y-1">
                   <label for="role-${idx}-name" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Role Name</label>
+
                   <input type="text" id="role-${idx}-name" value="${role.name || ""}" oninput="updateRole(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                 </div>
                 <div class="w-[72px] space-y-1">
@@ -905,9 +926,61 @@
                 </div>
                 <button onclick="removeRole(${idx})" class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 size-[40px] shrink-0 flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20">${trashSvg}</button>
               </div>
+              <div class="space-y-1">
+                <label for="role-${idx}-desc" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Description</label>
+                <input type="text" id="role-${idx}-desc" value="${(role.description || "").replace(/"/g, '&quot;')}" oninput="updateRole(${idx}, 'description', this.value)" placeholder="Role description (optional)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+              </div>
               ${secondRowHtml}`;
             // Prevent accidental drags from interactive children
             card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
+            fragment.appendChild(card);
+          });
+
+          container.innerHTML = "";
+          container.appendChild(fragment);
+        });
+      }, 50);
+
+      const renderVariations = debounce(() => {
+        if (activeSidebarTab !== "variations") return;
+        withPreservedFocus(() => {
+          const container = document.getElementById("sidebar-content-container");
+          const fragment = document.createDocumentFragment();
+
+          const addButton = document.createElement("button");
+          addButton.className = "w-full h-10 px-4 mb-2 bg-transparent text-[var(--accent)] border-2 border-dashed border-[var(--accent)] rounded-[8px] text-[13px] font-semibold cursor-pointer transition-colors duration-150 hover:bg-[var(--accent)]/10 flex items-center justify-center gap-2";
+          addButton.innerHTML = `<span>+ Add Variation</span>`;
+          addButton.onclick = addVariation;
+          fragment.appendChild(addButton);
+
+          const trashSvg = `<svg width="14" height="14" viewBox="0 0 12 14" fill="none"><path d="M8.00021 1.98568C8.00021 1.4562 7.5944 1.03371 7.09136 1.01758C6.72911 1.00599 6.36531 1 6.00021 1C5.63511 1 5.27131 1.00599 4.90906 1.01758C4.40602 1.03371 4.00021 1.4562 4.00021 1.98568V2.0612C4.6618 2.02102 5.32864 2 6.00021 2C6.67179 2 7.33862 2.02102 8.00021 2.0612V1.98568ZM6.00021 3C5.17177 3 4.35078 3.03229 3.53862 3.09505C2.92606 3.14239 2.31853 3.20784 1.71636 3.28971L2.39214 12.0768C2.43227 12.5978 2.86704 13 3.38953 13H8.61089C9.13338 13 9.56815 12.5978 9.60828 12.0768L10.2834 3.28971C9.68144 3.20789 9.07415 3.14237 8.4618 3.09505C7.64964 3.03229 6.82865 3 6.00021 3ZM4.15386 4.50065C4.42969 4.49004 4.66196 4.70468 4.67274 4.98047L4.90386 10.9805C4.91447 11.2564 4.69927 11.4887 4.42339 11.4993C4.14756 11.51 3.91529 11.2953 3.90451 11.0195L3.67339 5.01953C3.66278 4.74367 3.87803 4.51138 4.15386 4.50065ZM7.84656 4.50065C8.12239 4.51138 8.33764 4.74367 8.32703 5.01953L8.09591 11.0195C8.08513 11.2953 7.85287 11.51 7.57703 11.4993C7.30115 11.4887 7.08595 11.2564 7.09656 10.9805L7.32768 4.98047C7.33846 4.70468 7.57073 4.49004 7.84656 4.50065Z" fill="currentColor"/></svg>`;
+
+          appState.variations.forEach((varDef, idx) => {
+            const card = document.createElement("div");
+            card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2";
+            const canDelete = appState.variations.length > 1;
+            card.innerHTML = `
+              <div class="flex items-end gap-2">
+                <div class="flex flex-col gap-0.5 self-center flex-shrink-0">
+                  <button onclick="moveVariation(${idx}, -1)" ${idx === 0 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move up">▲</button>
+                  <span class="text-[var(--text-muted)] select-none text-[14px] leading-none text-center">⠿</span>
+                  <button onclick="moveVariation(${idx}, 1)" ${idx === appState.variations.length - 1 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move down">▼</button>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Name</label>
+                  <input type="text" value="${(varDef.name || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                </div>
+                <div class="w-[80px] space-y-1">
+                  <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Short</label>
+                  <input type="text" value="${(varDef.shortName || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'shortName', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                </div>
+                <button onclick="removeVariation(${idx})" ${!canDelete ? "disabled" : ""} class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 size-[40px] shrink-0 flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed">${trashSvg}</button>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Description</label>
+                <input type="text" value="${(varDef.description || "").replace(/"/g, '&quot;')}" oninput="updateVariation(${idx}, 'description', this.value)" placeholder="Variation description (optional)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+              </div>`;
+            card.querySelectorAll("input, button, label").forEach((el) => el.setAttribute("draggable", "false"));
             fragment.appendChild(card);
           });
 
@@ -988,14 +1061,14 @@
       }
 
       function updateRole(idx, key, value) {
-        if (key.startsWith("variation:")) {
-          const varKey = key.slice("variation:".length);
-          if (!appState.roles[idx].variations) {
-            appState.roles[idx].variations = { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 };
+        if (key.startsWith("variationTarget:")) {
+          const vi = parseInt(key.slice("variationTarget:".length));
+          if (!appState.roles[idx].variationTargets) {
+            appState.roles[idx].variationTargets = appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5);
           }
           let v = parseFloat(value);
           if (isNaN(v) || v < 1) v = 1;
-          appState.roles[idx].variations[varKey] = Math.min(21, v);
+          appState.roles[idx].variationTargets[vi] = Math.min(21, v);
         } else if (key === "minContrast") {
           let v = parseFloat(value);
           if (isNaN(v)) v = 1;
@@ -1030,8 +1103,40 @@
       function addRole() {
         const n = appState.roles.length + 1;
         const mid = Math.floor(appState.colorSteps / 2);
-        appState.roles.unshift({ _id: generateId(), name: "Role " + n, shortName: `r-${n}`, spread: 2, minContrast: 4.5, baseIndex: mid, darkBaseIndex: mid, variations: { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 } });
+        appState.roles.unshift({ _id: generateId(), name: "Role " + n, shortName: `r-${n}`, spread: 2, minContrast: 4.5, baseIndex: mid, darkBaseIndex: mid, variationTargets: appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5), description: "" });
         renderRoles();
+      }
+
+      function addVariation() {
+        const n = appState.variations.length + 1;
+        appState.variations.push({ _id: generateId(), name: String(n), shortName: String(n), description: "" });
+        ensureVariations();
+        renderVariations();
+        renderRoles();
+      }
+
+      function removeVariation(idx) {
+        if (appState.variations.length <= 1) return;
+        appState.variations.splice(idx, 1);
+        ensureVariations();
+        renderVariations();
+        renderRoles();
+      }
+
+      function moveVariation(idx, dir) {
+        const target = idx + dir;
+        if (target < 0 || target >= appState.variations.length) return;
+        const [item] = appState.variations.splice(idx, 1);
+        appState.variations.splice(target, 0, item);
+        ensureVariations();
+        renderVariations();
+        renderRoles();
+      }
+
+      function updateVariation(idx, field, value) {
+        appState.variations[idx][field] = value;
+        if (field === "name" || field === "shortName") renderRoles();
+        renderVariations();
       }
 
       function toggleBoolSetting(key) {
@@ -1096,7 +1201,7 @@
         if (sampleColor && sampleRole) {
           const cLabel = appState.useShortColorNames ? sampleColor.shortName || sampleColor.name : sampleColor.name;
           const rLabel = appState.useShortRoleNames ? sampleRole.shortName || sampleRole.name : sampleRole.name;
-          const stepLabel = (appState.roleStepNames || "base").split(",")[2]?.trim() || "base";
+          const stepLabel = (appState.variations && appState.variations[2]) ? (appState.variations[2].shortName || appState.variations[2].name) : "3";
           const preview = tg === "role" ? `${rLabel}/${cLabel}/${stepLabel}` : `${cLabel}/${rLabel}/${stepLabel}`;
           const el = document.getElementById("name-format-preview");
           if (el) el.textContent = preview;
@@ -1139,9 +1244,7 @@
         appState.colorStepNames = document.getElementById("setting-colorStepNames").value;
 
         // Role Settings
-        appState.roleSteps = 5; // fixed at 5 — variations count is not configurable
         appState.baseSelection = document.getElementById("setting-baseSelection").value;
-        appState.roleStepNames = document.getElementById("setting-roleStepNames").value;
 
         // Constants
         appState.globalColorsCollectionName = document.getElementById("setting-globalColorsCollectionName").value.trim() || "_constants";
@@ -1172,9 +1275,8 @@
         document.getElementById("setting-scaleAlgorithm").value = appState.scaleAlgorithm || "Natural";
         document.getElementById("setting-colorStepNames").value = appState.colorStepNames || "";
 
-        // Role Settings (roleSteps is fixed at 5, no DOM sync needed)
+        // Role Settings
         document.getElementById("setting-baseSelection").value = appState.baseSelection || "By Contrast";
-        document.getElementById("setting-roleStepNames").value = appState.roleStepNames;
 
         // Constants
         document.getElementById("setting-globalColorsCollectionName").value = appState.globalColorsCollectionName || "_constants";
@@ -1276,15 +1378,13 @@
           }
         }
 
-        // Theme tabs helper
-        const REF_VAR_KEYS = ["weakest", "weak", "base", "strong", "stronger"];
-        const varDisplayNames = (appState.roleStepNames || "")
-          .split(",")
-          .map((v) => v.trim())
-          .filter(Boolean);
-        const varLabel = (refKey) => {
-          const i = REF_VAR_KEYS.indexOf(refKey);
-          return i >= 0 && varDisplayNames[i] ? varDisplayNames[i] : refKey;
+        // Theme tabs helper — varKey is now a numeric string index "0","1",…
+        const varLabel = (varKey) => {
+          const i = parseInt(varKey);
+          if (!isNaN(i) && appState.variations && appState.variations[i]) {
+            return appState.variations[i].shortName || appState.variations[i].name;
+          }
+          return varKey;
         };
 
         function renderThemePanel(panelId, themeTokens, bgHex) {
@@ -1504,10 +1604,12 @@
           sidebarTabs.forEach((b) => b.classList.toggle("active", b.dataset.tab === activeSidebarTab));
           if (activeSidebarTab === "color-groups") renderColorGroups();
           else if (activeSidebarTab === "roles-config") renderRoles();
+          else if (activeSidebarTab === "variations") renderVariations();
         };
       });
 
       // Initial Render
+      ensureVariations();
       renderColorGroups();
 
       // Export filename helper — systemName_type_YYYY-MM-DD_HH-MM.ext
@@ -1609,10 +1711,10 @@
         appState = Object.assign({}, JSON.parse(JSON.stringify(demoConfig)), json);
         // Normalize fields that web app exports as arrays but plugin expects as comma-strings
         if (Array.isArray(appState.colorStepNames)) appState.colorStepNames = appState.colorStepNames.join(", ");
-        if (Array.isArray(appState.roleStepNames)) appState.roleStepNames = appState.roleStepNames.join(", ");
         // Normalize theme names to lowercase so variableMaker keys always match
         if (Array.isArray(appState.themes)) appState.themes = appState.themes.map((t) => Object.assign({}, t, { name: t.name.toLowerCase() }));
         ensureIds(appState); // migrate imported configs that predate the _id field
+        ensureVariations();
         savedState = null;   // an import is a full replace — no snapshot to diff against
         renderColorGroups();
         renderRoles();
@@ -1662,6 +1764,7 @@
         if (confirm("Are you sure you want to clear all data? This will reset the system to defaults.")) {
           appState = JSON.parse(JSON.stringify(demoConfig));
           ensureIds(appState); // fresh IDs so a subsequent sync doesn't wrongly rename
+          ensureVariations();
           savedState = null;   // no snapshot to diff against after a full reset
           renderColorGroups();
           renderRoles();
@@ -1741,7 +1844,7 @@
         const sampleRole = appState.roles[0] || { name: "Text", shortName: "tx" };
         const cLabel = shortC ? sampleColor.shortName || sampleColor.name : sampleColor.name;
         const rLabel = shortR ? sampleRole.shortName || sampleRole.name : sampleRole.name;
-        const stepLabel = (appState.roleStepNames || "weakest, weak, base").split(",")[2]?.trim() || "base";
+        const stepLabel = (appState.variations && appState.variations[2]) ? (appState.variations[2].shortName || appState.variations[2].name) : "3";
         const exName = tg === "role" ? `${rLabel}/${cLabel}/${stepLabel}` : `${cLabel}/${rLabel}/${stepLabel}`;
         const previewEl = document.getElementById("rd-name-preview");
         if (previewEl) previewEl.textContent = exName;
@@ -1842,6 +1945,7 @@
           savedState = JSON.parse(JSON.stringify(msg.state)); // deep-freeze for rename detection
           appState = Object.assign({}, JSON.parse(JSON.stringify(demoConfig)), msg.state);
           ensureIds(appState);
+          ensureVariations();
           renderColorGroups();
           renderRoles();
           syncInputsFromState();

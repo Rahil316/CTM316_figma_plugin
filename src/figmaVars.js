@@ -69,7 +69,6 @@ const VariableManager = {
       }
     }
 
-    const roleStepNames = config.roleStepNames || REF_VARIATION_KEYS;
 
     // Fetch ramps collection once — used by both stages when applicable.
     // scope="roles" skips Stage 1 but Stage 2 still needs rampsCol to resolve variable aliases
@@ -116,10 +115,10 @@ const VariableManager = {
             const rName = (config.roles[roleId] && config.roles[roleId].name) || roleId;
             const cLabel = colorLabel(colorName);
             const rLabel = roleLabel(rName, parseInt(roleId));
-            const vars = REF_VARIATION_KEYS.map((refKey, i) => {
-              const token = variations[refKey];
+            const vars = config.variations.map((varDef, i) => {
+              const token = variations[String(i)];
               if (!token) return null;
-              const dispName = roleStepNames[i] || refKey;
+              const dispName = varDef.shortName || varDef.name;
               const figmaName = variableStructure === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
               let value;
               if (skipRamps) {

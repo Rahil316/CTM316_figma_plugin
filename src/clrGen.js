@@ -148,7 +148,7 @@ function variableMaker(config) {
     roles: config.roles,
     roleMapping: config.roleMapping,
     colorStepNames: config.colorStepNames,
-    roleStepNames: config.roleStepNames,
+    variations: config.variations,
   });
 
   if (inputHash === lastInputHash && cachedOutput) {
@@ -267,7 +267,9 @@ function variableMaker(config) {
             }
           }
 
-          const maxOffset = 2 * spread;
+          const varCount = config.variations.length;
+          const baseVarIdx = Math.floor(varCount / 2);
+          const maxOffset = baseVarIdx * spread;
           const minAllowed = maxOffset;
           const maxAllowed = rampLength - 1 - maxOffset;
           let adjustedBase = false;
@@ -281,13 +283,10 @@ function variableMaker(config) {
           }
           if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
 
-          const offsetValues = [
-            { key: "weakest", offset: -2 * spread },
-            { key: "weak", offset: -spread },
-            { key: "base", offset: 0 },
-            { key: "strong", offset: spread },
-            { key: "stronger", offset: 2 * spread },
-          ];
+          const offsetValues = config.variations.map((v, i) => ({
+            key: String(i),
+            offset: (i - baseVarIdx) * spread,
+          }));
 
           for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
             const { key: variation, offset: pureOffset } = offsetValues[vIdx];
@@ -346,7 +345,9 @@ function variableMaker(config) {
           const baseIndexSource = isDark && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
           let baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
 
-          const maxOffset = 2 * spread;
+          const varCount = config.variations.length;
+          const baseVarIdx = Math.floor(varCount / 2);
+          const maxOffset = baseVarIdx * spread;
           const minAllowed = maxOffset;
           const maxAllowed = rampLength - 1 - maxOffset;
           let adjustedBase = false;
@@ -366,13 +367,10 @@ function variableMaker(config) {
             });
           }
 
-          const offsetValues = [
-            { key: "weakest", offset: -2 * spread },
-            { key: "weak", offset: -spread },
-            { key: "base", offset: 0 },
-            { key: "strong", offset: spread },
-            { key: "stronger", offset: 2 * spread },
-          ];
+          const offsetValues = config.variations.map((v, i) => ({
+            key: String(i),
+            offset: (i - baseVarIdx) * spread,
+          }));
 
           for (let vIdx = 0; vIdx < offsetValues.length; vIdx++) {
             const { key: variation, offset: pureOffset } = offsetValues[vIdx];
@@ -423,20 +421,20 @@ function variableMaker(config) {
 
           const bgHex = mode.bg;
           const solverMode = color.solverMode || "natural";
-          const variationKeys = config.roleStepNames || ["weakest", "weak", "base", "strong", "stronger"];
-          const variationTargets = role.variations || {};
+          const variationTargets = role.variationTargets || config.variations.map(() => 4.5);
 
-          // Pre-validate cardinality; push errors but still solve (best effort).
+          // Pre-validate cardinality; skip solving if invalid.
           const cardinalityCheck = validateVariationContrasts(variationTargets);
           if (!cardinalityCheck.valid) {
-            for (const msg of cardinalityCheck.errors) {
-              errors.warnings.push({ color: clrName, role: role.name, theme: modeName, warning: `Cardinality: ${msg}` });
+            for (const err of cardinalityCheck.errors) {
+              errors.critical.push({ color: clrName, role: role.name, theme: modeName, error: err });
             }
+            continue;
           }
 
-          for (let vi = 0; vi < variationKeys.length; vi++) {
-            const variation = variationKeys[vi];
-            const targetContrast = parseFloat(variationTargets[variation]) || 4.5;
+          for (let vi = 0; vi < config.variations.length; vi++) {
+            const variation = String(vi);
+            const targetContrast = parseFloat(variationTargets[vi]) || 4.5;
 
             const solved = solveColorForContrast(color.value, targetContrast, bgHex, solverMode);
 

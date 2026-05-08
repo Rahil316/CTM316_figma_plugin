@@ -14,16 +14,11 @@ function translateConfig(appState) {
     stepNames = names.slice(0, count);
   }
 
-  // Role variation display names — roleStepNames can be a comma-string (plugin) or array (web app export)
-  const roleStepRaw = Array.isArray(appState.roleStepNames)
-    ? appState.roleStepNames.join(",")
-    : appState.roleStepNames || "";
-  const userVarNames = roleStepRaw
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
-  const defaultVarNames = ["decorative", "subtle", "default", "emphasized", "prominent"];
-  const roleStepNames = defaultVarNames.map((def, i) => userVarNames[i] || def);
+  // Variation definitions — derived from appState.variations (new) or fallback defaults
+  const variations = appState.variations && appState.variations.length > 0
+    ? appState.variations
+    : [1,2,3,4,5].map(n => ({ _id: String(n), name: String(n), shortName: String(n), description: "" }));
+  const roleStepNames = variations.map(v => v.shortName || v.name);
 
   // themes array → light/dark backgrounds
   const themes = appState.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
@@ -35,6 +30,7 @@ function translateConfig(appState) {
       shortName: g.shortName,
       value: g.value,
       solverMode: g.solverMode || "natural",
+      description: g.description || "",
     })),
     roles: (appState.roles || []).map((role) => ({
       name: role.name,
@@ -46,7 +42,9 @@ function translateConfig(appState) {
       baseContrast:   parseFloat(role.baseContrast) || 4.5,
       contrastGap:    parseFloat(role.contrastGap)  || 1.5,
       useContrastGap: !!role.useContrastGap,
-      variations: role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 },
+      variationTargets: role.variationTargets ||
+        (role.variations ? Object.values(role.variations) : variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5)),
+      description: role.description || "",
     })),
     colorSteps: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",
@@ -54,6 +52,7 @@ function translateConfig(appState) {
     roleMapping: appState.pluginMode === "direct" ? "Direct Contrast" : (appState.baseSelection || "By Contrast"),
     colorStepNames: stepNames,
     roleStepNames,
+    variations,
     themes: [
       { name: "light", bg: themes[0].bg || "FFFFFF" },
       { name: "dark", bg: themes[1].bg || "000000" },
@@ -89,11 +88,8 @@ function buildVariableRenameMap(savedAppState, newAppState) {
   const oldCfg = translateConfig(savedAppState);
   const newCfg = translateConfig(newAppState);
 
-  const REF_VAR_KEYS = ["weakest", "weak", "base", "strong", "stronger"];
   const oldStepNames = oldCfg.colorStepNames || seriesMaker(oldCfg.colorSteps);
   const newStepNames = newCfg.colorStepNames || seriesMaker(newCfg.colorSteps);
-  const oldRoleSteps = oldCfg.roleStepNames || REF_VAR_KEYS;
-  const newRoleSteps = newCfg.roleStepNames || REF_VAR_KEYS;
   const stepCount = Math.min(oldCfg.colorSteps, newCfg.colorSteps);
   const oldTG = oldCfg.variableStructure || "color";
   const newTG = newCfg.variableStructure || "color";
@@ -149,11 +145,17 @@ function buildVariableRenameMap(savedAppState, newAppState) {
   }
 
   // Contextual token renames: every matched color × every matched role × every variation step
+  const varCount = Math.min(
+    (oldCfg.variations || []).length,
+    (newCfg.variations || []).length
+  );
+  const oldRoleSteps = (oldCfg.variations || []).map((v, i) => (v && (v.shortName || v.name)) || String(i));
+  const newRoleSteps = (newCfg.variations || []).map((v, i) => (v && (v.shortName || v.name)) || String(i));
   for (const { ocl, ncl } of colorPairs) {
     for (const { orl, nrl } of rolePairs) {
-      for (let vi = 0; vi < 5; vi++) {
-        const oldStep = oldRoleSteps[vi] || REF_VAR_KEYS[vi];
-        const newStep = newRoleSteps[vi] || REF_VAR_KEYS[vi];
+      for (let vi = 0; vi < varCount; vi++) {
+        const oldStep = oldRoleSteps[vi] || String(vi);
+        const newStep = newRoleSteps[vi] || String(vi);
         const oldName = oldTG === "role" ? `${orl}/${ocl}/${oldStep}` : `${ocl}/${orl}/${oldStep}`;
         const newName = newTG === "role" ? `${nrl}/${ncl}/${newStep}` : `${ncl}/${nrl}/${newStep}`;
         if (oldName !== newName) contextualRenames[oldName] = newName;
@@ -174,9 +176,6 @@ function buildVariableRenameMap(savedAppState, newAppState) {
   if (oldStepSample !== newStepSample) {
     changes.push({ type: "stepNames", from: oldStepSample + (stepCount > 3 ? "…" : ""), to: newStepSample + (stepCount > 3 ? "…" : "") });
   }
-  const oldRSample = oldRoleSteps.join(",");
-  const newRSample = newRoleSteps.join(",");
-  if (oldRSample !== newRSample) changes.push({ type: "roleStepNames", from: oldRSample, to: newRSample });
   if (oldTG !== newTG) changes.push({ type: "grouping", from: oldTG, to: newTG });
 
   return {

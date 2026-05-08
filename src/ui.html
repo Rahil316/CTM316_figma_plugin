@@ -413,6 +413,7 @@
         <div class="flex gap-1">
           <button class="sidebar-tab-btn active" data-tab="color-groups">Palettes</button>
           <button class="sidebar-tab-btn" data-tab="roles-config">Color Roles</button>
+          <button class="sidebar-tab-btn" data-tab="variations">Variations</button>
         </div>
         <button id="btn-settings" title="Settings" class="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -544,23 +545,14 @@
           <!-- Role Settings Section -->
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Role Settings</h3>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variation Levels</label>
-                <div class="w-full h-[40px] bg-[var(--bg-input)]/40 border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-muted)] flex items-center">5 (fixed)</div>
-              </div>
-              <div class="space-y-1">
-                <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
-                <select id="setting-baseSelection" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
-                  <option value="By Contrast">By Contrast</option>
-                  <option value="By Index">By Index</option>
-                </select>
-              </div>
-            </div>
             <div class="space-y-1">
-              <label for="setting-roleStepNames" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variation Labels (CSV)</label>
-              <input type="text" id="setting-roleStepNames" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+              <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
+              <select id="setting-baseSelection" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+                <option value="By Contrast">By Contrast</option>
+                <option value="By Index">By Index</option>
+              </select>
             </div>
+            <p class="text-[11px] text-[var(--text-muted)] px-1">Variation count and labels are managed in the <strong>Variations</strong> sidebar tab.</p>
           </div>
 
           <!-- Output Options Section -->

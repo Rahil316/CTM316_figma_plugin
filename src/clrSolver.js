@@ -250,25 +250,14 @@ function solveColorForContrast(sourceHex, targetContrast, bgHex, solverMode) {
 
 // ---------------------------------------------------------------------------
 // Validate variation cardinality for a Direct Contrast role.
-// Enforces: weakest < weak < base < strong < stronger (all strictly ascending).
+// Accepts a plain array of numbers [1.5, 3.0, 4.5, 7.0, 12.0] — must be strictly ascending.
 // Returns { valid: bool, errors: string[] }
-function validateVariationContrasts(variations) {
-  const keys = ["weakest", "weak", "base", "strong", "stronger"];
-  const vals = keys.map((k) => parseFloat(variations[k]) || 0);
+function validateVariationContrasts(targets) {
   const errors = [];
-
-  for (let i = 1; i < keys.length; i++) {
-    if (vals[i] <= vals[i - 1]) {
-      errors.push(`"${keys[i]}" (${vals[i]}) must be greater than "${keys[i - 1]}" (${vals[i - 1]}).`);
+  for (let i = 1; i < targets.length; i++) {
+    if (targets[i] <= targets[i - 1]) {
+      errors.push(`Variation ${i + 1} (${targets[i]}) must be greater than variation ${i} (${targets[i - 1]}).`);
     }
   }
-
-  // Each value must be >= 1.0 (minimum possible WCAG contrast is 1:1)
-  for (let i = 0; i < keys.length; i++) {
-    if (vals[i] < 1.0) {
-      errors.push(`"${keys[i]}" contrast must be ≥ 1.0.`);
-    }
-  }
-
   return { valid: errors.length === 0, errors };
 }
