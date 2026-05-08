@@ -652,20 +652,12 @@
       // Ensures appState.variations exists and all roles have matching variationTargets arrays.
       function ensureVariations() {
         if (!appState.variations || appState.variations.length === 0) {
-          appState.variations = [1,2,3,4,5].map((n, i) => ({
+          appState.variations = [1,2,3,4,5].map((n) => ({
             _id: generateId(),
             name: String(n),
             shortName: String(n),
-            description: "",
-            defaultContrastTarget: [1.5, 3.0, 4.5, 7.0, 12.0][i],
           }));
         }
-        const count = appState.variations.length;
-        appState.variations.forEach((v, i) => {
-          if (v.defaultContrastTarget === undefined) {
-            v.defaultContrastTarget = [1.5, 3.0, 4.5, 7.0, 12.0][i] || (1.5 + i * ((12.0 - 1.5) / Math.max(1, count - 1)));
-          }
-        });
         for (const role of appState.roles) {
           const roleVars = (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
             ? role.roleVariations
@@ -673,7 +665,7 @@
           const vLen = roleVars.length;
           if (!role.variationTargets || role.variationTargets.length !== vLen) {
             const oldVals = role.variations ? Object.values(role.variations) : (Array.isArray(role.variationTargets) ? role.variationTargets : []);
-            role.variationTargets = roleVars.map((v, i) => oldVals[i] || (appState.pluginMode === "direct" ? (v.defaultContrastTarget || 4.5) : Math.floor(((appState.colorSteps || 25) / Math.max(1, vLen - 1)) * i)));
+            role.variationTargets = roleVars.map((_, i) => oldVals[i] || (appState.pluginMode === "direct" ? ([1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5) : Math.floor(((appState.colorSteps || 25) / Math.max(1, vLen - 1)) * i)));
             delete role.variations;
           }
         }
@@ -894,7 +886,7 @@
                 <p class="text-[10px] text-[var(--text-muted)] px-1">Targets: ${previewTargets.join(" · ")}</p>`;
             } else if (isDirectMode && bSel === "Manual") {
               // Direct + Manual: N contrast target inputs
-              const varTargets = role.variationTargets || appState.variations.map((v, i) => v.defaultContrastTarget || ([1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5));
+              const varTargets = role.variationTargets || appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5);
               const cardErrors = [];
               for (let vi = 1; vi < varTargets.length; vi++) {
                 if (varTargets[vi] <= varTargets[vi - 1]) cardErrors.push(vi);
@@ -999,13 +991,8 @@
             const overrideSection = `
               <div class="border-t border-[var(--border)] mt-2 pt-2">
                 <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-[var(--text-muted)]">Custom Variations</span>
-                  <button onclick="toggleRoleVariationOverride(${idx})"
-                    class="text-[11px] px-2 py-0.5 rounded-[6px] border transition-all ${role.variationOverride
-                      ? 'bg-[var(--accent)]/15 text-[var(--accent)] border-[var(--accent)]/30 hover:bg-[var(--accent)]/25'
-                      : 'bg-[var(--bg-input)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text-primary)]'}">
-                    ${role.variationOverride ? "✓ Override active" : "Override"}
-                  </button>
+                  <span class="text-[12px] font-medium text-[var(--text-primary)]">Custom Variations</span>
+                  <button onclick="toggleRoleVariationOverride(${idx})" class="toggle-pill ${role.variationOverride ? 'active' : ''}"></button>
                 </div>
                 ${role.variationOverride ? `
                 <div class="mt-2 space-y-1.5">
@@ -1042,7 +1029,6 @@
                   <label for="role-${idx}-name" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Role Name</label>
                   <div class="flex items-center gap-1">
                     <input type="text" id="role-${idx}-name" value="${role.name || ""}" oninput="updateRole(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                    ${role.variationOverride ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] whitespace-nowrap">custom</span>` : ""}
                   </div>
                 </div>
                 <div class="w-[72px] space-y-1">
@@ -1189,7 +1175,6 @@
       function renderSettingsVariations() {
         const container = document.getElementById("settings-variations-list");
         if (!container) return;
-        const isDirect = appState.pluginMode === "direct";
         const vars = appState.variations || [];
         const canDelete = vars.length > 1;
         container.innerHTML = vars.map((v, idx) => `
@@ -1204,10 +1189,6 @@
             <input type="text" value="${(v.shortName||"").replace(/"/g,'&quot;')}" placeholder="Short"
               oninput="updateSharedVariation(${idx},'shortName',this.value)"
               class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-            ${isDirect ? `<input type="number" step="0.1" min="1" max="21" value="${v.defaultContrastTarget||4.5}"
-              oninput="updateSharedVariation(${idx},'defaultContrastTarget',parseFloat(this.value)||4.5)"
-              class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]"
-              title="Default contrast target">` : ""}
             <button onclick="removeSharedVariation(${idx})" ${!canDelete?"disabled":""} class="w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]">✕</button>
           </div>
         `).join("");
@@ -1216,7 +1197,7 @@
       function addSharedVariation() {
         ensureVariations();
         const n = appState.variations.length + 1;
-        appState.variations.push({ _id: generateId(), name: String(n), shortName: String(n), description: "", defaultContrastTarget: 4.5 });
+        appState.variations.push({ _id: generateId(), name: String(n), shortName: String(n) });
         ensureVariations();
         renderSettingsVariations();
         renderRoles();
@@ -1246,11 +1227,8 @@
       function updateSharedVariation(idx, field, value) {
         if (!appState.variations[idx]) return;
         appState.variations[idx][field] = value;
-        if (field === "name" || field === "shortName") {
-          renderRoles();
-          schedulePreview();
-        }
-        if (field === "defaultContrastTarget") schedulePreview();
+        renderRoles();
+        schedulePreview();
       }
 
       // --- PER-ROLE VARIATION OVERRIDE HELPERS ---
@@ -1274,7 +1252,7 @@
         const role = appState.roles[roleIdx];
         if (!role.roleVariations) role.roleVariations = [];
         const n = role.roleVariations.length + 1;
-        role.roleVariations.push({ _id: generateId(), name: String(n), shortName: String(n), description: "", defaultContrastTarget: 4.5 });
+        role.roleVariations.push({ _id: generateId(), name: String(n), shortName: String(n) });
         ensureVariations();
         renderRoles();
         schedulePreview();
@@ -1425,8 +1403,9 @@
 
       function updateRoleVariationTarget(roleIdx, varIdx, value) {
         if (!appState.roles[roleIdx].variationTargets) {
-          appState.roles[roleIdx].variationTargets = appState.variations.map((v, i) =>
-            appState.pluginMode === "direct" ? (v.defaultContrastTarget || 4.5) : Math.floor((appState.colorSteps || 25) / 2)
+          const vLen = getRoleVariations(appState.roles[roleIdx]).length;
+          appState.roles[roleIdx].variationTargets = Array.from({ length: vLen }, (_, i) =>
+            appState.pluginMode === "direct" ? ([1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5) : Math.floor((appState.colorSteps || 25) / 2)
           );
         }
         appState.roles[roleIdx].variationTargets[varIdx] = parseFloat(value) || 0;
@@ -1434,7 +1413,8 @@
       }
 
       function resetRoleToVariationDefaults(roleIdx) {
-        appState.roles[roleIdx].variationTargets = appState.variations.map(v => v.defaultContrastTarget || 4.5);
+        const vLen = getRoleVariations(appState.roles[roleIdx]).length;
+        appState.roles[roleIdx].variationTargets = Array.from({ length: vLen }, (_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || (1.5 + i * 1.5));
         renderRoles();
         schedulePreview();
       }

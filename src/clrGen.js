@@ -218,7 +218,7 @@ function variableMaker(config) {
 
             const bgHex = mode.bg;
             const solverMode = color.solverMode || "natural";
-            const variationTargets = role.variationTargets || roleVariations.map((v, i) => v.defaultContrastTarget || (1.5 + i * 1.5));
+            const variationTargets = role.variationTargets || roleVariations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || (1.5 + i * 1.5));
 
             // Pre-validate cardinality; skip solving if invalid.
             const cardinalityCheck = validateVariationContrasts(variationTargets);
