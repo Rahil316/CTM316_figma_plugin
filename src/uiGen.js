@@ -1044,21 +1044,28 @@ const renderRoles = debounce(() => {
                       const varCount = roleVars.length;
                       const baseVarIdx = Math.floor(varCount / 2);
                       const manualVal = (role.variationTargets || [])[vi];
+                      // Parse all numeric fields — inputs store strings after user edits
+                      const _baseContrast = parseFloat(role.baseContrast) || 4.5;
+                      const _minContrast  = parseFloat(role.minContrast)  || 4.5;
+                      const _contrastGap  = parseFloat(role.contrastGap)  || 1.5;
+                      const _spread       = Math.max(1, parseInt(role.spread) || 1);
+                      const _baseIndex    = role.baseIndex !== undefined ? parseInt(role.baseIndex) : mid;
+                      const maxSteps      = (appState.colorSteps || 25) - 1;
                       // Compute rule-derived value for display
                       var ruleVal;
                       if (isDirectMode) {
                         if (bSel === "Manual") {
-                          ruleVal = manualVal !== undefined ? manualVal : ([1.5, 3.0, 4.5, 7.0, 12.0][vi] || 4.5);
+                          ruleVal = manualVal !== undefined ? parseFloat(manualVal) : ([1.5, 3.0, 4.5, 7.0, 12.0][vi] || 4.5);
                         } else {
-                          ruleVal = Math.max(1.01, (role.baseContrast || 4.5) + (vi - baseVarIdx) * (role.contrastGap || 1.5));
+                          ruleVal = Math.max(1.01, _baseContrast + (vi - baseVarIdx) * _contrastGap);
                         }
                       } else {
                         if (bSel === "Manual") {
-                          ruleVal = manualVal !== undefined ? manualVal : Math.floor((appState.colorSteps || 25) / 2);
+                          ruleVal = manualVal !== undefined ? parseFloat(manualVal) : Math.floor((appState.colorSteps || 25) / 2);
                         } else if (bSel === "By Index") {
-                          ruleVal = (role.baseIndex !== undefined ? role.baseIndex : mid) + (vi - baseVarIdx) * (sUnit === "contrast" ? (role.contrastGap || 1.5) : (role.spread || 1));
+                          ruleVal = Math.max(0, Math.min(maxSteps, _baseIndex + (vi - baseVarIdx) * (sUnit === "contrast" ? _contrastGap : _spread)));
                         } else {
-                          ruleVal = (role.minContrast || 4.5) + (vi - baseVarIdx) * (sUnit === "contrast" ? (role.contrastGap || 1.5) : (role.spread || 1));
+                          ruleVal = Math.max(1.01, _minContrast + (vi - baseVarIdx) * (sUnit === "contrast" ? _contrastGap : _spread));
                         }
                       }
                       const displayVal = isManualInline
