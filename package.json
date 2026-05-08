@@ -4,7 +4,7 @@
   "description": "Your Figma Plugin",
   "main": "code.js",
   "scripts": {
-    "build": "cat src/clrUtils.js src/clrSpaces.js src/clrGen.js src/docGen.js src/figmaVars.js src/config.js src/main.js > scripts.js && node -e \"const fs=require('fs');let html=fs.readFileSync('src/ui.html','utf8');html=html.replace(/<script src=\\\"src\\\\/([^\\\"]+)\\\"><\\\\/script>/g,(_,f)=>'<script>\\\\n'+fs.readFileSync('src/'+f,'utf8')+'\\\\n</script>');fs.writeFileSync('ui.html',html);\"",
+    "build": "node -e \"const fs=require('fs');const hdr='/* AUTO-GENERATED — do not edit. Source: src/*.js  Run: npm run build */\\n';const src=['clrUtils','clrSpaces','clrGen','docGen','figmaVars','config','main'].map(f=>fs.readFileSync('src/'+f+'.js','utf8')).join('\\n');fs.writeFileSync('scripts.js',hdr+src);let html=fs.readFileSync('src/ui.html','utf8');html='<!-- AUTO-GENERATED — do not edit. Source: src/ui.html + src/*.js  Run: npm run build -->\\n'+html;html=html.replace(/<script src=\\\"src\\\\/([^\\\"]+)\\\"><\\\\/script>/g,(_,f)=>'<script>\\\\n'+fs.readFileSync('src/'+f,'utf8')+'\\\\n</script>');fs.writeFileSync('ui.html',html);\"",
     "watch": "node watch.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
