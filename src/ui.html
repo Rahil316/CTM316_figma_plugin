@@ -408,6 +408,15 @@
       <!-- Banner slot: all runtime notifications render here via BannerManager -->
       <div id="banner-slot" class="banner-slot"></div>
 
+      <!-- Mode toggle: Ramp Mode vs Direct Contrast -->
+      <div class="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-panel)]">
+        <span class="text-[11px] font-bold text-[var(--text-muted)] tracking-wider uppercase shrink-0">Mode</span>
+        <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5 flex-1">
+          <button id="mode-btn-ramp"   onclick="setPluginMode('ramp')"   class="seg-btn active flex-1 text-[11px]">Ramp</button>
+          <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1 text-[11px]">Direct Contrast</button>
+        </div>
+      </div>
+
       <!-- Sidebar Tabs -->
       <div class="sidebar-tabs">
         <div class="flex gap-1">
@@ -545,7 +554,6 @@
                 <select id="setting-roleMapping" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
                   <option value="Contrast Based">Contrast Based</option>
                   <option value="Manual Base Index">Manual Base Index</option>
-                  <option value="Direct Contrast">Direct Contrast (Pro)</option>
                 </select>
               </div>
             </div>
@@ -735,7 +743,7 @@
         </div>
         <!-- Tab Navigation -->
         <div id="preview-tabs" class="flex border-b border-[var(--border)] bg-[var(--bg-panel)] shrink-0 overflow-x-auto">
-          <button class="preview-tab-btn active" data-target="preview-colors">Color Ramps</button>
+          <button id="preview-tab-colors" class="preview-tab-btn active" data-target="preview-colors">Color Ramps</button>
           <button class="preview-tab-btn" data-target="preview-light">Light Theme</button>
           <button class="preview-tab-btn" data-target="preview-dark">Dark Theme</button>
         </div>

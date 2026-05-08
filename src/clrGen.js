@@ -164,7 +164,7 @@ function variableMaker(config) {
   };
   const errors = { critical: [], warnings: [], notices: [] };
 
-  if (config.roleMapping !== "Direct Contrast") {
+  if (config.pluginMode !== "direct") {
     for (const color of colors) {
       const colorRamp = colorRampMaker(color.value, rampLength, config.rampType);
       const ramp = Object.create(null);
@@ -415,7 +415,7 @@ function variableMaker(config) {
             }
           }
         }
-      } else if (config.roleMapping === "Direct Contrast") {
+      } else if (config.pluginMode === "direct") {
         for (const roleName of roleNames) {
           const role = roles[roleName];
           const conRole = Object.create(null);

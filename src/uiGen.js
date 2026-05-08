@@ -65,6 +65,7 @@
         colorSteps: 25,
         rampType: "Natural",
         colorStepNames: "",
+        pluginMode: "ramp",
         roleMapping: "Contrast Based",
         roleSteps: 5,
         roleStepNames: "weakest, weak, base, strong, stronger",
@@ -327,7 +328,8 @@
           })),
           colorSteps: count,
           rampType: state.rampType || "Natural",
-          roleMapping: state.roleMapping || "Contrast Based",
+          pluginMode: state.pluginMode || "ramp",
+          roleMapping: state.pluginMode === "direct" ? "Direct Contrast" : (state.roleMapping || "Contrast Based"),
           colorStepNames: stepNames,
           roleStepNames,
           themes: [
@@ -488,7 +490,7 @@
         const stepNames = config.colorStepNames || seriesMaker(rampLength);
         const lightBg = normalizeHex(config.themes[0].bg) || "#FFFFFF";
         const darkBg = normalizeHex(config.themes[1].bg) || "#000000";
-        const isDirectContrast = config.roleMapping === "Direct Contrast";
+        const isDirectContrast = config.pluginMode === "direct" || config.roleMapping === "Direct Contrast";
         const clrRamps = Object.create(null);
         const tokens = { light: Object.create(null), dark: Object.create(null) };
         const errors = { critical: [], warnings: [], notices: [] };
@@ -739,7 +741,7 @@
                     </div>
                   </div>
                 </div>
-                ${appState.roleMapping === "Direct Contrast" ? `
+                ${appState.pluginMode === "direct" ? `
                 <div class="space-y-1">
                   <label class="text-[var(--text-muted)] text-[12px] font-medium">Solver Mode</label>
                   <select onchange="updateGroup(${idx}, 'solverMode', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
@@ -820,11 +822,12 @@
               renderRoles();
             });
 
-            const mappingMethod = appState.roleMapping || "Contrast Based";
+            const isDirectMode = appState.pluginMode === "direct";
+            const mappingMethod = isDirectMode ? "Direct Contrast" : (appState.roleMapping || "Contrast Based");
             const mid = Math.floor(appState.colorSteps / 2);
 
             let secondRowHtml = "";
-            if (mappingMethod === "Direct Contrast") {
+            if (isDirectMode) {
               const vars = role.variations || { weakest: 1.5, weak: 3.0, base: 4.5, strong: 7.0, stronger: 12.0 };
               const varKeys = ["weakest", "weak", "base", "strong", "stronger"];
               const vals = varKeys.map((k) => parseFloat(vars[k]) || 0);
@@ -1063,10 +1066,20 @@
             if (r) r.classList.toggle("active", isRole);
           }
         });
-        // Hide ramp-specific settings when Direct Contrast is active
-        const isDirectContrast = appState.roleMapping === "Direct Contrast";
+        // Sync mode toggle buttons
+        const isDirect = appState.pluginMode === "direct";
+        const mbRamp   = document.getElementById("mode-btn-ramp");
+        const mbDirect = document.getElementById("mode-btn-direct");
+        if (mbRamp)   mbRamp.classList.toggle("active", !isDirect);
+        if (mbDirect) mbDirect.classList.toggle("active", isDirect);
+
+        // Hide ramp-specific settings in Direct Contrast mode
         const rampSection = document.getElementById("settings-ramp-section");
-        if (rampSection) rampSection.classList.toggle("hidden", isDirectContrast);
+        if (rampSection) rampSection.classList.toggle("hidden", isDirect);
+
+        // Update "Color Ramps" preview tab label contextually
+        const previewTabColors = document.getElementById("preview-tab-colors");
+        if (previewTabColors) previewTabColors.textContent = isDirect ? "Solved Colors" : "Color Ramps";
 
         // Update settings-sheet name format preview
         const sampleColor = appState.colors && appState.colors[0];
@@ -1079,6 +1092,14 @@
           const el = document.getElementById("name-format-preview");
           if (el) el.textContent = preview;
         }
+      }
+
+      function setPluginMode(mode) {
+        if (mode !== "ramp" && mode !== "direct") return;
+        appState.pluginMode = mode;
+        syncOutputToggles();
+        renderColorGroups();
+        renderRoles();
       }
 
       function updateSettingsFromInputs() {
@@ -1662,7 +1683,7 @@
         const existing = lastCollectionCheckResult;
         const colorName = appState.colorsCollectionName || "_Colors";
         const ctxName = appState.contextualCollectionName || "contextual";
-        const skipRamps = appState.skipColorRamps || appState.roleMapping === "Direct Contrast";
+        const skipRamps = appState.skipColorRamps || appState.pluginMode === "direct";
         const tg = appState.tokenGrouping || "color";
         const shortC = appState.useShortColorNames;
         const shortR = appState.useShortRoleNames;
@@ -1738,8 +1759,9 @@
             summaryRow("System", appState.name || "—"),
             summaryRow("Colors", `${appState.colors.length}: ${colorList}`),
             summaryRow("Roles", `${appState.roles.length}: ${roleList}`),
-            summaryRow("Role Mapping", appState.roleMapping || "Contrast Based"),
-            ...(appState.roleMapping === "Direct Contrast" ? [] : [
+            summaryRow("Mode", appState.pluginMode === "direct" ? "Direct Contrast" : "Ramp"),
+            ...(appState.pluginMode === "direct" ? [] : [
+              summaryRow("Role Mapping", appState.roleMapping || "Contrast Based"),
               summaryRow("Color Steps", String(appState.colorSteps || 25)),
               summaryRow("Ramp Type", appState.rampType || "Natural"),
             ]),

@@ -50,7 +50,8 @@ function translateConfig(appState) {
     })),
     colorSteps: count,
     rampType: appState.rampType || "Natural",
-    roleMapping: appState.roleMapping || "Contrast Based",
+    pluginMode: appState.pluginMode || "ramp",
+    roleMapping: appState.pluginMode === "direct" ? "Direct Contrast" : (appState.roleMapping || "Contrast Based"),
     colorStepNames: stepNames,
     roleStepNames,
     themes: [
