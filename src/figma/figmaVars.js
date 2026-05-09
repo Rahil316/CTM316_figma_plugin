@@ -9,9 +9,7 @@ const VariableManager = {
   async applyRenames(collection, renameMap) {
     if (!collection || !renameMap || Object.keys(renameMap).length === 0) return 0;
     let renamed = 0;
-    const colVars = this.cache.variables.filter(
-      (v) => v.variableCollectionId === collection.id && v.name !== "__ctm316_config__"
-    );
+    const colVars = this.cache.variables.filter((v) => v.variableCollectionId === collection.id && v.name !== "__ctm316_config__");
     const occupiedNames = new Set(colVars.map((v) => v.name));
 
     for (let pass = 0; pass < 2; pass++) {
@@ -39,9 +37,7 @@ const VariableManager = {
 
     // Build rename maps: position-matched items that only changed names get renamed
     // silently instead of being deleted and recreated.
-    const renameMap = (savedAppState && appState)
-      ? buildVariableRenameMap(savedAppState, appState)
-      : { ramps: {}, contextual: {} };
+    const renameMap = savedAppState && appState ? buildVariableRenameMap(savedAppState, appState) : { ramps: {}, contextual: {} };
 
     const colorName = (appState && appState.tonalScaleCollectionName) || "_scale";
     const contextualName = (appState && appState.tokenCollectionName) || "contextual";
@@ -69,7 +65,6 @@ const VariableManager = {
       }
     }
 
-
     // Fetch ramps collection once — used by both stages when applicable.
     // scope="roles" skips Stage 1 but Stage 2 still needs rampsCol to resolve variable aliases
     // (unless embedDirectly is true, in which case raw hex values are used directly).
@@ -91,7 +86,7 @@ const VariableManager = {
         for (const [weightName, entry] of Object.entries(ramp)) {
           const contrastNote = include ? `L:${entry.contrast.light.ratio}(${entry.contrast.light.rating}) D:${entry.contrast.dark.ratio}(${entry.contrast.dark.rating})` : "";
           const groupDesc = include ? entry.description : "";
-          const fullDesc = (groupDesc && contrastNote) ? `${groupDesc} | ${contrastNote}` : (groupDesc || contrastNote);
+          const fullDesc = groupDesc && contrastNote ? `${groupDesc} | ${contrastNote}` : groupDesc || contrastNote;
           allRampVars.push([`${cLabel}/${weightName}`, "COLOR", entry.value, fullDesc]);
         }
       }
@@ -120,33 +115,33 @@ const VariableManager = {
             const rName = roleObj.name || roleId;
             const cLabel = colorLabel(colorName);
             const rLabel = roleLabel(rName, parseInt(roleId));
-            const vars = config.variations.map((varDef, i) => {
-              const token = variations[String(i)];
-              if (!token) return null;
-              const dispName = varDef.shorthand || varDef.name;
-              const figmaName = variableStructure === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
-              let value;
-              if (skipRamps) {
-                value = token.value;
-              } else {
-                const rampFigmaName = this.rampVarNameMap[token.tknRef];
-                const targetVar = (rampFigmaName && rampsCol)
-                  ? this.cache.variables.find((cv) => cv.name === rampFigmaName && cv.variableCollectionId === rampsCol.id)
-                  : null;
-                value = targetVar ? { type: "VARIABLE_ALIAS", id: targetVar.id } : token.value;
-              }
-              const include = config.includeDescriptions !== false;
-              const note = (include && token.isAdjusted) ? " | ⚠ Adjusted" : "";
-              const themeNote = include ? theme.toUpperCase() : "";
-              const roleDesc = include ? token.roleDescription : "";
-              
-              let fullDesc = "";
-              if (roleDesc && themeNote) fullDesc = `${roleDesc} | ${themeNote}${note}`;
-              else if (roleDesc) fullDesc = roleDesc;
-              else if (themeNote) fullDesc = `${themeNote}${note}`;
+            const vars = config.variations
+              .map((varDef, i) => {
+                const token = variations[String(i)];
+                if (!token) return null;
+                const dispName = varDef.shorthand || varDef.name;
+                const figmaName = variableStructure === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
+                let value;
+                if (skipRamps) {
+                  value = token.value;
+                } else {
+                  const rampFigmaName = this.rampVarNameMap[token.tknRef];
+                  const targetVar = rampFigmaName && rampsCol ? this.cache.variables.find((cv) => cv.name === rampFigmaName && cv.variableCollectionId === rampsCol.id) : null;
+                  value = targetVar ? { type: "VARIABLE_ALIAS", id: targetVar.id } : token.value;
+                }
+                const include = config.includeDescriptions !== false;
+                const note = include && token.isAdjusted ? " | ⚠ Adjusted" : "";
+                const themeNote = include ? theme.toUpperCase() : "";
+                const roleDesc = include ? token.roleDescription : "";
 
-              return [figmaName, "COLOR", value, fullDesc];
-            }).filter(Boolean);
+                let fullDesc = "";
+                if (roleDesc && themeNote) fullDesc = `${roleDesc} | ${themeNote}${note}`;
+                else if (roleDesc) fullDesc = roleDesc;
+                else if (themeNote) fullDesc = `${themeNote}${note}`;
+
+                return [figmaName, "COLOR", value, fullDesc];
+              })
+              .filter(Boolean);
             await this.upsertVariables(contextualCol, modeId, vars);
           }
         }
@@ -154,7 +149,7 @@ const VariableManager = {
       if (skippedModes.length > 0) {
         figma.ui.postMessage({
           type: "warning",
-          message: `The "${contextualName}" token collection is missing the ${skippedModes.join(" and ")} mode(s). Multiple modes per collection require a paid Figma plan.`
+          message: `The "${contextualName}" token collection is missing the ${skippedModes.join(" and ")} mode(s). Multiple modes per collection require a paid Figma plan.`,
         });
       }
     }
@@ -176,22 +171,20 @@ const VariableManager = {
     try {
       // Use whichever collection already holds __ctm316_config__; fall back to the
       // first collection in the cache (the one this run created/touched first).
-      const existingCfgCol = this.cache.collections.find((col) =>
-        this.cache.variables.some((v) => v.name === "__ctm316_config__" && v.variableCollectionId === col.id)
-      );
-      const targetCol = existingCfgCol || this.cache.collections[0] || await this.getOrCreateCollection(colorName);
+      const existingCfgCol = this.cache.collections.find((col) => this.cache.variables.some((v) => v.name === "__ctm316_config__" && v.variableCollectionId === col.id));
+      const targetCol = existingCfgCol || this.cache.collections[0] || (await this.getOrCreateCollection(colorName));
       const modeId = targetCol.modes[0].modeId;
 
       // Remove any stale copies of __ctm316_config__ in other collections to avoid
       // ambiguous restore on next launch when embedDirectly has been toggled.
       for (const v of this.cache.variables) {
         if (v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id) {
-          try { v.remove(); } catch (_) {}
+          try {
+            v.remove();
+          } catch (_) {}
         }
       }
-      this.cache.variables = this.cache.variables.filter(
-        (v) => !(v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id)
-      );
+      this.cache.variables = this.cache.variables.filter((v) => !(v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id));
 
       let cfgVar = this.cache.variables.find((v) => v.name === "__ctm316_config__" && v.variableCollectionId === targetCol.id);
       if (!cfgVar) {
@@ -241,7 +234,7 @@ const VariableManager = {
       const hex = "#" + color.value.replace(/^#/, "").toUpperCase().padEnd(6, "0");
       const label = config.useShorthandColors && color.shorthand ? color.shorthand : color.name;
       const include = config.includeDescriptions !== false;
-      const groupDesc = include ? (color.description || "Brand constant — raw hex, no theme processing") : "";
+      const groupDesc = include ? color.description || "Brand constant — raw hex, no theme processing" : "";
       vars.push([`${label}/${label}`, "COLOR", hex, groupDesc]);
 
       if (config.includeAlphaTints && config.alphaValues.length > 0) {

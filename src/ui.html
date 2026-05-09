@@ -524,7 +524,11 @@
             </div>
             <div class="space-y-1">
               <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
-              <select id="setting-baseSelection" onchange="setBaseSelection(this.selectedIndex)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+              <select
+                id="setting-baseSelection"
+                onchange="setBaseSelection(this.selectedIndex)"
+                class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer"
+              >
                 <option value="By Contrast">By Contrast</option>
                 <option value="By Index" id="base-selection-opt-byindex">By Index</option>
                 <option value="Manual">Manual</option>
@@ -886,21 +890,42 @@
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Colors</p>
                 <p class="text-[11px] text-[var(--text-muted)] mt-0.5">e.g. primary → pr</p>
               </div>
-              <button id="rd-toggle-useShorthandColors" class="toggle-pill" onclick="toggleBoolSetting('useShorthandColors'); refreshRunDialog();"></button>
+              <button
+                id="rd-toggle-useShorthandColors"
+                class="toggle-pill"
+                onclick="
+                  toggleBoolSetting('useShorthandColors');
+                  refreshRunDialog();
+                "
+              ></button>
             </div>
             <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
               <div>
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Roles</p>
                 <p class="text-[11px] text-[var(--text-muted)] mt-0.5">e.g. Text → tx</p>
               </div>
-              <button id="rd-toggle-useShorthandRoles" class="toggle-pill" onclick="toggleBoolSetting('useShorthandRoles'); refreshRunDialog();"></button>
+              <button
+                id="rd-toggle-useShorthandRoles"
+                class="toggle-pill"
+                onclick="
+                  toggleBoolSetting('useShorthandRoles');
+                  refreshRunDialog();
+                "
+              ></button>
             </div>
             <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
               <div>
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Variations</p>
                 <p class="text-[11px] text-[var(--text-muted)] mt-0.5">e.g. Darker → dk</p>
               </div>
-              <button id="rd-toggle-useShorthandVariations" class="toggle-pill" onclick="toggleBoolSetting('useShorthandVariations'); refreshRunDialog();"></button>
+              <button
+                id="rd-toggle-useShorthandVariations"
+                class="toggle-pill"
+                onclick="
+                  toggleBoolSetting('useShorthandVariations');
+                  refreshRunDialog();
+                "
+              ></button>
             </div>
             <div class="bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 py-2">
               <p class="text-[11px] text-[var(--text-muted)]">Example variable name:</p>

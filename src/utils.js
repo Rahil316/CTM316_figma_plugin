@@ -34,18 +34,29 @@ function hexToRgb(hex) {
 
 function rgbToHsl(r, g, b) {
   if ([r, g, b].some((v) => typeof v !== "number" || v < 0 || v > 255)) return null;
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h,
+    s,
+    l = (max + min) / 2;
   if (max === min) {
     h = s = 0;
   } else {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      default: h = (r - g) / d + 4; break;
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+        break;
     }
     h *= 60;
   }
@@ -57,17 +68,29 @@ function hexToHsl(hex) {
   return rgb ? rgbToHsl(rgb[0], rgb[1], rgb[2]) : null;
 }
 
-function hexToHue(hex) { const hsl = hexToHsl(hex); return hsl ? hsl[0] : null; }
-function hexToSat(hex) { const hsl = hexToHsl(hex); return hsl ? hsl[1] : null; }
-function hexToLum(hex) { const hsl = hexToHsl(hex); return hsl ? hsl[2] : null; }
+function hexToHue(hex) {
+  const hsl = hexToHsl(hex);
+  return hsl ? hsl[0] : null;
+}
+function hexToSat(hex) {
+  const hsl = hexToHsl(hex);
+  return hsl ? hsl[1] : null;
+}
+function hexToLum(hex) {
+  const hsl = hexToHsl(hex);
+  return hsl ? hsl[2] : null;
+}
 
 function hslToRgb(h, s, l) {
   if (typeof h !== "number" || typeof s !== "number" || typeof l !== "number" || h < 0 || h > 360 || s < 0 || s > 100 || l < 0 || l > 100) return null;
-  s /= 100; l /= 100;
+  s /= 100;
+  l /= 100;
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
   if (h < 60) [r, g, b] = [c, x, 0];
   else if (h < 120) [r, g, b] = [x, c, 0];
   else if (h < 180) [r, g, b] = [0, c, x];
@@ -98,9 +121,11 @@ function relLum(hex) {
 }
 
 function contrastRatio(hex1, hex2) {
-  const n1 = normalizeHex(hex1), n2 = normalizeHex(hex2);
+  const n1 = normalizeHex(hex1),
+    n2 = normalizeHex(hex2);
   if (!n1 || !n2) return null;
-  const l1 = relLum(n1), l2 = relLum(n2);
+  const l1 = relLum(n1),
+    l2 = relLum(n2);
   if (l1 === null || l2 === null) return null;
   return Number(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)).toFixed(2));
 }
@@ -126,7 +151,12 @@ function seriesMaker(x) {
 
 function slugify(str) {
   if (!str) return "";
-  return str.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 const debounce = (fn, delay = 150) => {

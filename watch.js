@@ -20,7 +20,7 @@ build();
 let debounceTimer = null;
 
 fs.watch(SRC_DIR, { recursive: false }, (_, filename) => {
-  if (!filename || !filename.endsWith(".js") && !filename.endsWith(".html")) return;
+  if (!filename || (!filename.endsWith(".js") && !filename.endsWith(".html"))) return;
 
   // Debounce: if multiple files are saved within 100ms, only build once
   clearTimeout(debounceTimer);
