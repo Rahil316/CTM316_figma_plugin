@@ -21,7 +21,9 @@
   try {
     const saved = await figma.clientStorage.getAsync("uiPrefs");
     if (saved && saved.width && saved.height) savedUiSize = saved;
-  } catch (_) {}
+  } catch (e) {
+    console.warn("Failed to load uiPrefs:", e);
+  }
   figma.showUI(__html__, { width: savedUiSize.width, height: savedUiSize.height, themeColors: true });
 
   // Capability probe: try adding a second mode to a temp collection.
@@ -32,10 +34,11 @@
   try {
     probeCol = figma.variables.createVariableCollection("__ctm316_probe__");
     probeCol.addMode("probe2");
-  } catch (_) {
+  } catch (e) {
+    console.warn("Probe failed:", e);
     capabilities.multiMode = false;
   } finally {
-    if (probeCol) try { probeCol.remove(); } catch (_) {}
+    if (probeCol) try { probeCol.remove(); } catch (e) { console.warn("Failed to remove probe collection:", e); }
   }
   figma.ui.postMessage({ type: "capabilities", capabilities });
 
@@ -43,7 +46,9 @@
   try {
     const meta = await figma.clientStorage.getAsync("uiPrefsMeta");
     if (meta) figma.ui.postMessage({ type: "load-ui-prefs-meta", prefs: meta });
-  } catch (_) {}
+  } catch (e) {
+    console.warn("Failed to load uiPrefsMeta:", e);
+  }
 
   // Load saved config
   try {
@@ -56,7 +61,9 @@
         figma.ui.postMessage({ type: "load-config", state: JSON.parse(savedConfigStr) });
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    console.warn("Failed to load saved config:", e);
+  }
 })();
 
 // 2. MESSAGE ROUTER

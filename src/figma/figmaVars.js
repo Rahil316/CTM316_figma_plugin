@@ -22,7 +22,9 @@ const VariableManager = {
           variable.name = newName;
           occupiedNames.add(newName);
           renamed++;
-        } catch (_) {}
+        } catch (e) {
+          console.warn("Rename failed for variable:", variable.name, e);
+        }
       }
     }
 
@@ -39,7 +41,7 @@ const VariableManager = {
     // silently instead of being deleted and recreated.
     const renameMap = savedAppState && appState ? buildVariableRenameMap(savedAppState, appState) : { ramps: {}, contextual: {} };
 
-    const colorName = (appState && appState.tonalScaleCollectionName) || "_scale";
+    const rampCollectionName = (appState && appState.tonalScaleCollectionName) || "_scale";
     const contextualName = (appState && appState.tokenCollectionName) || "contextual";
     const skipRamps = config.embedDirectly || config.pluginMode === "direct";
     const variableStructure = config.variableStructure || "color";
@@ -69,7 +71,7 @@ const VariableManager = {
     // scope="roles" skips Stage 1 but Stage 2 still needs rampsCol to resolve variable aliases
     // (unless embedDirectly is true, in which case raw hex values are used directly).
     const needsRampsCol = !skipRamps && (scope === "all" || scope === "groups" || scope === "roles");
-    const rampsCol = needsRampsCol ? await this.getOrCreateCollection(colorName) : null;
+    const rampsCol = needsRampsCol ? await this.getOrCreateCollection(rampCollectionName) : null;
 
     // Apply ramp renames before upserting so the cache reflects new names immediately
     if (rampsCol && renameMap.ramps && Object.keys(renameMap.ramps).length > 0) {
@@ -80,6 +82,7 @@ const VariableManager = {
     if (rampsCol && (scope === "all" || scope === "groups")) {
       const modeId = rampsCol.modes[0].modeId;
       const include = config.includeDescriptions !== false;
+      const allRampVars = [];
 
       for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
         const cLabel = colorLabel(colorName);
@@ -161,7 +164,7 @@ const VariableManager = {
 
     // Persist config so the plugin can restore state on next launch
     if (appState) {
-      await this.saveConfig(appState, colorName);
+      await this.saveConfig(appState, rampCollectionName);
     }
 
     figma.ui.postMessage({ type: "finish", tally: this.tally, errors: result ? result.errors : null });
@@ -172,7 +175,7 @@ const VariableManager = {
       // Use whichever collection already holds __ctm316_config__; fall back to the
       // first collection in the cache (the one this run created/touched first).
       const existingCfgCol = this.cache.collections.find((col) => this.cache.variables.some((v) => v.name === "__ctm316_config__" && v.variableCollectionId === col.id));
-      const targetCol = existingCfgCol || this.cache.collections[0] || (await this.getOrCreateCollection(colorName));
+      const targetCol = existingCfgCol || this.cache.collections[0] || (await this.getOrCreateCollection(rampCollectionName));
       const modeId = targetCol.modes[0].modeId;
 
       // Remove any stale copies of __ctm316_config__ in other collections to avoid
@@ -181,7 +184,9 @@ const VariableManager = {
         if (v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id) {
           try {
             v.remove();
-          } catch (_) {}
+          } catch (e) {
+            console.warn("Stale config cleanup failed:", e);
+          }
         }
       }
       this.cache.variables = this.cache.variables.filter((v) => !(v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id));
@@ -192,7 +197,9 @@ const VariableManager = {
         this.cache.variables.push(cfgVar);
       }
       cfgVar.setValueForMode(modeId, JSON.stringify(appState));
-    } catch (_) {}
+    } catch (e) {
+      console.warn("saveConfig failed:", e);
+    }
   },
 
   async refreshCache() {

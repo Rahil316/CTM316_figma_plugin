@@ -15,7 +15,6 @@
     "@eslint/js": "^9.39.4",
     "@figma/eslint-plugin-figma-plugins": "*",
     "@figma/plugin-typings": "^1.124.0",
-    "@tailwindcss/cli": "^4.3.0",
     "eslint": "^9.39.4",
     "tailwindcss": "^3.4.19"
   }

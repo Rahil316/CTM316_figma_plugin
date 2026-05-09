@@ -17,7 +17,7 @@ const UI_MODES = {
   plugin: ["ramp", "direct"],
   grouping: ["color", "role"],
   spread: ["steps", "contrast"],
-  selection: ["By Contrast", "Manual", "By Index"],
+  selection: ["By Contrast", "By Index", "Manual"],
 };
 
 /**
@@ -29,60 +29,6 @@ const UI_MODES = {
 
 let _previewLastHash = null;
 let _previewCache = null;
-
-function translateConfigForPreview(state) {
-  const count = Math.max(1, parseInt(state.colorSteps) || 23);
-  const userWeightNames = state.colorStepNames && state.colorStepNames.trim() ? state.colorStepNames.split(",").map((n) => n.trim()) : null;
-  let stepNames = null;
-  if (userWeightNames && userWeightNames.length > 0) {
-    const names = userWeightNames.slice();
-    while (names.length < count) names.push(String(names.length + 1));
-    stepNames = names.slice(0, count);
-  }
-  const variations = state.variations && state.variations.length > 0 ? state.variations : [1, 2, 3, 4, 5].map((n) => ({ _id: String(n), name: String(n), shorthand: String(n), description: "" }));
-  const themes = state.themes || [
-    { name: "light", bg: "FFFFFF" },
-    { name: "dark", bg: "000000" },
-  ];
-
-  // Normalize themes for clrGen (must have names 'light' and 'dark')
-  const normalizedThemes = [
-    { name: "light", bg: themes[0]?.bg || "FFFFFF" },
-    { name: "dark", bg: themes[1]?.bg || "000000" },
-  ];
-
-  return {
-    name: state.name || "ctm316",
-    colors: (state.colors || []).map((g) => ({
-      name: g.name,
-      shorthand: g.shorthand || g.name.substring(0, 2).toLowerCase(),
-      value: normalizeHex(g.value) || "#000000",
-      solverMode: g.solverMode || "natural",
-    })),
-    roles: (state.roles || []).map((role) => ({
-      name: role.name,
-      shorthand: role.shorthand || role.name.substring(0, 2).toLowerCase(),
-      minContrast: parseFloat(role.minContrast) || 4.5,
-      spread: Math.max(1, parseInt(role.spread) || 1),
-      baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
-      darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
-      baseContrast: parseFloat(role.baseContrast) || 4.5,
-      contrastGap: parseFloat(role.contrastGap) || 1.5,
-      variationTargets: role.variationTargets || [],
-      variationOverride: role.variationOverride || false,
-      roleVariations: role.roleVariations || [],
-    })),
-    colorSteps: count,
-    scaleAlgorithm: state.scaleAlgorithm || "Natural",
-    pluginMode: state.pluginMode || "ramp",
-    spreadUnit: state.spreadUnit || "steps",
-    baseSelectionMode: state.baseSelection || "By Contrast",
-    roleMapping: state.pluginMode === "direct" ? (state.baseSelection === "Manual" ? "Direct Manual" : "Direct Contrast") : state.baseSelection || "By Contrast",
-    colorStepNames: stepNames,
-    variations,
-    themes: normalizedThemes,
-  };
-}
 
 /**
  * 5. DYNAMIC DOM GENERATORS
@@ -507,7 +453,7 @@ function updateRole(idx, key, value) {
   } else if (key === "minContrast") {
     let v = parseFloat(value);
     if (isNaN(v)) v = 1;
-    appState.roles[idx].minContrast = Math.max(1, Math.min(21, v)).toString();
+    appState.roles[idx].minContrast = Math.max(1, Math.min(21, v));
   } else if (key === "spread") {
     let v = parseInt(value);
     if (isNaN(v)) v = 1;
@@ -810,7 +756,11 @@ function setPluginMode(idx) {
 }
 
 // schedulePreview: no-op placeholder (preview is rendered on demand via btn-preview)
-function schedulePreview() {}
+const schedulePreview = debounce(() => {
+  if (document.getElementById("preview-overlay").classList.contains("hidden")) return;
+  const result = variableMaker(translateConfig(appState));
+  renderPreviewPanel(result);
+}, 500);
 
 function setSpreadUnit(idx) {
   appState.spreadUnit = UI_MODES.spread[idx] || "steps";
@@ -821,6 +771,8 @@ function setSpreadUnit(idx) {
 function setBaseSelection(idx) {
   appState.baseSelection = UI_MODES.selection[idx] || "By Contrast";
   syncUiSettingsInputs();
+  renderRoles();
+  syncOutputToggles();
 }
 
 function updateRoleVariationTarget(roleIdx, varIdx, value) {
@@ -1006,7 +958,7 @@ function renderPreviewPanel(result) {
   const varLabel = (varKey) => {
     const i = parseInt(varKey);
     if (!isNaN(i) && appState.variations && appState.variations[i]) {
-      return appState.variations[i].shorthand || appState.variations[i].name;
+      return appState.variations[i].name || appState.variations[i].shorthand;
     }
     return varKey;
   };
@@ -1168,7 +1120,9 @@ document.addEventListener("click", async (e) => {
     const text = e.altKey && name ? name : val;
     await navigator.clipboard.writeText(text);
     showToast(`Copied ${text}`);
-  } catch (_) {}
+  } catch (e) {
+    console.warn("Clipboard copy failed:", e);
+  }
 });
 
 // Preview tab switching
@@ -1217,7 +1171,7 @@ document.getElementById("btn-run").onclick = () => handleSubmit("all");
 document.getElementById("btn-import").onclick = () => document.getElementById("file-input").click();
 
 document.getElementById("btn-preview").onclick = () => {
-  const result = variableMaker(translateConfigForPreview(appState));
+  const result = variableMaker(translateConfig(appState));
   // Reset to Color Ramps tab each time
   document.querySelectorAll(".preview-tab-btn").forEach((b, i) => b.classList.toggle("active", i === 0));
   document.querySelectorAll(".preview-panel").forEach((p, i) => p.classList.toggle("active", i === 0));
@@ -1347,6 +1301,11 @@ function applyImport(json) {
   if (Array.isArray(appState.colorStepNames)) appState.colorStepNames = appState.colorStepNames.join(", ");
   // Normalize theme names to lowercase so variableMaker keys always match
   if (Array.isArray(appState.themes)) appState.themes = appState.themes.map((t) => Object.assign({}, t, { name: t.name.toLowerCase() }));
+
+  // Migration for C2: pluginMode type mismatch (0/1 -> ramp/direct)
+  if (appState.pluginMode === 0) appState.pluginMode = "ramp";
+  else if (appState.pluginMode === 1) appState.pluginMode = "direct";
+
   ensureIds(appState); // migrate imported configs that predate the _id field
   ensureVariations();
   savedState = null; // an import is a full replace — no snapshot to diff against
@@ -1563,7 +1522,8 @@ function refreshRunDialog() {
 }
 
 window.onmessage = (event) => {
-  const msg = event.data.pluginMessage;
+  const msg = event.data?.pluginMessage;
+  if (!msg) return;
 
   if (msg.type === "collection-check-result") {
     lastCollectionCheckResult = msg.existing || [];
@@ -1579,6 +1539,11 @@ window.onmessage = (event) => {
     ensureIds(msg.state);
     savedState = JSON.parse(JSON.stringify(msg.state)); // deep-freeze for rename detection
     appState = Object.assign({}, JSON.parse(JSON.stringify(demoConfig)), msg.state);
+
+    // Migration for C2: pluginMode type mismatch (0/1 -> ramp/direct)
+    if (appState.pluginMode === 0) appState.pluginMode = "ramp";
+    else if (appState.pluginMode === 1) appState.pluginMode = "direct";
+
     ensureIds(appState);
     ensureVariations();
     renderColorGroups();

@@ -67,7 +67,7 @@ function _mapRoles(appState, variations, count) {
   return (appState.roles || []).map((role) => ({
     name: role.name,
     shorthand: role.shorthand || role.name.substring(0, 2).toLowerCase(),
-    minContrast: String(role.minContrast !== undefined ? role.minContrast : "4.5"),
+    minContrast: parseFloat(role.minContrast !== undefined ? role.minContrast : 4.5),
     spread: Math.max(1, parseInt(role.spread) || 1),
     baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
     darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,

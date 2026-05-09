@@ -43,8 +43,7 @@ const demoConfig = {
   colorSteps: 25,
   scaleAlgorithm: "Natural",
   colorStepNames: "",
-  pluginMode: 0, // 0: ramp, 1: direct
-  groupingMode: 0, // 0: color, 1: role
+  pluginMode: "ramp", // "ramp" or "direct"
   baseSelection: "By Contrast",
   spreadUnit: "steps",
   roleSteps: 5,
@@ -92,26 +91,3 @@ let activeSidebarTab = "color-groups";
 let _colorDragSrcIdx = null;
 let _roleDragSrcIdx = null;
 
-/**
- * 3. THE STORE
- * Subscription-based state management.
- */
-const Store = {
-  subscribers: [],
-
-  subscribe(fn) {
-    this.subscribers.push(fn);
-    return () => {
-      this.subscribers = this.subscribers.filter((s) => s !== fn);
-    };
-  },
-
-  notify() {
-    this.subscribers.forEach((fn) => fn(appState));
-  },
-
-  update(newState) {
-    appState = Object.assign(appState, newState);
-    this.notify();
-  },
-};

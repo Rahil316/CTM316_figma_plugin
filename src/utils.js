@@ -110,13 +110,20 @@ function hslToHex(h, s, l) {
   return rgb ? rgbToHex(rgb[0], rgb[1], rgb[2]) : null;
 }
 
+function srgbLinearize(v) {
+  const x = v / 255;
+  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+function srgbDelinearize(v) {
+  const c = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(255, Math.round(c * 255)));
+}
+
 function relLum(hex) {
   const rgb = hexToRgb(hex);
   if (!rgb) return null;
-  const [r, g, b] = rgb.map((v) => {
-    const x = v / 255;
-    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-  });
+  const [r, g, b] = rgb.map(srgbLinearize);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -161,49 +168,47 @@ function slugify(str) {
 
 const debounce = (fn, delay = 150) => {
   let timeout;
-  return function () {
-    var args = Array.prototype.slice.call(arguments);
+  return function (...args) {
     clearTimeout(timeout);
-    timeout = setTimeout(() => fn.apply(null, args), delay);
+    timeout = setTimeout(() => fn.apply(this, args), delay);
   };
 };
 
-if (typeof document !== "undefined") {
-  function withPreservedFocus(fn) {
-    const activeEl = document.activeElement;
-    const activeId = activeEl ? activeEl.id : null;
-    const start = activeEl ? activeEl.selectionStart : null;
-    const end = activeEl ? activeEl.selectionEnd : null;
-    fn();
-    if (activeId) {
-      const newEl = document.getElementById(activeId);
-      if (newEl) {
-        newEl.focus();
-        if (start !== null && (newEl.type === "text" || newEl.type === "number")) {
-          try {
-            newEl.setSelectionRange(start, end);
-          } catch (e) {}
+function withPreservedFocus(fn) {
+  if (typeof document === "undefined") return fn();
+  const activeEl = document.activeElement;
+  const activeId = activeEl ? activeEl.id : null;
+  const start = activeEl ? activeEl.selectionStart : null;
+  const end = activeEl ? activeEl.selectionEnd : null;
+  fn();
+  if (activeId) {
+    const newEl = document.getElementById(activeId);
+    if (newEl) {
+      newEl.focus();
+      if (start !== null && (newEl.type === "text" || newEl.type === "number")) {
+        try {
+          newEl.setSelectionRange(start, end);
+        } catch (e) {
+          console.warn("Failed to restore focus range:", e);
         }
       }
     }
   }
 }
 
-if (typeof document !== "undefined") {
-  /**
-   * Applies the current UI preferences (scale and theme) to the document body.
-   */
-  function applyUiPrefs() {
-    document.body.style.zoom = uiPrefs.scale;
-    document.body.setAttribute("data-ui-theme", uiPrefs.theme);
-  }
+/**
+ * Applies the current UI preferences (scale and theme) to the document body.
+ */
+function applyUiPrefs() {
+  if (typeof document === "undefined") return;
+  document.body.style.zoom = uiPrefs.scale;
+  document.body.setAttribute("data-ui-theme", uiPrefs.theme);
 }
 
-if (typeof parent !== "undefined" && typeof parent.postMessage === "function") {
-  /**
-   * Persists the current UI preferences to Figma's client storage.
-   */
-  function saveUiPrefs() {
-    parent.postMessage({ pluginMessage: { type: "save-ui-prefs-meta", prefs: uiPrefs } }, "*");
-  }
+/**
+ * Persists the current UI preferences to Figma's client storage.
+ */
+function saveUiPrefs() {
+  if (typeof parent === "undefined" || typeof parent.postMessage !== "function") return;
+  parent.postMessage({ pluginMessage: { type: "save-ui-prefs-meta", prefs: uiPrefs } }, "*");
 }
