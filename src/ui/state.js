@@ -31,8 +31,9 @@ const demoConfig = {
   includeAlphaTints: false,
   alphaValues: "10, 25, 50, 75, 90",
   variableStructure: "color",
-  useShortColorNames: false,
-  useShortRoleNames: false,
+  useShorthandColors: false,
+  useShorthandRoles: false,
+  useShorthandVariations: false,
   colorSteps: 25,
   scaleAlgorithm: "Natural",
   colorStepNames: "",
@@ -42,20 +43,21 @@ const demoConfig = {
   roleSteps: 5,
   variations: null,
   colors: [
-    { name: "Primary", shortName: "pr", value: "0067DD", description: "" },
-    { name: "Secondary", shortName: "sc", value: "EFEFF2", description: "" },
-    { name: "Gray", shortName: "gr", value: "808080", description: "" },
+    { name: "Primary", shorthand: "pr", value: "0067DD", description: "" },
+    { name: "Secondary", shorthand: "sc", value: "EFEFF2", description: "" },
+    { name: "Gray", shorthand: "gr", value: "808080", description: "" },
   ],
   roles: [
-    { name: "Text", shortName: "tx", spread: 2, minContrast: 4.5, baseIndex: 14, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-    { name: "Fill", shortName: "fi", spread: 1, minContrast: 3.0, baseIndex: 9, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-    { name: "Background", shortName: "bg", spread: 1, minContrast: 1.2, baseIndex: 4, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-    { name: "Border", shortName: "br", spread: 1, minContrast: 2.0, baseIndex: 11, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+    { name: "Text", shorthand: "tx", spread: 2, minContrast: 4.5, baseIndex: 14, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+    { name: "Fill", shorthand: "fi", spread: 1, minContrast: 3.0, baseIndex: 9, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+    { name: "Background", shorthand: "bg", spread: 1, minContrast: 1.2, baseIndex: 4, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
+    { name: "Border", shorthand: "br", spread: 1, minContrast: 2.0, baseIndex: 11, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
   ],
   themes: [
     { name: "light", bg: "FFFFFF" },
     { name: "dark", bg: "000000" },
   ],
+  includeDescriptions: false,
 };
 
 ensureIds(demoConfig);

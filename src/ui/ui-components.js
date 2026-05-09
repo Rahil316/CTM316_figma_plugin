@@ -50,8 +50,8 @@ const Components = {
         </div>
         <div class="grid grid-cols-[1fr_1fr_1fr] items-end gap-2">
           <div class="flex-[3] space-y-1">
-            <label for="${gId}-short" class="text-[var(--text-muted)] text-[12px] font-medium">Short Name</label>
-            <input type="text" id="${gId}-short" value="${group.shortName}" oninput="updateGroup(${idx}, 'shortName', this.value)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
+            <label for="${gId}-shorthand" class="text-[var(--text-muted)] text-[12px] font-medium">Shorthand</label>
+            <input type="text" id="${gId}-shorthand" value="${group.shorthand}" oninput="updateGroup(${idx}, 'shorthand', this.value)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
           </div>
           <div class="flex-[3.5] space-y-1">
             <span class="text-[var(--text-muted)] text-[12px] font-medium">Light Contrast</span>
@@ -79,10 +79,11 @@ const Components = {
             <option value="chroma-maximized" ${(group.solverMode || "natural") === "chroma-maximized" ? "selected" : ""}>Max Vibrancy — most saturated color that meets contrast</option>
           </select>
         </div>` : ""}
+        ${config.includeDescriptions ? `
         <div class="space-y-1">
           <label for="${gId}-desc" class="text-[var(--text-muted)] text-[12px] font-medium">Description</label>
           <input type="text" id="${gId}-desc" value="${(group.description || "").replace(/"/g, "&quot;")}" oninput="updateGroup(${idx}, 'description', this.value)" placeholder="Color description (optional)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
-        </div>
+        </div>` : ""}
       </div>
     `;
   },
@@ -110,15 +111,16 @@ const Components = {
           </div>
         </div>
         <div class="w-[72px] space-y-1">
-          <label for="role-${idx}-short" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Short</label>
-          <input type="text" id="role-${idx}-short" value="${role.shortName || ""}" oninput="updateRole(${idx}, 'shortName', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+          <label for="role-${idx}-shorthand" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Shorthand</label>
+          <input type="text" id="role-${idx}-shorthand" value="${role.shorthand || ""}" oninput="updateRole(${idx}, 'shorthand', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
         </div>
         <button onclick="removeRole(${idx})" class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 size-[40px] shrink-0 flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20">${Icons.Trash}</button>
       </div>
+      ${config.includeDescriptions ? `
       <div class="space-y-1">
         <label for="role-${idx}-desc" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Description</label>
         <input type="text" id="role-${idx}-desc" value="${(role.description || "").replace(/"/g, "&quot;")}" oninput="updateRole(${idx}, 'description', this.value)" placeholder="Role description (optional)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-      </div>
+      </div>` : ""}
       ${secondRowHtml}
       ${overrideSection}
     `;

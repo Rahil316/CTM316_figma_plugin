@@ -32,26 +32,29 @@ function translateConfigForPreview(state) {
     while (names.length < count) names.push(String(names.length + 1));
     stepNames = names.slice(0, count);
   }
-  const variations = state.variations && state.variations.length > 0 ? state.variations : [1, 2, 3, 4, 5].map((n) => ({ _id: String(n), name: String(n), shortName: String(n), description: "" }));
-  const themes = state.themes || [{ name: "light", bg: "FFFFFF" }, { name: "dark", bg: "000000" }];
-  
+  const variations = state.variations && state.variations.length > 0 ? state.variations : [1, 2, 3, 4, 5].map((n) => ({ _id: String(n), name: String(n), shorthand: String(n), description: "" }));
+  const themes = state.themes || [
+    { name: "light", bg: "FFFFFF" },
+    { name: "dark", bg: "000000" },
+  ];
+
   // Normalize themes for clrGen (must have names 'light' and 'dark')
   const normalizedThemes = [
     { name: "light", bg: themes[0]?.bg || "FFFFFF" },
-    { name: "dark", bg: themes[1]?.bg || "000000" }
+    { name: "dark", bg: themes[1]?.bg || "000000" },
   ];
 
   return {
     name: state.name || "ctm316",
-    colors: (state.colors || []).map((g) => ({ 
-      name: g.name, 
-      shortName: g.shortName || g.name.substring(0, 2).toLowerCase(), 
-      value: normalizeHex(g.value) || "#000000", 
-      solverMode: g.solverMode || "natural" 
+    colors: (state.colors || []).map((g) => ({
+      name: g.name,
+      shorthand: g.shorthand || g.name.substring(0, 2).toLowerCase(),
+      value: normalizeHex(g.value) || "#000000",
+      solverMode: g.solverMode || "natural",
     })),
     roles: (state.roles || []).map((role) => ({
       name: role.name,
-      shortName: role.shortName || role.name.substring(0, 2).toLowerCase(),
+      shorthand: role.shorthand || role.name.substring(0, 2).toLowerCase(),
       minContrast: parseFloat(role.minContrast) || 4.5,
       spread: Math.max(1, parseInt(role.spread) || 1),
       baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
@@ -74,7 +77,6 @@ function translateConfigForPreview(state) {
   };
 }
 
-
 /**
  * 5. DYNAMIC DOM GENERATORS
  * These functions convert appState into interactive UI cards.
@@ -87,7 +89,7 @@ function ensureVariations() {
     appState.variations = [1, 2, 3, 4, 5].map((n) => ({
       _id: generateId(),
       name: String(n),
-      shortName: String(n),
+      shorthand: String(n),
     }));
   }
   for (const role of appState.roles) {
@@ -242,28 +244,22 @@ const renderRoles = debounce(() => {
                 <p class="text-[10px] text-[var(--text-muted)] px-1">Targets: ${previewTargets.join(" · ")}</p>`;
       } else if (isDirectMode && bSel === "Manual") {
         const varTargets = role.variationTargets || appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5);
-        const cardErrors = [];
-        for (let vi = 1; vi < varTargets.length; vi++) {
-          if (varTargets[vi] <= varTargets[vi - 1]) cardErrors.push(vi);
-        }
         const inputRow = appState.variations
           .map((varDef, vi) => {
-            const isErr = cardErrors.includes(vi) || cardErrors.includes(vi + 1);
             return `
                   <div class="space-y-1">
                     <label class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">${varDef.name}</label>
                     <div class="relative">
                       <input type="number" step="0.1" min="1" max="21" value="${varTargets[vi] || ""}"
                         onchange="updateRoleVariationTarget(${idx}, ${vi}, parseFloat(this.value))"
-                        class="w-full h-[40px] bg-[var(--bg-input)] border ${isErr ? "border-[var(--danger)]" : "border-[var(--border)]"} rounded-[8px] p-2 pr-6 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
+                        class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 pr-6 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                       <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-dim)] pointer-events-none">:1</span>
                     </div>
                   </div>`;
           })
           .join("");
         secondRowHtml = `
-                <div class="grid gap-1.5" style="grid-template-columns: repeat(${appState.variations.length}, 1fr)">${inputRow}</div>
-                ${cardErrors.length ? `<p class="text-[10px] text-[var(--danger)] px-1">Contrast values must strictly increase across all variations.</p>` : ""}`;
+                <div class="grid gap-1.5" style="grid-template-columns: repeat(${appState.variations.length}, 1fr)">${inputRow}</div>`;
       } else if (!isDirectMode && bSel === "Manual") {
         const varTargets = role.variationTargets || appState.variations.map(() => Math.floor((appState.colorSteps || 25) / 2));
         const maxStep = (appState.colorSteps || 25) - 1;
@@ -395,8 +391,8 @@ const renderRoles = debounce(() => {
                       <input type="text" value="${(v.name || "").replace(/"/g, "&quot;")}" placeholder="Name"
                         oninput="updateRoleVariation(${idx},${vi},'name',this.value)"
                         class="flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                      <input type="text" value="${(v.shortName || "").replace(/"/g, "&quot;")}" placeholder="Short"
-                        oninput="updateRoleVariation(${idx},${vi},'shortName',this.value)"
+                      <input type="text" value="${(v.shorthand || "").replace(/"/g, "&quot;")}" placeholder="Shorthand"
+                        oninput="updateRoleVariation(${idx},${vi},'shorthand',this.value)"
                         class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
                       ${tInput}
                       <button onclick="removeRoleVariation(${idx},${vi})" ${roleVars.length <= 1 ? "disabled" : ""} class="w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]">✕</button>
@@ -488,7 +484,7 @@ function moveGroup(idx, dir) {
 
 function addGroup() {
   const n = appState.colors.length + 1;
-  appState.colors.unshift({ _id: generateId(), name: `color${n}`, shortName: `C${n}`, value: "888888" });
+  appState.colors.unshift({ _id: generateId(), name: `color${n}`, shorthand: `C${n}`, value: "888888" });
   renderColorGroups();
 }
 
@@ -538,7 +534,7 @@ function addRole() {
   appState.roles.unshift({
     _id: generateId(),
     name: "Role " + n,
-    shortName: `r-${n}`,
+    shorthand: `r-${n}`,
     spread: 2,
     minContrast: 4.5,
     baseIndex: mid,
@@ -568,8 +564,8 @@ function renderSettingsVariations() {
             <input type="text" value="${(v.name || "").replace(/"/g, "&quot;")}" placeholder="Name"
               oninput="updateSharedVariation(${idx},'name',this.value)"
               class="flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-            <input type="text" value="${(v.shortName || "").replace(/"/g, "&quot;")}" placeholder="Short"
-              oninput="updateSharedVariation(${idx},'shortName',this.value)"
+            <input type="text" value="${(v.shorthand || "").replace(/"/g, "&quot;")}" placeholder="Shorthand"
+              oninput="updateSharedVariation(${idx},'shorthand',this.value)"
               class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
             <button onclick="removeSharedVariation(${idx})" ${!canDelete ? "disabled" : ""} class="w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]">✕</button>
           </div>
@@ -581,7 +577,7 @@ function renderSettingsVariations() {
 function addSharedVariation() {
   ensureVariations();
   const n = appState.variations.length + 1;
-  appState.variations.push({ _id: generateId(), name: String(n), shortName: String(n) });
+  appState.variations.push({ _id: generateId(), name: String(n), shorthand: String(n) });
   ensureVariations();
   renderSettingsVariations();
   renderRoles();
@@ -656,7 +652,7 @@ function addRoleVariation(roleIdx) {
   const role = appState.roles[roleIdx];
   if (!role.roleVariations) role.roleVariations = [];
   const n = role.roleVariations.length + 1;
-  role.roleVariations.push({ _id: generateId(), name: String(n), shortName: String(n) });
+  role.roleVariations.push({ _id: generateId(), name: String(n), shorthand: String(n) });
   ensureVariations();
   renderRoles();
   schedulePreview();
@@ -699,7 +695,10 @@ function resetRoleVariationsToShared(roleIdx) {
 function toggleBoolSetting(key) {
   appState[key] = !appState[key];
   syncOutputToggles();
-  if (key === "allowRoleVariations") renderRoles();
+  if (key === "allowRoleVariations" || key === "includeDescriptions") {
+    renderColorGroups();
+    renderRoles();
+  }
 }
 
 function setTokenGrouping(val) {
@@ -710,7 +709,7 @@ function setTokenGrouping(val) {
 function syncOutputToggles() {
   const tg = appState.variableStructure || "color";
   // Sync all toggle pills (settings sheet + run dialog)
-  ["embedDirectly", "useShortColorNames", "useShortRoleNames", "includeGlobalColors", "includeAlphaTints", "allowRoleVariations"].forEach((key) => {
+  ["embedDirectly", "useShorthandColors", "useShorthandRoles", "useShorthandVariations", "includeGlobalColors", "includeAlphaTints", "allowRoleVariations", "includeDescriptions"].forEach((key) => {
     ["toggle-" + key, "rd-toggle-" + key].forEach((id) => {
       const btn = document.getElementById(id);
       if (btn) btn.classList.toggle("on", !!appState[key]);
@@ -745,7 +744,7 @@ function syncOutputToggles() {
   if (mbRamp) mbRamp.classList.toggle("active", !isDirect);
   if (mbDirect) mbDirect.classList.toggle("active", isDirect);
 
-  // Hide ramp-specific settings in Direct Contrast mode
+  // Hide ramp-specific settings in Adaptive Engine mode
   const rampSection = document.getElementById("settings-ramp-section");
   if (rampSection) rampSection.classList.toggle("hidden", isDirect);
 
@@ -785,9 +784,9 @@ function syncOutputToggles() {
   const sampleColor = appState.colors && appState.colors[0];
   const sampleRole = appState.roles && appState.roles[0];
   if (sampleColor && sampleRole) {
-    const cLabel = appState.useShortColorNames ? sampleColor.shortName || sampleColor.name : sampleColor.name;
-    const rLabel = appState.useShortRoleNames ? sampleRole.shortName || sampleRole.name : sampleRole.name;
-    const stepLabel = appState.variations && appState.variations[2] ? appState.variations[2].shortName || appState.variations[2].name : "3";
+    const cLabel = appState.useShorthandColors ? sampleColor.shorthand || sampleColor.name : sampleColor.name;
+    const rLabel = appState.useShorthandRoles ? sampleRole.shorthand || sampleRole.name : sampleRole.name;
+    const stepLabel = appState.variations && appState.variations[2] ? (appState.useShorthandVariations && appState.variations[2].shorthand ? appState.variations[2].shorthand : appState.variations[2].name) : "3";
     const preview = tg === "role" ? `${rLabel}/${cLabel}/${stepLabel}` : `${cLabel}/${rLabel}/${stepLabel}`;
     const el = document.getElementById("name-format-preview");
     if (el) el.textContent = preview;
@@ -895,9 +894,9 @@ function syncInputsFromState() {
  */
 function validateUniqueness() {
   const colorNames = appState.colors.map((c) => c.name.trim().toLowerCase()).filter(Boolean);
-  const colorShorts = appState.colors.map((c) => (c.shortName || "").trim().toLowerCase()).filter(Boolean);
+  const colorShorts = appState.colors.map((c) => (c.shorthand || "").trim().toLowerCase()).filter(Boolean);
   const roleNames = appState.roles.map((r) => r.name.trim().toLowerCase()).filter(Boolean);
-  const roleShorts = appState.roles.map((r) => (r.shortName || "").trim().toLowerCase()).filter(Boolean);
+  const roleShorts = appState.roles.map((r) => (r.shorthand || "").trim().toLowerCase()).filter(Boolean);
   const hasDup = (arr) => new Set(arr).size !== arr.length;
   if (hasDup(colorNames)) return "Two or more color groups share the same name. Each color name must be unique.";
   if (colorShorts.length && hasDup(colorShorts)) return "Two or more color groups share the same short name. Each color short name must be unique.";
@@ -948,7 +947,7 @@ function renderPreviewPanel(result) {
   const colorEl = document.getElementById("preview-colors");
   colorEl.innerHTML = "";
   if (Object.keys(result.colorRamps).length === 0) {
-    colorEl.innerHTML = `<p class="text-[12px] text-[var(--text-muted)] px-1 py-4 text-center">No tonal scale in Direct Contrast mode. Colors are solved directly per variation target.</p>`;
+    colorEl.innerHTML = `<p class="text-[12px] text-[var(--text-muted)] px-1 py-4 text-center">No tonal scale in Adaptive Engine mode. Colors are solved directly per variation target.</p>`;
   } else {
     for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
       const baseColor = ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value;
@@ -989,7 +988,7 @@ function renderPreviewPanel(result) {
   const varLabel = (varKey) => {
     const i = parseInt(varKey);
     if (!isNaN(i) && appState.variations && appState.variations[i]) {
-      return appState.variations[i].shortName || appState.variations[i].name;
+      return appState.variations[i].shorthand || appState.variations[i].name;
     }
     return varKey;
   };
@@ -1101,14 +1100,14 @@ function showSystemBanners(errors, result = null) {
   let detailHtml = "";
   if (critCount > 0) {
     detailHtml += `<div class="mb-2"><p class="font-bold text-red-400 mb-1">Critical Issues:</p>`;
-    errors.critical.forEach(e => {
+    errors.critical.forEach((e) => {
       detailHtml += `<div class="ml-2 text-[10px] opacity-90">• <b>${e.color}/${e.role}</b>: ${e.error}</div>`;
     });
     detailHtml += `</div>`;
   }
   if (warnCount > 0) {
     detailHtml += `<div class="mb-2"><p class="font-bold text-amber-400 mb-1">Warnings:</p>`;
-    errors.warnings.forEach(w => {
+    errors.warnings.forEach((w) => {
       detailHtml += `<div class="ml-2 text-[10px] opacity-90">• <b>${w.color}/${w.role}</b>: ${w.warning}</div>`;
     });
     detailHtml += `</div>`;
@@ -1121,11 +1120,11 @@ function showSystemBanners(errors, result = null) {
 
   BannerManager.show({
     id: "system-status-banner",
-    type: critCount > 0 ? "error" : (warnCount > 0 ? "warning" : "info"),
+    type: critCount > 0 ? "error" : warnCount > 0 ? "warning" : "info",
     title: critCount > 0 ? "Color System Errors" : "System Audit Results",
     message: `${critCount > 0 ? `${critCount} Critical · ` : ""}${warnCount} Warnings · ${auditCount} Access concerns detected.`,
     detail: `<div class="flex flex-col gap-1 mt-2 border-t border-white/10 pt-2">${detailHtml}</div>`,
-    dismissable: true
+    dismissable: true,
   });
 }
 
@@ -1421,8 +1420,8 @@ function refreshRunDialog() {
   const isDirect = appState.pluginMode === "direct";
   const skipRamps = appState.embedDirectly || isDirect;
   const tg = appState.variableStructure || "color";
-  const shortC = appState.useShortColorNames;
-  const shortR = appState.useShortRoleNames;
+  const shortC = appState.useShorthandColors;
+  const shortR = appState.useShorthandRoles;
   const scope = pendingScope || "all";
 
   // Sync all toggle states (settings sheet + run dialog)
@@ -1455,11 +1454,11 @@ function refreshRunDialog() {
   }
 
   // Name preview
-  const sampleColor = appState.colors[0] || { name: "Primary", shortName: "pr" };
-  const sampleRole = appState.roles[0] || { name: "Text", shortName: "tx" };
-  const cLabel = shortC ? sampleColor.shortName || sampleColor.name : sampleColor.name;
-  const rLabel = shortR ? sampleRole.shortName || sampleRole.name : sampleRole.name;
-  const stepLabel = appState.variations && appState.variations[2] ? appState.variations[2].shortName || appState.variations[2].name : "3";
+  const sampleColor = appState.colors[0] || { name: "Primary", shorthand: "pr" };
+  const sampleRole = appState.roles[0] || { name: "Text", shorthand: "tx" };
+  const cLabel = shortC ? sampleColor.shorthand || sampleColor.name : sampleColor.name;
+  const rLabel = shortR ? sampleRole.shorthand || sampleRole.name : sampleRole.name;
+  const stepLabel = appState.variations && appState.variations[2] ? (appState.useShorthandVariations && appState.variations[2].shorthand ? appState.variations[2].shorthand : appState.variations[2].name) : "3";
   const exName = tg === "role" ? `${rLabel}/${cLabel}/${stepLabel}` : `${cLabel}/${rLabel}/${stepLabel}`;
   const previewEl = document.getElementById("rd-name-preview");
   if (previewEl) previewEl.textContent = exName;
@@ -1500,13 +1499,13 @@ function refreshRunDialog() {
   // Summary
   const sumEl = document.getElementById("rd-summary");
   if (sumEl) {
-    const colorList = appState.colors.map((c) => `${c.name}${c.shortName ? ` (${c.shortName})` : ""}`).join(", ");
-    const roleList = appState.roles.map((r) => `${r.name}${r.shortName ? ` (${r.shortName})` : ""}`).join(", ");
+    const colorList = appState.colors.map((c) => `${c.name}${c.shorthand ? ` (${c.shorthand})` : ""}`).join(", ");
+    const roleList = appState.roles.map((r) => `${r.name}${r.shorthand ? ` (${r.shorthand})` : ""}`).join(", ");
     sumEl.innerHTML = [
       summaryRow("System", appState.name || "—"),
       summaryRow("Colors", `${appState.colors.length}: ${colorList}`),
       summaryRow("Roles", `${appState.roles.length}: ${roleList}`),
-      summaryRow("Mode", appState.pluginMode === "direct" ? "Direct Contrast" : "Tonal Scale"),
+      summaryRow("Mode", appState.pluginMode === "direct" ? "Adaptive Engine" : "Palette-Based"),
       ...(appState.pluginMode === "direct"
         ? []
         : [
@@ -1652,3 +1651,46 @@ renderRoles();
 syncInputsFromState();
 syncUiSettingsInputs();
 applyUiPrefs();
+
+// --- RICH TOOLTIP LOGIC ---
+const tooltipEl = document.getElementById("tooltip");
+document.addEventListener(
+  "mouseenter",
+  (e) => {
+    if (!e.target || !e.target.closest) return;
+    const target = e.target.closest("[data-tooltip]");
+    if (!target) return;
+
+    const text = target.getAttribute("data-tooltip");
+    tooltipEl.textContent = text;
+    tooltipEl.classList.add("active");
+
+    const rect = target.getBoundingClientRect();
+    const tipRect = tooltipEl.getBoundingClientRect();
+
+    // Position above the element, centered
+    let top = rect.top - tipRect.height - 8;
+    let left = rect.left + rect.width / 2 - tipRect.width / 2;
+
+    // Keep within viewport
+    if (top < 8) top = rect.bottom + 8;
+    left = Math.max(8, Math.min(window.innerWidth - tipRect.width - 8, left));
+
+    tooltipEl.style.top = `${top}px`;
+    tooltipEl.style.left = `${left}px`;
+  },
+  true,
+);
+
+document.addEventListener(
+  "mouseleave",
+  (e) => {
+    if (!e.target || !e.target.closest) return;
+    const target = e.target.closest("[data-tooltip]");
+    if (target) {
+      const tooltipEl = document.getElementById("tooltip");
+      if (tooltipEl) tooltipEl.classList.remove("active");
+    }
+  },
+  true,
+);

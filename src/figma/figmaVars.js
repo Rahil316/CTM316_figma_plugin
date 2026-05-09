@@ -47,19 +47,19 @@ const VariableManager = {
     const contextualName = (appState && appState.tokenCollectionName) || "contextual";
     const skipRamps = config.embedDirectly || config.pluginMode === "direct";
     const variableStructure = config.variableStructure || "color";
-    const useShortColor = config.useShortColorNames || false;
-    const useShortRole = config.useShortRoleNames || false;
+    const useShortColor = config.useShorthandColors || false;
+    const useShortRole = config.useShorthandRoles || false;
 
     // Helper: resolve display label for color/role names
     const colorLabel = (name) => {
       if (!useShortColor) return name;
       const col = config.colors.find((c) => c.name === name);
-      return (col && col.shortName) || name;
+      return (col && col.shorthand) || name;
     };
     const roleLabel = (name, roleIdx) => {
       if (!useShortRole) return name;
       const role = config.roles[roleIdx];
-      return (role && role.shortName) || name;
+      return (role && role.shorthand) || name;
     };
 
     // Build tknRef → Figma variable name map using the same naming as stage 1
@@ -84,11 +84,15 @@ const VariableManager = {
     // STAGE 1: Tonal Scale → scale collection (skipped when embedDirectly is true)
     if (rampsCol && (scope === "all" || scope === "groups")) {
       const modeId = rampsCol.modes[0].modeId;
-      const allRampVars = [];
+      const include = config.includeDescriptions !== false;
+
       for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
         const cLabel = colorLabel(colorName);
         for (const [weightName, entry] of Object.entries(ramp)) {
-          allRampVars.push([`${cLabel}/${weightName}`, "COLOR", entry.value, `L:${entry.contrast.light.ratio}(${entry.contrast.light.rating}) D:${entry.contrast.dark.ratio}(${entry.contrast.dark.rating})`]);
+          const contrastNote = include ? `L:${entry.contrast.light.ratio}(${entry.contrast.light.rating}) D:${entry.contrast.dark.ratio}(${entry.contrast.dark.rating})` : "";
+          const groupDesc = include ? entry.description : "";
+          const fullDesc = (groupDesc && contrastNote) ? `${groupDesc} | ${contrastNote}` : (groupDesc || contrastNote);
+          allRampVars.push([`${cLabel}/${weightName}`, "COLOR", entry.value, fullDesc]);
         }
       }
       await this.upsertVariables(rampsCol, modeId, allRampVars);
@@ -112,13 +116,14 @@ const VariableManager = {
         }
         for (const [colorName, roles] of Object.entries(result.colorTokens[theme])) {
           for (const [roleId, variations] of Object.entries(roles)) {
-            const rName = (config.roles[roleId] && config.roles[roleId].name) || roleId;
+            const roleObj = config.roles[roleId] || {};
+            const rName = roleObj.name || roleId;
             const cLabel = colorLabel(colorName);
             const rLabel = roleLabel(rName, parseInt(roleId));
             const vars = config.variations.map((varDef, i) => {
               const token = variations[String(i)];
               if (!token) return null;
-              const dispName = varDef.shortName || varDef.name;
+              const dispName = varDef.shorthand || varDef.name;
               const figmaName = variableStructure === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
               let value;
               if (skipRamps) {
@@ -130,8 +135,17 @@ const VariableManager = {
                   : null;
                 value = targetVar ? { type: "VARIABLE_ALIAS", id: targetVar.id } : token.value;
               }
-              const note = token.isAdjusted ? " | ⚠ Adjusted" : "";
-              return [figmaName, "COLOR", value, `${theme.toUpperCase()}${note}`];
+              const include = config.includeDescriptions !== false;
+              const note = (include && token.isAdjusted) ? " | ⚠ Adjusted" : "";
+              const themeNote = include ? theme.toUpperCase() : "";
+              const roleDesc = include ? token.roleDescription : "";
+              
+              let fullDesc = "";
+              if (roleDesc && themeNote) fullDesc = `${roleDesc} | ${themeNote}${note}`;
+              else if (roleDesc) fullDesc = roleDesc;
+              else if (themeNote) fullDesc = `${themeNote}${note}`;
+
+              return [figmaName, "COLOR", value, fullDesc];
             }).filter(Boolean);
             await this.upsertVariables(contextualCol, modeId, vars);
           }
@@ -225,8 +239,10 @@ const VariableManager = {
     const vars = [];
     for (const color of config.colors) {
       const hex = "#" + color.value.replace(/^#/, "").toUpperCase().padEnd(6, "0");
-      const label = config.useShortColorNames && color.shortName ? color.shortName : color.name;
-      vars.push([`${label}/${label}`, "COLOR", hex, "Brand constant — raw hex, no theme processing"]);
+      const label = config.useShorthandColors && color.shorthand ? color.shorthand : color.name;
+      const include = config.includeDescriptions !== false;
+      const groupDesc = include ? (color.description || "Brand constant — raw hex, no theme processing") : "";
+      vars.push([`${label}/${label}`, "COLOR", hex, groupDesc]);
 
       if (config.includeAlphaTints && config.alphaValues.length > 0) {
         const rgb = hexToFigmaRgb(hex);

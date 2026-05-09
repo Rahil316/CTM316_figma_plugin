@@ -204,6 +204,7 @@ function _generateBaseRamps(colors, rampLength, algorithm, stepNames, lightBg, d
         value,
         stepName: `${color.name}-${weight}`,
         shortName: `${color.shortName}-${weight}`,
+        description: color.description || "",
         contrast: {
           light: { ratio: contrastRatio(value, lightBg), rating: contrastRating(value, lightBg) },
           dark: { ratio: contrastRatio(value, darkBg), rating: contrastRating(value, darkBg) },
@@ -252,6 +253,7 @@ function _solveDirectMode(color, mode, config, groupOutput, errors) {
       roleOutput[variation] = {
         tknName: `${color.name}-${role.name}-${variation}`,
         color: color.name, role: role.name, variation,
+        roleDescription: role.description || "",
         value: solved.hex,
         contrast: { ratio: solved.achievedContrast, rating: contrastRating(solved.hex, bgHex) },
         contrastTarget: targetContrast,
@@ -290,6 +292,7 @@ function _mapManualSteps(color, role, variations, ramp, stepNames, modeName, out
     output[vi] = {
       tknName: `${color.name}-${role.name}-${vi}`,
       color: color.name, role: role.name, variation: String(vi),
+      roleDescription: role.description || "",
       tknRef: data.stepName, value: data.value,
       contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
     };
@@ -314,6 +317,7 @@ function _mapByContrastTarget(color, role, variations, ramp, stepNames, modeName
     output[vi] = {
       tknName: `${color.name}-${role.name}-${vi}`,
       color: color.name, role: role.name, variation: String(vi),
+      roleDescription: role.description || "",
       tknRef: data.stepName, value: data.value,
       contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
       contrastTarget: targetC,
@@ -351,6 +355,7 @@ function _mapByStepOffset(color, role, variations, ramp, stepNames, modeName, ou
     output[vi] = {
       tknName: `${color.name}-${role.name}-${vi}`,
       color: color.name, role: role.name, variation: String(vi),
+      roleDescription: role.description || "",
       tknRef: data.stepName, value: data.value,
       contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
       isAdjusted: adjusted,

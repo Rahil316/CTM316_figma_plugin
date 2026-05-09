@@ -136,6 +136,30 @@
         transition: background 0.2s;
         flex-shrink: 0;
       }
+      .tooltip {
+        position: fixed;
+        z-index: 100000;
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+        border-radius: 8px;
+        padding: 8px 12px;
+        max-width: 200px;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(4px) scale(0.98);
+        transition:
+          opacity 0.15s ease,
+          transform 0.15s ease;
+        backdrop-filter: blur(12px);
+        font-size: 11px;
+        line-height: 1.4;
+        color: var(--text-primary);
+      }
+      .tooltip.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
       .toggle-pill::after {
         content: "";
         position: absolute;
@@ -419,12 +443,12 @@
           <button id="close-settings" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] py-1.5 px-4 rounded-[8px] text-[13px] font-bold transition-colors text-[var(--text-primary)]">Done</button>
         </div>
         <div class="p-4 overflow-y-auto space-y-6">
-          <!-- Plugin Mode -->
-          <div class="space-y-2">
-            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Generation Mode</h3>
+          <!-- Token Creation Mode -->
+          <div class="space-y-3">
+            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1 uppercase">Token Creation Mode</h3>
             <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-              <button id="mode-btn-ramp" onclick="setPluginMode('ramp')" class="seg-btn active flex-1">Tonal Scale</button>
-              <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1">Direct Contrast</button>
+              <button id="mode-btn-ramp" onclick="setPluginMode('ramp')" class="seg-btn active flex-1" data-tooltip="Uses a pre-defined tonal scale for maximum system consistency. Offers several methods to auto-map tokens to steps.">Palette-Based</button>
+              <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1" data-tooltip="Uses an adaptive engine to generate mathematically perfect colors for every role based on target contrasts.">Adaptive Engine</button>
             </div>
           </div>
 
@@ -524,6 +548,18 @@
             </div>
           </div>
 
+          <!-- Variable Descriptions -->
+          <div class="space-y-3">
+            <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1 uppercase">Descriptions</h3>
+            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Variable Descriptions</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Include custom notes and contrast metadata in Figma</p>
+              </div>
+              <button id="toggle-includeDescriptions" class="toggle-pill" onclick="toggleBoolSetting('includeDescriptions')"></button>
+            </div>
+          </div>
+
           <!-- Output Options Section -->
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Output Options</h3>
@@ -577,17 +613,24 @@
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variable Naming</label>
               <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
                 <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Abbreviate Color Names</p>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Colors</p>
                   <p class="text-[11px] text-[var(--text-muted)] mt-0.5" id="preview-color-name-format">e.g. primary → pr</p>
                 </div>
-                <button id="toggle-useShortColorNames" class="toggle-pill" onclick="toggleBoolSetting('useShortColorNames')"></button>
+                <button id="toggle-useShorthandColors" class="toggle-pill" onclick="toggleBoolSetting('useShorthandColors')"></button>
               </div>
               <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
                 <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Abbreviate Role Names</p>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Roles</p>
                   <p class="text-[11px] text-[var(--text-muted)] mt-0.5" id="preview-role-name-format">e.g. Text → tx</p>
                 </div>
-                <button id="toggle-useShortRoleNames" class="toggle-pill" onclick="toggleBoolSetting('useShortRoleNames')"></button>
+                <button id="toggle-useShorthandRoles" class="toggle-pill" onclick="toggleBoolSetting('useShorthandRoles')"></button>
+              </div>
+              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+                <div>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Variations</p>
+                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5" id="preview-variation-name-format">e.g. Darker → dk</p>
+                </div>
+                <button id="toggle-useShorthandVariations" class="toggle-pill" onclick="toggleBoolSetting('useShorthandVariations')"></button>
               </div>
               <div class="bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 py-2">
                 <p class="text-[11px] text-[var(--text-muted)]">Preview:</p>
@@ -944,6 +987,7 @@
         <path d="M11 1L1 11M11 5L5 11M11 9L9 11" stroke="var(--text-dim)" stroke-width="2" stroke-linecap="round" />
       </svg>
     </div>
+    <div id="tooltip" class="tooltip"></div>
     <script src="src/ui/bannerManager.js"></script>
     <script src="src/utils.js"></script>
     <script src="src/ui/state.js"></script>
