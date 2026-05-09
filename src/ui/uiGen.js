@@ -12,6 +12,13 @@
  */
 
 // Drag-and-drop state, appState, and UI prefs are now managed globally in src/state.js
+/** @param {array} UI_MODES - Plugin modes */
+const UI_MODES = {
+  plugin: ["ramp", "direct"],
+  grouping: ["color", "role"],
+  spread: ["steps", "contrast"],
+  selection: ["By Contrast", "Manual", "By Index"],
+};
 
 /**
  * 4. COLOR ENGINE (UI THREAD)
@@ -701,8 +708,8 @@ function toggleBoolSetting(key) {
   }
 }
 
-function setTokenGrouping(val) {
-  appState.variableStructure = val;
+function setTokenGrouping(idx) {
+  appState.variableStructure = UI_MODES.grouping[idx] || "color";
   syncOutputToggles();
 }
 
@@ -793,8 +800,9 @@ function syncOutputToggles() {
   }
 }
 
-function setPluginMode(mode) {
-  if (mode !== "ramp" && mode !== "direct") return;
+function setPluginMode(idx) {
+  const mode = UI_MODES.plugin[idx];
+  if (!mode) return;
   appState.pluginMode = mode;
   syncOutputToggles();
   renderColorGroups();
@@ -804,10 +812,15 @@ function setPluginMode(mode) {
 // schedulePreview: no-op placeholder (preview is rendered on demand via btn-preview)
 function schedulePreview() {}
 
-function setSpreadUnit(unit) {
-  appState.spreadUnit = unit;
+function setSpreadUnit(idx) {
+  appState.spreadUnit = UI_MODES.spread[idx] || "steps";
   syncOutputToggles();
   renderRoles();
+}
+
+function setBaseSelection(idx) {
+  appState.baseSelection = UI_MODES.selection[idx] || "By Contrast";
+  syncUiSettingsInputs();
 }
 
 function updateRoleVariationTarget(roleIdx, varIdx, value) {
@@ -847,7 +860,8 @@ function updateSettingsFromInputs() {
   appState.colorStepNames = document.getElementById("setting-colorStepNames").value;
 
   // Role Settings
-  appState.baseSelection = document.getElementById("setting-baseSelection").value;
+  const bsSelect = document.getElementById("setting-baseSelection");
+  appState.baseSelection = UI_MODES.selection[bsSelect.selectedIndex] || "By Contrast";
 
   // Constants
   appState.globalColorsCollectionName = document.getElementById("setting-globalColorsCollectionName").value.trim() || "_constants";
@@ -879,7 +893,11 @@ function syncInputsFromState() {
   document.getElementById("setting-colorStepNames").value = appState.colorStepNames || "";
 
   // Role Settings
-  document.getElementById("setting-baseSelection").value = appState.baseSelection || "By Contrast";
+  const bsEl = document.getElementById("setting-baseSelection");
+  if (bsEl) {
+    const idx = UI_MODES.selection.indexOf(appState.baseSelection || "By Contrast");
+    bsEl.selectedIndex = idx !== -1 ? idx : 0;
+  }
 
   // Constants
   document.getElementById("setting-globalColorsCollectionName").value = appState.globalColorsCollectionName || "_constants";
@@ -1502,9 +1520,9 @@ function refreshRunDialog() {
     const colorList = appState.colors.map((c) => `${c.name}${c.shorthand ? ` (${c.shorthand})` : ""}`).join(", ");
     const roleList = appState.roles.map((r) => `${r.name}${r.shorthand ? ` (${r.shorthand})` : ""}`).join(", ");
     sumEl.innerHTML = [
-      summaryRow("System", appState.name || "—"),
-      summaryRow("Colors", `${appState.colors.length}: ${colorList}`),
-      summaryRow("Roles", `${appState.roles.length}: ${roleList}`),
+      summaryRow("Project Name", appState.name || "—"),
+      summaryRow(`Colors x${appState.colors.length}`, `${colorList}`),
+      summaryRow(`Roles x${appState.roles.length}`, `${roleList}`),
       summaryRow("Mode", appState.pluginMode === "direct" ? "Adaptive Engine" : "Palette-Based"),
       ...(appState.pluginMode === "direct"
         ? []

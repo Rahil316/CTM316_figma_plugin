@@ -14,7 +14,11 @@ const RAMP_STRATEGIES = {
   Uniform: (hue, satu, N, stepLum, findL) => {
     const out = [];
     for (let i = 0; i < N; i++) {
-      const L = findL(stepLum(i), () => satu, () => hue);
+      const L = findL(
+        stepLum(i),
+        () => satu,
+        () => hue,
+      );
       out.push(hslToHex(hue, satu, L) || "#000000");
     }
     return out;
@@ -46,18 +50,22 @@ const RAMP_STRATEGIES = {
 
   Symmetric: (hue, satu, N, stepLum, findL, { hexIn, uMax, uMin }) => {
     const srcLum = relLum(normalizeHex(hexIn)) || 0.18;
-    const uSrc   = Math.log(srcLum + 0.05);
-    const mid    = Math.floor((N - 1) / 2);
-    const out    = [];
+    const uSrc = Math.log(srcLum + 0.05);
+    const mid = Math.floor((N - 1) / 2);
+    const out = [];
     for (let i = 0; i < N; i++) {
       let u;
-      if      (N === 1)       u = uSrc;
-      else if (i === 0)       u = uMax;
-      else if (i === N - 1)   u = uMin;
-      else if (i <= mid && mid > 0) u = uMax - (uMax - uSrc) * i / mid;
-      else                    u = uSrc - (uSrc - uMin) * (i - mid) / (N - 1 - mid);
+      if (N === 1) u = uSrc;
+      else if (i === 0) u = uMax;
+      else if (i === N - 1) u = uMin;
+      else if (i <= mid && mid > 0) u = uMax - ((uMax - uSrc) * i) / mid;
+      else u = uSrc - ((uSrc - uMin) * (i - mid)) / (N - 1 - mid);
       const targetLum = Math.max(0.0001, Math.exp(Math.min(uMax, Math.max(uMin, u))) - 0.05);
-      const L = findL(targetLum, () => satu, () => hue);
+      const L = findL(
+        targetLum,
+        () => satu,
+        () => hue,
+      );
       out.push(hslToHex(hue, satu, L) || "#000000");
     }
     return out;
@@ -68,13 +76,16 @@ const RAMP_STRATEGIES = {
     const out = [];
     for (let i = 0; i < N; i++) {
       const targetLum = stepLum(i);
-      let lo = 0, hi = 1, oL = 0.5;
+      let lo = 0,
+        hi = 1,
+        oL = 0.5;
       for (let j = 0; j < 40; j++) {
         const mid = (lo + hi) / 2;
         const lum = relLum(oklchToHex(mid, srcC, srcH));
         oL = mid;
         if (Math.abs(lum - targetLum) < 0.0001) break;
-        if (lum < targetLum) lo = mid; else hi = mid;
+        if (lum < targetLum) lo = mid;
+        else hi = mid;
       }
       out.push(oklchToHex(oL, srcC, srcH) || "#000000");
     }
@@ -86,18 +97,21 @@ const RAMP_STRATEGIES = {
     const out = [];
     for (let i = 0; i < N; i++) {
       const targetLum = stepLum(i);
-      let lo = 0, hi = 100, tone = 50;
+      let lo = 0,
+        hi = 100,
+        tone = 50;
       for (let j = 0; j < 40; j++) {
         const mid = (lo + hi) / 2;
         const lum = relLum(hctToHex(srcH, srcC, mid));
         tone = mid;
         if (Math.abs(lum - targetLum) < 0.0001) break;
-        if (lum < targetLum) lo = mid; else hi = mid;
+        if (lum < targetLum) lo = mid;
+        else hi = mid;
       }
       out.push(hctToHex(srcH, srcC, tone) || "#000000");
     }
     return out;
-  }
+  },
 };
 
 function tonalScaleMaker(hexIn, rampLength, rampType = "Natural") {
@@ -107,8 +121,8 @@ function tonalScaleMaker(hexIn, rampLength, rampType = "Natural") {
 
   // Shared geometric scaling params
   const C_max = (21 * N) / (N + 1);
-  const uMax  = Math.log(0.05 * C_max);
-  const uMin  = Math.log(1.05 / C_max);
+  const uMax = Math.log(0.05 * C_max);
+  const uMin = Math.log(1.05 / C_max);
 
   const stepLum = (i) => {
     const u = N === 1 ? (uMax + uMin) / 2 : uMax - (i / (N - 1)) * (uMax - uMin);
@@ -116,13 +130,16 @@ function tonalScaleMaker(hexIn, rampLength, rampType = "Natural") {
   };
 
   const findL = (targetLum, getS, getH) => {
-    let lo = 0, hi = 100, L = 50;
+    let lo = 0,
+      hi = 100,
+      L = 50;
     for (let j = 0; j < 30; j++) {
       const mid = (lo + hi) / 2;
       const lum = relLum(hslToHex(getH(mid), getS(mid), mid));
       L = mid;
       if (Math.abs(lum - targetLum) < 0.0001) break;
-      if (lum < targetLum) lo = mid; else hi = mid;
+      if (lum < targetLum) lo = mid;
+      else hi = mid;
     }
     return L;
   };
@@ -142,9 +159,7 @@ function variableMaker(config) {
   const darkBg = normalizeHex(themes[1].bg) || "#000000";
 
   // 1. Generate base ramps (unless in direct mode where they aren't needed)
-  const clrRamps = config.pluginMode !== "direct" 
-    ? _generateBaseRamps(colors, colorSteps, config.scaleAlgorithm, config.colorStepNames, lightBg, darkBg)
-    : Object.create(null);
+  const clrRamps = config.pluginMode !== "direct" ? _generateBaseRamps(colors, colorSteps, config.scaleAlgorithm, config.colorStepNames, lightBg, darkBg) : Object.create(null);
 
   const tokensCollection = { light: {}, dark: {} };
 
@@ -174,7 +189,9 @@ function variableMaker(config) {
 
 function _computeInputHash(config) {
   return JSON.stringify({
-    colors: config.colors.map(function(g) { return Object.assign({}, g, { value: normalizeHex(g.value) }); }),
+    colors: config.colors.map(function (g) {
+      return Object.assign({}, g, { value: normalizeHex(g.value) });
+    }),
     rampLength: config.colorSteps,
     scaleAlgorithm: config.scaleAlgorithm,
     lightBg: normalizeHex(config.themes[0].bg),
@@ -203,7 +220,7 @@ function _generateBaseRamps(colors, rampLength, algorithm, stepNames, lightBg, d
       ramp[weight] = {
         value,
         stepName: `${color.name}-${weight}`,
-        shortName: `${color.shortName}-${weight}`,
+        shorthand: `${color.shorthand}-${weight}`,
         description: color.description || "",
         contrast: {
           light: { ratio: contrastRatio(value, lightBg), rating: contrastRating(value, lightBg) },
@@ -222,19 +239,18 @@ function _solveDirectMode(color, mode, config, groupOutput, errors) {
 
   for (let ri = 0; ri < config.roles.length; ri++) {
     const role = config.roles[ri];
-    const roleOutput = groupOutput[ri] = {};
-    
-    const variations = (role.variationOverride && role.roleVariations && role.roleVariations.length)
-      ? role.roleVariations : config.variations;
-    
+    const roleOutput = (groupOutput[ri] = {});
+
+    const variations = role.variationOverride && role.roleVariations && role.roleVariations.length ? role.roleVariations : config.variations;
+
     // Determine target contrasts based on mode
     let targets;
     if (config.baseSelectionMode === "Manual") {
       targets = role.variationTargets || variations.map((_, i) => [1.5, 3, 4.5, 7, 12][i] || 1.5 + i * 1.5);
-      
+
       const check = validateVariationContrasts(targets);
       if (!check.valid) {
-        check.errors.forEach(err => errors.critical.push({ color: color.name, role: role.name, theme: modeName, error: err }));
+        check.errors.forEach((err) => errors.critical.push({ color: color.name, role: role.name, theme: modeName, error: err }));
         continue;
       }
     } else {
@@ -246,13 +262,15 @@ function _solveDirectMode(color, mode, config, groupOutput, errors) {
     targets.forEach((targetContrast, vi) => {
       const variation = String(vi);
       const solved = solveColorForContrast(color.value, targetContrast, bgHex, solverMode);
-      
+
       if (solved.warning) errors.warnings.push({ color: color.name, role: role.name, variation, theme: modeName, warning: solved.warning });
       if (solved.chromaReduced) errors.notices.push({ color: color.name, role: role.name, variation, theme: modeName, notice: "Chroma reduced to fit gamut." });
 
       roleOutput[variation] = {
         tknName: `${color.name}-${role.name}-${variation}`,
-        color: color.name, role: role.name, variation,
+        color: color.name,
+        role: role.name,
+        variation,
         roleDescription: role.description || "",
         value: solved.hex,
         contrast: { ratio: solved.achievedContrast, rating: contrastRating(solved.hex, bgHex) },
@@ -270,9 +288,8 @@ function _processTonalMode(color, mode, config, clrRamps, groupOutput, errors) {
 
   for (let ri = 0; ri < config.roles.length; ri++) {
     const role = config.roles[ri];
-    const roleOutput = groupOutput[ri] = {};
-    const variations = (role.variationOverride && role.roleVariations && role.roleVariations.length)
-      ? role.roleVariations : config.variations;
+    const roleOutput = (groupOutput[ri] = {});
+    const variations = role.variationOverride && role.roleVariations && role.roleVariations.length ? role.roleVariations : config.variations;
 
     if (config.baseSelectionMode === "Manual") {
       _mapManualSteps(color, role, variations, ramp, stepNames, modeName, roleOutput);
@@ -285,15 +302,18 @@ function _processTonalMode(color, mode, config, clrRamps, groupOutput, errors) {
 }
 
 function _mapManualSteps(color, role, variations, ramp, stepNames, modeName, output) {
-  const targets = role.variationTargets || variations.map((_, i) => Math.floor(stepNames.length * i / Math.max(1, variations.length - 1)));
+  const targets = role.variationTargets || variations.map((_, i) => Math.floor((stepNames.length * i) / Math.max(1, variations.length - 1)));
   variations.forEach((_, vi) => {
     const idx = Math.max(0, Math.min(stepNames.length - 1, parseInt(targets[vi]) || 0));
     const data = ramp[stepNames[idx]];
     output[vi] = {
       tknName: `${color.name}-${role.name}-${vi}`,
-      color: color.name, role: role.name, variation: String(vi),
+      color: color.name,
+      role: role.name,
+      variation: String(vi),
       roleDescription: role.description || "",
-      tknRef: data.stepName, value: data.value,
+      tknRef: data.stepName,
+      value: data.value,
       contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
     };
   });
@@ -306,19 +326,26 @@ function _mapByContrastTarget(color, role, variations, ramp, stepNames, modeName
 
   variations.forEach((_, vi) => {
     const targetC = baseC + (vi - baseVarIdx) * role.contrastGap;
-    let bestIdx = 0, bestDiff = Infinity;
-    
+    let bestIdx = 0,
+      bestDiff = Infinity;
+
     stepNames.forEach((name, si) => {
       const diff = Math.abs(ramp[name].contrast[modeName].ratio - targetC);
-      if (diff < bestDiff) { bestDiff = diff; bestIdx = si; }
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = si;
+      }
     });
 
     const data = ramp[stepNames[bestIdx]];
     output[vi] = {
       tknName: `${color.name}-${role.name}-${vi}`,
-      color: color.name, role: role.name, variation: String(vi),
+      color: color.name,
+      role: role.name,
+      variation: String(vi),
       roleDescription: role.description || "",
-      tknRef: data.stepName, value: data.value,
+      tknRef: data.stepName,
+      value: data.value,
       contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
       contrastTarget: targetC,
       isAdjusted: bestDiff > 0.5,
@@ -329,16 +356,14 @@ function _mapByContrastTarget(color, role, variations, ramp, stepNames, modeName
 
 function _mapByStepOffset(color, role, variations, ramp, stepNames, modeName, output, mappingType, errors) {
   const isDark = modeName === "dark";
-  let baseIdx = (mappingType === "By Contrast") 
-    ? _findBaseIndexByContrast(role, ramp, stepNames, modeName, isDark, color.name, role.name, errors)
-    : _findBaseIndexExplicit(role, stepNames, isDark);
+  let baseIdx = mappingType === "By Contrast" ? _findBaseIndexByContrast(role, ramp, stepNames, modeName, isDark, color.name, role.name, errors) : _findBaseIndexExplicit(role, stepNames, isDark);
 
   // Clamp baseIdx for spread
   const baseVarIdx = Math.floor(variations.length / 2);
   const spread = role.spread;
   const minAllowed = baseVarIdx * spread;
   const maxAllowed = stepNames.length - 1 - minAllowed;
-  
+
   if (baseIdx < minAllowed || baseIdx > maxAllowed) {
     baseIdx = Math.max(minAllowed, Math.min(maxAllowed, baseIdx));
     errors.warnings.push({ color: color.name, role: role.name, theme: modeName, warning: "Base index clamped for spread." });
@@ -350,13 +375,16 @@ function _mapByStepOffset(color, role, variations, ramp, stepNames, modeName, ou
     let idx = baseIdx + (vi - baseVarIdx) * spread * growthDir;
     const adjusted = idx < 0 || idx >= stepNames.length;
     idx = Math.max(0, Math.min(stepNames.length - 1, idx));
-    
+
     const data = ramp[stepNames[idx]];
     output[vi] = {
       tknName: `${color.name}-${role.name}-${vi}`,
-      color: color.name, role: role.name, variation: String(vi),
+      color: color.name,
+      role: role.name,
+      variation: String(vi),
       roleDescription: role.description || "",
-      tknRef: data.stepName, value: data.value,
+      tknRef: data.stepName,
+      value: data.value,
       contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
       isAdjusted: adjusted,
     };
@@ -370,7 +398,7 @@ function _findBaseContrast(role, ramp, stepNames, modeName, isDark) {
     return ramp[stepNames[idx]].contrast[modeName].ratio;
   }
   const minC = parseFloat(role.minContrast) || 4.5;
-  const step = stepNames.find(n => ramp[n].contrast[modeName].ratio >= minC) || stepNames[stepNames.length >> 1];
+  const step = stepNames.find((n) => ramp[n].contrast[modeName].ratio >= minC) || stepNames[stepNames.length >> 1];
   return ramp[step].contrast[modeName].ratio;
 }
 
@@ -380,20 +408,30 @@ function _findBaseIndexByContrast(role, ramp, stepNames, modeName, isDark, color
 
   if (isDark) {
     for (let i = stepNames.length - 1; i >= 0; i--) {
-      if (ramp[stepNames[i]].contrast[modeName].ratio >= minC) { baseIdx = i; break; }
+      if (ramp[stepNames[i]].contrast[modeName].ratio >= minC) {
+        baseIdx = i;
+        break;
+      }
     }
   } else {
     for (let i = 0; i < stepNames.length; i++) {
-      if (ramp[stepNames[i]].contrast[modeName].ratio >= minC) { baseIdx = i; break; }
+      if (ramp[stepNames[i]].contrast[modeName].ratio >= minC) {
+        baseIdx = i;
+        break;
+      }
     }
   }
 
   if (baseIdx === -1) {
     // Fallback: find step with highest contrast
-    let bestIdx = 0, maxC = -1;
+    let bestIdx = 0,
+      maxC = -1;
     stepNames.forEach((name, i) => {
       const c = ramp[name].contrast[modeName].ratio;
-      if (c > maxC) { maxC = c; bestIdx = i; }
+      if (c > maxC) {
+        maxC = c;
+        bestIdx = i;
+      }
     });
     baseIdx = bestIdx;
     errors.critical.push({ color: colorName, role: roleName, theme: modeName, error: `Cannot meet minimum contrast ${minC}. using closest available (${maxC.toFixed(2)}).` });

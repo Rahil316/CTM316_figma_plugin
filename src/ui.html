@@ -447,8 +447,8 @@
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1 uppercase">Token Creation Mode</h3>
             <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-              <button id="mode-btn-ramp" onclick="setPluginMode('ramp')" class="seg-btn active flex-1" data-tooltip="Uses a pre-defined tonal scale for maximum system consistency. Offers several methods to auto-map tokens to steps.">Palette-Based</button>
-              <button id="mode-btn-direct" onclick="setPluginMode('direct')" class="seg-btn flex-1" data-tooltip="Uses an adaptive engine to generate mathematically perfect colors for every role based on target contrasts.">Adaptive Engine</button>
+              <button id="mode-btn-ramp" onclick="setPluginMode(0)" class="seg-btn active flex-1" data-tooltip="Uses a pre-defined tonal scale for maximum system consistency. Offers several methods to auto-map tokens to steps.">Palette-Based</button>
+              <button id="mode-btn-direct" onclick="setPluginMode(1)" class="seg-btn flex-1" data-tooltip="Uses an adaptive engine to generate mathematically perfect colors for every role based on target contrasts.">Adaptive Engine</button>
             </div>
           </div>
 
@@ -524,7 +524,7 @@
             </div>
             <div class="space-y-1">
               <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
-              <select id="setting-baseSelection" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+              <select id="setting-baseSelection" onchange="setBaseSelection(this.selectedIndex)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
                 <option value="By Contrast">By Contrast</option>
                 <option value="By Index" id="base-selection-opt-byindex">By Index</option>
                 <option value="Manual">Manual</option>
@@ -533,8 +533,8 @@
             <div id="settings-spread-unit-row" class="space-y-1">
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Spread Unit</label>
               <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-                <button id="su-btn-steps" onclick="setSpreadUnit('steps')" class="seg-btn active flex-1">Steps</button>
-                <button id="su-btn-contrast" onclick="setSpreadUnit('contrast')" class="seg-btn flex-1">Contrast</button>
+                <button id="su-btn-steps" onclick="setSpreadUnit(0)" class="seg-btn active flex-1">Steps</button>
+                <button id="su-btn-contrast" onclick="setSpreadUnit(1)" class="seg-btn flex-1">Contrast</button>
               </div>
               <p class="text-[11px] text-[var(--text-muted)] px-1">How variation distance is measured from the base.</p>
             </div>
@@ -603,8 +603,8 @@
             <div class="space-y-1">
               <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variable Structure</label>
               <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-                <button id="seg-group-color" class="seg-btn flex-1" onclick="setTokenGrouping('color')">Color-first&nbsp;&nbsp;color/role/step</button>
-                <button id="seg-group-role" class="seg-btn flex-1" onclick="setTokenGrouping('role')">Role-first&nbsp;&nbsp;role/color/step</button>
+                <button id="seg-group-color" class="seg-btn flex-1" onclick="setTokenGrouping(0)">Color-first&nbsp;&nbsp;color/role/step</button>
+                <button id="seg-group-role" class="seg-btn flex-1" onclick="setTokenGrouping(1)">Role-first&nbsp;&nbsp;role/color/step</button>
               </div>
             </div>
 
@@ -863,7 +863,7 @@
                   id="rd-seg-group-color"
                   class="seg-btn flex-1"
                   onclick="
-                    setTokenGrouping('color');
+                    setTokenGrouping(0);
                     refreshRunDialog();
                   "
                 >
@@ -873,7 +873,7 @@
                   id="rd-seg-group-role"
                   class="seg-btn flex-1"
                   onclick="
-                    setTokenGrouping('role');
+                    setTokenGrouping(1);
                     refreshRunDialog();
                   "
                 >
@@ -882,26 +882,25 @@
               </div>
             </div>
             <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-              <p class="text-[13px] font-medium text-[var(--text-primary)]">Abbreviate Color Names</p>
-              <button
-                id="rd-toggle-useShortColorNames"
-                class="toggle-pill"
-                onclick="
-                  toggleBoolSetting('useShortColorNames');
-                  refreshRunDialog();
-                "
-              ></button>
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Colors</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">e.g. primary → pr</p>
+              </div>
+              <button id="rd-toggle-useShorthandColors" class="toggle-pill" onclick="toggleBoolSetting('useShorthandColors'); refreshRunDialog();"></button>
             </div>
             <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-              <p class="text-[13px] font-medium text-[var(--text-primary)]">Abbreviate Role Names</p>
-              <button
-                id="rd-toggle-useShortRoleNames"
-                class="toggle-pill"
-                onclick="
-                  toggleBoolSetting('useShortRoleNames');
-                  refreshRunDialog();
-                "
-              ></button>
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Roles</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">e.g. Text → tx</p>
+              </div>
+              <button id="rd-toggle-useShorthandRoles" class="toggle-pill" onclick="toggleBoolSetting('useShorthandRoles'); refreshRunDialog();"></button>
+            </div>
+            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Variations</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">e.g. Darker → dk</p>
+              </div>
+              <button id="rd-toggle-useShorthandVariations" class="toggle-pill" onclick="toggleBoolSetting('useShorthandVariations'); refreshRunDialog();"></button>
             </div>
             <div class="bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 py-2">
               <p class="text-[11px] text-[var(--text-muted)]">Example variable name:</p>

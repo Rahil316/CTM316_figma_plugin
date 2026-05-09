@@ -43,7 +43,7 @@ const ExportFormatter = {
           for (let i = 0; i < config.variations.length; i++) {
             const token = variations[String(i)];
             if (!token) continue;
-            const dispName = (config.variations[i].shortName || config.variations[i].name);
+            const dispName = config.variations[i].shorthand || config.variations[i].name;
             lines.push([csvField(colorName), csvField(roleName), csvField(dispName), csvField(theme), csvField(token.value), csvField(token.contrast ? token.contrast.ratio : ""), csvField(token.contrast ? token.contrast.rating : ""), csvField(token.isAdjusted ? "yes" : "")].join(","));
           }
         }
@@ -81,7 +81,7 @@ const ExportFormatter = {
           for (let i = 0; i < config.variations.length; i++) {
             const token = variations[String(i)];
             if (!token) continue;
-            const dispName = (config.variations[i].shortName || config.variations[i].name);
+            const dispName = config.variations[i].shorthand || config.variations[i].name;
             css += `  --${cssSlug(colorName)}-${cssSlug(roleName)}-${cssSlug(dispName)}: ${token.value};\n`;
           }
         }
@@ -98,7 +98,7 @@ const ExportFormatter = {
           for (let i = 0; i < config.variations.length; i++) {
             const token = variations[String(i)];
             if (!token) continue;
-            const dispName = (config.variations[i].shortName || config.variations[i].name);
+            const dispName = config.variations[i].shorthand || config.variations[i].name;
             css += `    --${cssSlug(colorName)}-${cssSlug(roleName)}-${cssSlug(dispName)}: ${token.value};\n`;
           }
         }
@@ -162,7 +162,7 @@ function generateScss(result, config) {
         for (let i = 0; i < configVariations.length; i++) {
           const token = variations[String(i)];
           if (!token || !token.tknRef) continue;
-          const dispName = (configVariations[i].shortName || configVariations[i].name);
+          const dispName = configVariations[i].shorthand || configVariations[i].name;
           const tokenKey = `${scssSlug(colorName)}-${scssSlug(roleName)}-${scssSlug(dispName)}`;
           // tknRef is "colorName-weight" (e.g. "Primary-18") — split on last dash
           const lastDash = token.tknRef.lastIndexOf("-");
