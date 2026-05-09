@@ -406,7 +406,7 @@
       </header>
 
       <!-- Banner slot: all runtime notifications render here via BannerManager -->
-      <div id="banner-slot" class="banner-slot"></div>
+      <div id="banner-slot" class="flex flex-col"></div>
 
       <!-- Sidebar Tabs -->
       <div class="sidebar-tabs">
@@ -865,13 +865,23 @@
                 <button
                   id="rd-seg-group-color"
                   class="seg-btn flex-1"
-                  onclick="setTokenGrouping('color'); refreshRunDialog();"
-                >Color-first&nbsp;color/role/step</button>
+                  onclick="
+                    setTokenGrouping('color');
+                    refreshRunDialog();
+                  "
+                >
+                  Color-first&nbsp;color/role/step
+                </button>
                 <button
                   id="rd-seg-group-role"
                   class="seg-btn flex-1"
-                  onclick="setTokenGrouping('role'); refreshRunDialog();"
-                >Role-first&nbsp;role/color/step</button>
+                  onclick="
+                    setTokenGrouping('role');
+                    refreshRunDialog();
+                  "
+                >
+                  Role-first&nbsp;role/color/step
+                </button>
               </div>
             </div>
             <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">

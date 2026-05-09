@@ -30,101 +30,43 @@
  *   actions     [{label, onClick(id), style:"primary"|"ghost"}]
  */
 const BannerManager = (() => {
+  // ── Tailwind Class System ──────────────────────────────────────────────────
+  const CLASSES = {
+    banner: "banner relative overflow-hidden border-b border-[var(--bn-border,rgba(255,255,255,.1))] bg-[var(--bn-bg,rgba(255,255,255,.04))]",
+    clickable: "banner--clickable cursor-pointer hover:bg-white/[0.03]",
+    body: "banner__body flex items-start gap-2 px-3 py-2 cursor-default",
+    icon: "banner__icon text-[12px] text-[var(--bn-icon)] shrink-0 mt-[1px] leading-[1.5]",
+    content: "banner__content flex-1 min-w-0",
+    title: "banner__title text-[11px] font-bold text-[var(--bn-text)] mb-0.5",
+    message: "banner__message text-[11px] text-[var(--bn-text)] leading-[1.5] opacity-90",
+    detail: "banner__detail text-[11px] text-[var(--bn-text)] opacity-70 leading-[1.5] mt-1.5 pt-1.5 border-t border-[var(--bn-border)]",
+    expand: "banner__expand inline-block mt-1 text-[10px] text-[var(--bn-icon)] opacity-80 bg-none border-none p-0 cursor-pointer underline underline-offset-2 hover:opacity-100",
+    actions: "banner__actions flex gap-1.5 mt-1.5 flex-wrap",
+    action: "banner__action text-[10px] px-2.5 py-1 rounded border border-[var(--bn-border)] bg-none text-[var(--bn-text)] cursor-pointer transition-colors hover:bg-white/[0.07]",
+    actionPrimary: "bn-primary bg-[var(--bn-icon)] !text-black border-transparent font-semibold hover:opacity-80",
+    dismiss: "banner__dismiss shrink-0 w-[18px] h-[18px] flex items-center justify-center rounded-[3px] bg-none border-none text-[var(--bn-text)] opacity-35 cursor-pointer text-[10px] mt-[1px] transition-opacity hover:opacity-100",
+    barWrap: "banner__bar-wrap h-[2px] bg-[var(--bn-border)]",
+    bar: "banner__bar h-full w-full bg-[var(--bn-icon)]",
 
-  // ── Injected CSS ───────────────────────────────────────────────────────────
+    // Carousel nav
+    nav: "bn-carousel__nav flex items-center justify-center gap-1.5 px-3 py-1 bg-[var(--bn-bg)] border-b border-[var(--bn-border)]",
+    dot: "bn-carousel__dot w-1.5 h-1.5 rounded-full bg-[var(--bn-text)] opacity-30 border-none p-0 cursor-pointer transition-opacity",
+    dotActive: "active opacity-100",
+    arrow: "bn-carousel__arrow bg-none border-none text-[var(--bn-text)] opacity-45 cursor-pointer text-[13px] px-0.5 leading-none transition-opacity hover:enabled:opacity-100 disabled:opacity-15 disabled:cursor-default",
+    count: "bn-carousel__count text-[10px] text-[var(--bn-text)] opacity-45",
+
+    // Queue
+    queueMore: "bn-queue__more text-[10px] px-3 py-1 text-right text-[var(--bn-text)] opacity-45 bg-[var(--bn-bg)] border-b border-[var(--bn-border)]",
+  };
+
+  // ── Injected CSS (Theme Variables Only) ────────────────────────────────────
   const CSS = `
-    .banner-slot { display:flex; flex-direction:column; }
-
-    .banner {
-      position:relative; overflow:hidden;
-      border-bottom:1px solid var(--bn-border, rgba(255,255,255,.1));
-      background:var(--bn-bg, rgba(255,255,255,.04));
-    }
     .banner--warning { --bn-bg:rgba(234,179,8,.09);  --bn-border:rgba(234,179,8,.28);  --bn-text:rgb(253,224,71);  --bn-icon:rgb(250,204,21); }
     .banner--error   { --bn-bg:rgba(239,68,68,.09);  --bn-border:rgba(239,68,68,.28);  --bn-text:rgb(252,165,165); --bn-icon:rgb(248,113,113);}
     .banner--info    { --bn-bg:rgba(59,130,246,.09); --bn-border:rgba(59,130,246,.28); --bn-text:rgb(147,197,253); --bn-icon:rgb(96,165,250); }
     .banner--success { --bn-bg:rgba(34,197,94,.09);  --bn-border:rgba(34,197,94,.28);  --bn-text:rgb(134,239,172); --bn-icon:rgb(74,222,128); }
     .banner--neutral { --bn-bg:rgba(255,255,255,.03);--bn-border:rgba(255,255,255,.09);--bn-text:rgba(255,255,255,.55);--bn-icon:rgba(255,255,255,.4);}
-
-    .banner__body {
-      display:flex; align-items:flex-start; gap:8px;
-      padding:8px 12px; cursor:default;
-    }
-    .banner--clickable .banner__body { cursor:pointer; }
-    .banner--clickable .banner__body:hover { background:rgba(255,255,255,.03); }
-
-    .banner__icon  { font-size:12px; color:var(--bn-icon); flex-shrink:0; margin-top:1px; line-height:1.5; }
-    .banner__content { flex:1; min-width:0; }
-    .banner__title   { font-size:11px; font-weight:700; color:var(--bn-text); margin-bottom:2px; }
-    .banner__message { font-size:11px; color:var(--bn-text); line-height:1.5; opacity:.9; }
-
-    .banner__detail {
-      font-size:11px; color:var(--bn-text); opacity:.72; line-height:1.5;
-      margin-top:6px; padding-top:6px;
-      border-top:1px solid var(--bn-border);
-    }
-    .banner__detail.bn-hidden { display:none; }
-
-    .banner__expand {
-      display:inline-block; margin-top:4px;
-      font-size:10px; color:var(--bn-icon); opacity:.8;
-      background:none; border:none; padding:0; cursor:pointer;
-      text-decoration:underline; text-underline-offset:2px;
-    }
-    .banner__expand:hover { opacity:1; }
-
-    .banner__actions { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
-    .banner__action {
-      font-size:10px; padding:3px 9px; border-radius:4px;
-      border:1px solid var(--bn-border); background:none;
-      color:var(--bn-text); cursor:pointer; transition:background .12s;
-    }
-    .banner__action:hover { background:rgba(255,255,255,.07); }
-    .banner__action.bn-primary {
-      background:var(--bn-icon); color:#000;
-      border-color:transparent; font-weight:600;
-    }
-    .banner__action.bn-primary:hover { opacity:.82; }
-
-    .banner__dismiss {
-      flex-shrink:0; width:18px; height:18px;
-      display:flex; align-items:center; justify-content:center;
-      border-radius:3px; background:none; border:none;
-      color:var(--bn-text); opacity:.35; cursor:pointer;
-      font-size:10px; margin-top:1px; transition:opacity .12s;
-    }
-    .banner__dismiss:hover { opacity:1; }
-
-    .banner__bar-wrap { height:2px; background:var(--bn-border); }
-    .banner__bar      { height:100%; width:100%; background:var(--bn-icon); }
-
-    /* ── Carousel nav ── */
-    .bn-carousel__nav {
-      display:flex; align-items:center; justify-content:center; gap:5px;
-      padding:4px 12px 5px;
-      background:var(--bn-bg); border-bottom:1px solid var(--bn-border);
-    }
-    .bn-carousel__dot {
-      width:5px; height:5px; border-radius:50%;
-      background:var(--bn-text); opacity:.28;
-      border:none; padding:0; cursor:pointer; transition:opacity .15s;
-    }
-    .bn-carousel__dot.active { opacity:1; }
-    .bn-carousel__arrow {
-      background:none; border:none; color:var(--bn-text);
-      opacity:.45; cursor:pointer; font-size:13px; padding:0 2px;
-      line-height:1; transition:opacity .15s;
-    }
-    .bn-carousel__arrow:hover:not(:disabled) { opacity:1; }
-    .bn-carousel__arrow:disabled { opacity:.15; cursor:default; }
-    .bn-carousel__count { font-size:10px; color:var(--bn-text); opacity:.45; }
-
-    /* ── Queue remaining pill ── */
-    .bn-queue__more {
-      font-size:10px; padding:3px 12px; text-align:right;
-      color:var(--bn-text); opacity:.45;
-      background:var(--bn-bg); border-bottom:1px solid var(--bn-border);
-    }
+    .bn-hidden { display:none !important; }
   `;
 
   (function injectCSS() {
@@ -137,26 +79,30 @@ const BannerManager = (() => {
 
   // ── Constants ──────────────────────────────────────────────────────────────
   const TYPES = {
-    warning: { icon:"⚠", cls:"banner--warning" },
-    error:   { icon:"✕", cls:"banner--error"   },
-    info:    { icon:"ℹ", cls:"banner--info"    },
-    success: { icon:"✓", cls:"banner--success" },
-    neutral: { icon:"·", cls:"banner--neutral" },
+    warning: { icon: "⚠", cls: "banner--warning" },
+    error: { icon: "✕", cls: "banner--error" },
+    info: { icon: "ℹ", cls: "banner--info" },
+    success: { icon: "✓", cls: "banner--success" },
+    neutral: { icon: "·", cls: "banner--neutral" },
   };
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const _timers  = new Map();
-  let _queueList   = [];
-  let _queueBusy   = false;
+  const _timers = new Map();
+  let _queueList = [];
+  let _queueBusy = false;
   let _carouselWrap = null;
   let _carouselData = [];
-  let _carouselIdx  = 0;
+  let _carouselIdx = 0;
   let _carouselAutoTimer = null;
   let _carouselOpts = {};
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  function _slot() { return document.getElementById("banner-slot"); }
-  function _uid()  { return "bn-" + Math.random().toString(36).slice(2,8); }
+  function _slot() {
+    return document.getElementById("banner-slot");
+  }
+  function _uid() {
+    return "bn-" + Math.random().toString(36).slice(2, 8);
+  }
 
   function _animOut(el, cb) {
     const h = el.offsetHeight;
@@ -172,49 +118,52 @@ const BannerManager = (() => {
   }
 
   function _cancelTimer(id) {
-    if (_timers.has(id)) { clearTimeout(_timers.get(id)); _timers.delete(id); }
+    if (_timers.has(id)) {
+      clearTimeout(_timers.get(id));
+      _timers.delete(id);
+    }
   }
 
   // Build a banner DOM element from config. Returns { id, el }.
   function _build(cfg, dismissCb) {
-    const id  = cfg.id || _uid();
-    const td  = TYPES[cfg.type || "neutral"] || TYPES.neutral;
+    const id = cfg.id || _uid();
+    const td = TYPES[cfg.type || "neutral"] || TYPES.neutral;
     const dim = cfg.dismissable !== false;
 
     const el = document.createElement("div");
     el.id = id;
-    el.className = `banner ${td.cls}`;
+    el.className = `${CLASSES.banner} ${td.cls}`;
     el._bnCfg = cfg;
-    if (cfg.onClick) el.classList.add("banner--clickable");
+    if (cfg.onClick) el.classList.add(...CLASSES.clickable.split(" "));
 
     // Body
-    let h = `<div class="banner__body">`;
-    h += `<span class="banner__icon">${cfg.icon || td.icon}</span>`;
-    h += `<div class="banner__content">`;
-    if (cfg.title)   h += `<p class="banner__title">${cfg.title}</p>`;
-    h += `<p class="banner__message">${cfg.message || ""}</p>`;
+    let h = `<div class="${CLASSES.body}">`;
+    h += `<span class="${CLASSES.icon}">${cfg.icon || td.icon}</span>`;
+    h += `<div class="${CLASSES.content}">`;
+    if (cfg.title) h += `<p class="${CLASSES.title}">${cfg.title}</p>`;
+    h += `<p class="${CLASSES.message}">${cfg.message || ""}</p>`;
     if (cfg.detail) {
-      h += `<div class="banner__detail bn-hidden">${cfg.detail}</div>`;
-      h += `<button class="banner__expand">Show more ▾</button>`;
+      h += `<div class="${CLASSES.detail} bn-hidden">${cfg.detail}</div>`;
+      h += `<button class="${CLASSES.expand}">Show more ▾</button>`;
     }
     if (cfg.actions && cfg.actions.length) {
-      h += `<div class="banner__actions">`;
+      h += `<div class="${CLASSES.actions}">`;
       cfg.actions.forEach((a, i) => {
-        const c = a.style === "primary" ? "banner__action bn-primary" : "banner__action";
+        const c = a.style === "primary" ? `${CLASSES.action} ${CLASSES.actionPrimary}` : CLASSES.action;
         h += `<button class="${c}" data-ai="${i}">${a.label}</button>`;
       });
       h += `</div>`;
     }
     h += `</div>`; // content
-    if (dim) h += `<button class="banner__dismiss" title="Dismiss">✕</button>`;
+    if (dim) h += `<button class="${CLASSES.dismiss}" title="Dismiss">✕</button>`;
     h += `</div>`; // body
-    if (cfg.autoClose) h += `<div class="banner__bar-wrap"><div class="banner__bar"></div></div>`;
+    if (cfg.autoClose) h += `<div class="${CLASSES.barWrap}"><div class="${CLASSES.bar}"></div></div>`;
     el.innerHTML = h;
 
     // onClick on body (excluding interactive children)
     if (cfg.onClick) {
       el.querySelector(".banner__body").addEventListener("click", (e) => {
-        if (!e.target.closest(".banner__dismiss,.banner__action,.banner__expand")) {
+        if (!e.target.closest(".banner__dismiss, .banner__action, .banner__expand")) {
           cfg.onClick(id);
         }
       });
@@ -264,7 +213,10 @@ const BannerManager = (() => {
         bar.style.width = "0%";
       });
     }
-    _timers.set(id, setTimeout(() => remove(id), ms));
+    _timers.set(
+      id,
+      setTimeout(() => remove(id), ms),
+    );
   }
 
   // ── Stack mode ─────────────────────────────────────────────────────────────
@@ -302,20 +254,28 @@ const BannerManager = (() => {
   function clear() {
     _timers.forEach(clearTimeout);
     _timers.clear();
-    _queueList = []; _queueBusy = false;
-    _carouselData = []; _carouselIdx = 0;
+    _queueList = [];
+    _queueBusy = false;
+    _carouselData = [];
+    _carouselIdx = 0;
     if (_carouselAutoTimer) clearInterval(_carouselAutoTimer);
     _carouselWrap = null;
     const slot = _slot();
     if (slot) slot.innerHTML = "";
   }
 
-  function has(id) { return !!document.getElementById(id); }
+  function has(id) {
+    return !!document.getElementById(id);
+  }
 
   // ── Queue mode ─────────────────────────────────────────────────────────────
   function _showQueued() {
     const slot = _slot();
-    if (!slot || _queueList.length === 0) { _queueBusy = false; _clearQueueMore(); return; }
+    if (!slot || _queueList.length === 0) {
+      _queueBusy = false;
+      _clearQueueMore();
+      return;
+    }
     _queueBusy = true;
 
     const cfg = _queueList.shift();
@@ -337,7 +297,7 @@ const BannerManager = (() => {
     if (_queueList.length === 0) return;
     const pill = document.createElement("div");
     pill.id = "__bn-qmore__";
-    pill.className = "bn-queue__more";
+    pill.className = CLASSES.queueMore;
     // Inherit color vars from the active banner
     const type = currentEl._bnCfg.type || "neutral";
     const td = TYPES[type] || TYPES.neutral;
@@ -376,7 +336,7 @@ const BannerManager = (() => {
     _destroyCarousel();
 
     _carouselData = cfgs;
-    _carouselIdx  = 0;
+    _carouselIdx = 0;
     _carouselOpts = opts;
 
     _carouselWrap = document.createElement("div");
@@ -399,8 +359,8 @@ const BannerManager = (() => {
     _carouselWrap.innerHTML = "";
 
     const cfg = _carouselData[_carouselIdx];
-    const td  = TYPES[cfg.type || "neutral"] || TYPES.neutral;
-    _carouselWrap.className = `banner ${td.cls}`;
+    const td = TYPES[cfg.type || "neutral"] || TYPES.neutral;
+    _carouselWrap.className = `${CLASSES.banner} ${td.cls}`;
 
     // Banner body (no individual dismiss; carousel manages lifecycle)
     const { el } = _build({ ...cfg, dismissable: false });
@@ -411,37 +371,37 @@ const BannerManager = (() => {
     // Nav bar (only when >1 item)
     if (_carouselData.length > 1) {
       const nav = document.createElement("div");
-      nav.className = `bn-carousel__nav ${td.cls}`;
+      nav.className = `${CLASSES.nav} ${td.cls}`;
 
       const prev = document.createElement("button");
-      prev.className = "bn-carousel__arrow";
+      prev.className = CLASSES.arrow;
       prev.textContent = "‹";
       prev.disabled = _carouselIdx === 0 && !_carouselOpts.loop;
       prev.addEventListener("click", () => {
         const p = _carouselIdx - 1;
-        _carouselGoTo(p >= 0 ? p : (_carouselOpts.loop ? _carouselData.length - 1 : 0));
+        _carouselGoTo(p >= 0 ? p : _carouselOpts.loop ? _carouselData.length - 1 : 0);
       });
       nav.appendChild(prev);
 
       _carouselData.forEach((_, i) => {
         const dot = document.createElement("button");
-        dot.className = "bn-carousel__dot" + (i === _carouselIdx ? " active" : "");
+        dot.className = CLASSES.dot + (i === _carouselIdx ? ` ${CLASSES.dotActive}` : "");
         dot.addEventListener("click", () => _carouselGoTo(i));
         nav.appendChild(dot);
       });
 
       const count = document.createElement("span");
-      count.className = "bn-carousel__count";
+      count.className = CLASSES.count;
       count.textContent = `${_carouselIdx + 1} / ${_carouselData.length}`;
       nav.appendChild(count);
 
       const next = document.createElement("button");
-      next.className = "bn-carousel__arrow";
+      next.className = CLASSES.arrow;
       next.textContent = "›";
       next.disabled = _carouselIdx === _carouselData.length - 1 && !_carouselOpts.loop;
       next.addEventListener("click", () => {
         const n = _carouselIdx + 1;
-        _carouselGoTo(n < _carouselData.length ? n : (_carouselOpts.loop ? 0 : _carouselIdx));
+        _carouselGoTo(n < _carouselData.length ? n : _carouselOpts.loop ? 0 : _carouselIdx);
       });
       nav.appendChild(next);
 
@@ -456,23 +416,40 @@ const BannerManager = (() => {
   }
 
   function _destroyCarousel() {
-    if (_carouselAutoTimer) { clearInterval(_carouselAutoTimer); _carouselAutoTimer = null; }
-    if (_carouselWrap) { _carouselWrap.remove(); _carouselWrap = null; }
-    _carouselData = []; _carouselIdx = 0;
+    if (_carouselAutoTimer) {
+      clearInterval(_carouselAutoTimer);
+      _carouselAutoTimer = null;
+    }
+    if (_carouselWrap) {
+      _carouselWrap.remove();
+      _carouselWrap = null;
+    }
+    _carouselData = [];
+    _carouselIdx = 0;
   }
 
-  function carouselDismiss() { _destroyCarousel(); }
+  function carouselDismiss() {
+    _destroyCarousel();
+  }
 
   // ── Template shorthands ────────────────────────────────────────────────────
-  const warn    = (msg, o={}) => show({ type:"warning", message:msg, ...o });
-  const error   = (msg, o={}) => show({ type:"error",   message:msg, ...o });
-  const info    = (msg, o={}) => show({ type:"info",    message:msg, ...o });
-  const success = (msg, o={}) => show({ type:"success", message:msg, ...o });
+  const warn = (msg, o = {}) => show({ type: "warning", message: msg, ...o });
+  const error = (msg, o = {}) => show({ type: "error", message: msg, ...o });
+  const info = (msg, o = {}) => show({ type: "info", message: msg, ...o });
+  const success = (msg, o = {}) => show({ type: "success", message: msg, ...o });
 
   return {
-    show, remove, clear, has,
-    queue, enqueue,
-    carousel, carouselDismiss,
-    warn, error, info, success,
+    show,
+    remove,
+    clear,
+    has,
+    queue,
+    enqueue,
+    carousel,
+    carouselDismiss,
+    warn,
+    error,
+    info,
+    success,
   };
 })();
