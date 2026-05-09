@@ -1,26 +1,9 @@
 // 3. CONFIG TRANSLATOR: Converts appState (UI format) into the format expected by variableMaker.
 function translateConfig(appState) {
   const count = Math.max(1, parseInt(appState.colorSteps) || 23);
-
-  // Weight (step) names — colorStepNames can be a comma-string (plugin) or array (web app export)
-  const colorStepRaw = Array.isArray(appState.colorStepNames)
-    ? appState.colorStepNames.join(",")
-    : appState.colorStepNames || "";
-  const userWeightNames = colorStepRaw.trim() ? colorStepRaw.split(",").map((n) => n.trim()) : null;
-  let stepNames = null;
-  if (userWeightNames && userWeightNames.length > 0) {
-    const names = userWeightNames.slice();
-    while (names.length < count) names.push(String(names.length + 1));
-    stepNames = names.slice(0, count);
-  }
-
-  // Variation definitions — derived from appState.variations (new) or fallback defaults
-  const variations = appState.variations && appState.variations.length > 0
-    ? appState.variations
-    : [1,2,3,4,5].map(n => ({ _id: String(n), name: String(n), shortName: String(n), description: "" }));
-  const roleStepNames = variations.map(v => v.shortName || v.name);
-
-  // themes array → light/dark backgrounds
+  const stepNames = _parseStepNames(appState, count);
+  const variations = _parseVariations(appState);
+  const roleStepNames = variations.map((v) => v.shortName || v.name);
   const themes = appState.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
 
   return {
@@ -32,38 +15,16 @@ function translateConfig(appState) {
       solverMode: g.solverMode || "natural",
       description: g.description || "",
     })),
-    roles: (appState.roles || []).map((role) => ({
-      name: role.name,
-      shortName: role.shortName || role.name.substring(0, 2).toLowerCase(),
-      minContrast: String(role.minContrast !== undefined ? role.minContrast : "4.5"),
-      spread: Math.max(1, parseInt(role.spread) || 1),
-      baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
-      darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
-      baseContrast:   parseFloat(role.baseContrast) || 4.5,
-      contrastGap:    parseFloat(role.contrastGap)  || 1.5,
-      useContrastGap: !!role.useContrastGap,
-      variationTargets: role.variationTargets ||
-        (appState.pluginMode === "direct"
-          ? variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || (1.5 + i * 1.5))
-          : (variations).map((_, i) => Math.floor((count / 2) + (i - Math.floor(variations.length / 2))))
-        ),
-      description: role.description || "",
-      variationOverride: role.variationOverride || false,
-      roleVariations: (role.variationOverride && role.roleVariations && role.roleVariations.length > 0)
-        ? role.roleVariations.map(v => Object.assign({}, v))
-        : [],
-    })),
+    roles: _mapRoles(appState, variations, count),
     colorSteps: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",
     pluginMode: appState.pluginMode || "ramp",
     spreadUnit: appState.spreadUnit || "steps",
     baseSelectionMode: appState.baseSelection || "By Contrast",
-    roleMapping: appState.pluginMode === "direct"
-      ? (appState.baseSelection === "Manual" ? "Direct Manual" : "Direct Contrast")
-      : (appState.baseSelection || "By Contrast"),
+    roleMapping: appState.pluginMode === "direct" ? (appState.baseSelection === "Manual" ? "Direct Manual" : "Direct Contrast") : appState.baseSelection || "By Contrast",
     colorStepNames: stepNames,
     roleStepNames,
-    variations: variations.map(function(v) { return Object.assign({}, v); }),
+    variations: variations.map((v) => ({ ...v })),
     themes: [
       { name: "light", bg: themes[0].bg || "FFFFFF" },
       { name: "dark", bg: themes[1].bg || "000000" },
@@ -82,6 +43,45 @@ function translateConfig(appState) {
   };
 }
 
+// ── Translation Helpers ─────────────────────────────────────────────────────
+
+function _parseStepNames(appState, count) {
+  const raw = Array.isArray(appState.colorStepNames) ? appState.colorStepNames.join(",") : appState.colorStepNames || "";
+  const userNames = raw.trim() ? raw.split(",").map((n) => n.trim()) : null;
+  if (!userNames || userNames.length === 0) return null;
+
+  const names = userNames.slice();
+  while (names.length < count) names.push(String(names.length + 1));
+  return names.slice(0, count);
+}
+
+function _parseVariations(appState) {
+  return (appState.variations && appState.variations.length > 0)
+    ? appState.variations
+    : [1, 2, 3, 4, 5].map((n) => ({ _id: String(n), name: String(n), shortName: String(n), description: "" }));
+}
+
+function _mapRoles(appState, variations, count) {
+  return (appState.roles || []).map((role) => ({
+    name: role.name,
+    shortName: role.shortName || role.name.substring(0, 2).toLowerCase(),
+    minContrast: String(role.minContrast !== undefined ? role.minContrast : "4.5"),
+    spread: Math.max(1, parseInt(role.spread) || 1),
+    baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
+    darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
+    baseContrast: parseFloat(role.baseContrast) || 4.5,
+    contrastGap: parseFloat(role.contrastGap) || 1.5,
+    useContrastGap: !!role.useContrastGap,
+    variationTargets: role.variationTargets || (appState.pluginMode === "direct" 
+      ? variations.map((_, i) => [1.5, 3, 4.5, 7, 12][i] || 1.5 + i * 1.5) 
+      : variations.map((_, i) => Math.floor(count / 2 + (i - Math.floor(variations.length / 2))))),
+    description: role.description || "",
+    variationOverride: role.variationOverride || false,
+    roleVariations: role.variationOverride && role.roleVariations?.length > 0 
+      ? role.roleVariations.map((v) => ({ ...v })) : [],
+  }));
+}
+
 // 3b. RENAME DETECTOR
 // Builds a map of old Figma variable names → new Figma variable names so that
 // variables can be renamed in-place rather than deleted and recreated.
@@ -98,96 +98,14 @@ function buildVariableRenameMap(savedAppState, newAppState) {
 
   const oldCfg = translateConfig(savedAppState);
   const newCfg = translateConfig(newAppState);
-
   const oldStepNames = oldCfg.colorStepNames || seriesMaker(oldCfg.colorSteps);
   const newStepNames = newCfg.colorStepNames || seriesMaker(newCfg.colorSteps);
-  const stepCount = Math.min(oldCfg.colorSteps, newCfg.colorSteps);
-  const oldTG = oldCfg.variableStructure || "color";
-  const newTG = newCfg.variableStructure || "color";
 
-  // Build _id → display-label maps for each side.
-  // Items without _id are excluded — index-based guessing is not safe.
-  function makeIdLabelMap(items, useShort) {
-    const m = {};
-    for (const item of items) {
-      if (!item._id) continue;
-      m[item._id] = (useShort && item.shortName) ? item.shortName : item.name;
-    }
-    return m;
-  }
+  const colorLabels = _mapIdToLabel(savedAppState.colors, newAppState.colors, oldCfg.useShortColorNames, newCfg.useShortColorNames);
+  const roleLabels = _mapIdToLabel(savedAppState.roles, newAppState.roles, oldCfg.useShortRoleNames, newCfg.useShortRoleNames);
 
-  const savedColorLabels = makeIdLabelMap(savedAppState.colors || [], oldCfg.useShortColorNames);
-  const newColorLabels   = makeIdLabelMap(newAppState.colors  || [], newCfg.useShortColorNames);
-  const savedRoleLabels  = makeIdLabelMap(savedAppState.roles  || [], oldCfg.useShortRoleNames);
-  const newRoleLabels    = makeIdLabelMap(newAppState.roles   || [], newCfg.useShortRoleNames);
-
-  // Compute matched pairs: items present in BOTH snapshots with the same _id.
-  // Only matched pairs can be renamed; everything else is a new create or an orphan.
-  const colorPairs = []; // { ocl: oldLabel, ncl: newLabel }
-  for (const [id, ncl] of Object.entries(newColorLabels)) {
-    const ocl = savedColorLabels[id];
-    if (ocl !== undefined) colorPairs.push({ ocl, ncl });
-  }
-
-  const rolePairs = []; // { orl: oldLabel, nrl: newLabel }
-  for (const [id, nrl] of Object.entries(newRoleLabels)) {
-    const orl = savedRoleLabels[id];
-    if (orl !== undefined) rolePairs.push({ orl, nrl });
-  }
-
-  // NOTE: reordering variables in Figma is not supported by the Plugin API
-  // (VariableCollection.variableIds is readonly). Display order reflects creation
-  // order only. Reordering in the plugin UI updates values correctly but does not
-  // change visual order in the Figma Variables panel — accepted limitation.
-
-  const rampRenames = {};
-  const contextualRenames = {};
-
-  // Color ramp renames: every matched color × every step position
-  for (const { ocl, ncl } of colorPairs) {
-    for (let si = 0; si < stepCount; si++) {
-      const oldStep = oldStepNames[si];
-      const newStep = newStepNames[si];
-      if (oldStep === undefined || newStep === undefined) continue;
-      const oldName = `${ocl}/${oldStep}`;
-      const newName = `${ncl}/${newStep}`;
-      if (oldName !== newName) rampRenames[oldName] = newName;
-    }
-  }
-
-  // Contextual token renames: every matched color × every matched role × every variation step
-  const varCount = Math.min(
-    (oldCfg.variations || []).length,
-    (newCfg.variations || []).length
-  );
-  const oldRoleSteps = (oldCfg.variations || []).map((v, i) => (v && (v.shortName || v.name)) || String(i));
-  const newRoleSteps = (newCfg.variations || []).map((v, i) => (v && (v.shortName || v.name)) || String(i));
-  for (const { ocl, ncl } of colorPairs) {
-    for (const { orl, nrl } of rolePairs) {
-      for (let vi = 0; vi < varCount; vi++) {
-        const oldStep = oldRoleSteps[vi] || String(vi);
-        const newStep = newRoleSteps[vi] || String(vi);
-        const oldName = oldTG === "role" ? `${orl}/${ocl}/${oldStep}` : `${ocl}/${orl}/${oldStep}`;
-        const newName = newTG === "role" ? `${nrl}/${ncl}/${newStep}` : `${ncl}/${nrl}/${newStep}`;
-        if (oldName !== newName) contextualRenames[oldName] = newName;
-      }
-    }
-  }
-
-  // Human-readable change list for the UI (de-duped)
-  const changes = [];
-  for (const { ocl, ncl } of colorPairs) {
-    if (ocl !== ncl) changes.push({ type: "color", from: ocl, to: ncl });
-  }
-  for (const { orl, nrl } of rolePairs) {
-    if (orl !== nrl) changes.push({ type: "role", from: orl, to: nrl });
-  }
-  const oldStepSample = oldStepNames.slice(0, 3).join(",");
-  const newStepSample = newStepNames.slice(0, 3).join(",");
-  if (oldStepSample !== newStepSample) {
-    changes.push({ type: "stepNames", from: oldStepSample + (stepCount > 3 ? "…" : ""), to: newStepSample + (stepCount > 3 ? "…" : "") });
-  }
-  if (oldTG !== newTG) changes.push({ type: "grouping", from: oldTG, to: newTG });
+  const rampRenames = _getRampRenames(colorLabels.pairs, oldStepNames, newStepNames, Math.min(oldCfg.colorSteps, newCfg.colorSteps));
+  const contextualRenames = _getContextualRenames(colorLabels.pairs, roleLabels.pairs, oldCfg, newCfg);
 
   return {
     ramps: rampRenames,
@@ -195,7 +113,70 @@ function buildVariableRenameMap(savedAppState, newAppState) {
     summary: {
       rampCount: Object.keys(rampRenames).length,
       contextualCount: Object.keys(contextualRenames).length,
-      changes,
+      changes: _getSummaryChanges(colorLabels.pairs, roleLabels.pairs, oldCfg, newCfg, oldStepNames, newStepNames),
     },
   };
+}
+
+// ── Rename Map Helpers ──────────────────────────────────────────────────────
+
+function _mapIdToLabel(oldItems, newItems, oldShort, newShort) {
+  const getMap = (items, useShort) => {
+    const m = {};
+    (items || []).forEach(item => { if (item._id) m[item._id] = useShort && item.shortName ? item.shortName : item.name; });
+    return m;
+  };
+  const oldMap = getMap(oldItems, oldShort);
+  const newMap = getMap(newItems, newShort);
+  const pairs = Object.entries(newMap)
+    .filter(([id]) => oldMap[id] !== undefined)
+    .map(([id, ncl]) => ({ oldLabel: oldMap[id], newLabel: ncl }));
+  return { oldMap, newMap, pairs };
+}
+
+function _getRampRenames(colorPairs, oldSteps, newSteps, count) {
+  const renames = {};
+  for (const { oldLabel, newLabel } of colorPairs) {
+    for (let i = 0; i < count; i++) {
+      if (oldSteps[i] === undefined || newSteps[i] === undefined) continue;
+      const oldN = `${oldLabel}/${oldSteps[i]}`;
+      const newN = `${newLabel}/${newSteps[i]}`;
+      if (oldN !== newN) renames[oldN] = newN;
+    }
+  }
+  return renames;
+}
+
+function _getContextualRenames(colorPairs, rolePairs, oldCfg, newCfg) {
+  const renames = {};
+  const varCount = Math.min((oldCfg.variations || []).length, (newCfg.variations || []).length);
+  const oldRoleSteps = (oldCfg.variations || []).map((v, i) => v?.shortName || v?.name || String(i));
+  const newRoleSteps = (newCfg.variations || []).map((v, i) => v?.shortName || v?.name || String(i));
+  const oldTG = oldCfg.variableStructure || "color";
+  const newTG = newCfg.variableStructure || "color";
+
+  for (const cp of colorPairs) {
+    for (const rp of rolePairs) {
+      for (let vi = 0; vi < varCount; vi++) {
+        const oldStep = oldRoleSteps[vi];
+        const newStep = newRoleSteps[vi];
+        const oldName = oldTG === "role" ? `${rp.oldLabel}/${cp.oldLabel}/${oldStep}` : `${cp.oldLabel}/${rp.oldLabel}/${oldStep}`;
+        const newName = newTG === "role" ? `${rp.newLabel}/${cp.newLabel}/${newStep}` : `${cp.newLabel}/${rp.newLabel}/${newStep}`;
+        if (oldName !== newName) renames[oldName] = newName;
+      }
+    }
+  }
+  return renames;
+}
+
+function _getSummaryChanges(colorPairs, rolePairs, oldCfg, newCfg, oldSteps, newSteps) {
+  const changes = [];
+  colorPairs.forEach(p => { if (p.oldLabel !== p.newLabel) changes.push({ type: "color", from: p.oldLabel, to: p.newLabel }); });
+  rolePairs.forEach(p => { if (p.oldLabel !== p.newLabel) changes.push({ type: "role", from: p.oldLabel, to: p.newLabel }); });
+  
+  const sample = (s) => s.slice(0, 3).join(",") + (s.length > 3 ? "…" : "");
+  if (sample(oldSteps) !== sample(newSteps)) changes.push({ type: "stepNames", from: sample(oldSteps), to: sample(newSteps) });
+  if (oldCfg.variableStructure !== newCfg.variableStructure) changes.push({ type: "grouping", from: oldCfg.variableStructure, to: newCfg.variableStructure });
+  
+  return changes;
 }

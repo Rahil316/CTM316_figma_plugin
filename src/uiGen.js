@@ -5,299 +5,13 @@
  */
 
 /**
- * 0. PLUGIN DIMENSION & UI CONSTANTS — single source of truth for all resize logic.
- */
-const UI_DIMS = {
-  defaultWidth: 424,
-  defaultHeight: 720,
-  minWidth: 360,
-  minHeight: 560,
-  maxWidth: 1400,
-  maxHeight: 1400,
-};
-
-const UI_SCALES = [0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5];
-const UI_THEMES = ["figma", "dark", "light"]; // "figma" = follow Figma's own theme
-
-// Persisted UI prefs (scale, theme). Separate from appState so they survive config resets.
-let uiPrefs = { scale: 1.0, theme: "figma" };
-
-function applyUiPrefs() {
-  document.body.style.zoom = uiPrefs.scale;
-  document.body.setAttribute("data-ui-theme", uiPrefs.theme);
-}
-
-function saveUiPrefs() {
-  parent.postMessage({ pluginMessage: { type: "save-ui-prefs-meta", prefs: uiPrefs } }, "*");
-}
-
-/**
- * 0. STABLE IDENTITY HELPERS
- * Each color and role carries a `_id` that never changes, even when the item
- * is renamed or reordered.  The rename-detector in scripts.js relies on these
- * to distinguish "same item, new name" from "deleted + new item at same slot".
- */
-function generateId() {
-  return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
-}
-
-// Assigns a `_id` to any color or role that is missing one (migration for
-// configs saved before this feature existed).  Mutates in place, returns state.
-function ensureIds(state) {
-  if (state.colors)
-    state.colors.forEach((c) => {
-      if (!c._id) c._id = generateId();
-    });
-  if (state.roles)
-    state.roles.forEach((r) => {
-      if (!r._id) r._id = generateId();
-    });
-  return state;
-}
-
-/**
- * 1. CORE STATE & DEFAULTS
- * demoConfig serves as the template for factory resets and schema validation.
- * appState is the single source of truth for the session.
- */
-const demoConfig = {
-  name: "CTM316",
-  tonalScaleCollectionName: "_scale",
-  tokenCollectionName: "contextual",
-  embedDirectly: false,
-  includeGlobalColors: false,
-  globalColorsCollectionName: "_constants",
-  includeAlphaTints: false,
-  alphaValues: "10, 25, 50, 75, 90",
-  variableStructure: "color",
-  useShortColorNames: false,
-  useShortRoleNames: false,
-  colorSteps: 25,
-  scaleAlgorithm: "Natural",
-  colorStepNames: "",
-  pluginMode: "ramp",
-  baseSelection: "By Contrast",
-  spreadUnit: "steps",
-  roleSteps: 5,
-  variations: null,
-  colors: [
-    { name: "Primary", shortName: "pr", value: "0067DD", description: "" },
-    { name: "Secondary", shortName: "sc", value: "EFEFF2", description: "" },
-    { name: "Gray", shortName: "gr", value: "808080", description: "" },
-  ],
-  roles: [
-    { name: "Text", shortName: "tx", spread: 2, minContrast: 4.5, baseIndex: 14, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-    { name: "Fill", shortName: "fi", spread: 1, minContrast: 3.0, baseIndex: 9, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-    { name: "Background", shortName: "bg", spread: 1, minContrast: 1.2, baseIndex: 4, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-    { name: "Border", shortName: "br", spread: 1, minContrast: 2.0, baseIndex: 11, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
-  ],
-  themes: [
-    { name: "light", bg: "FFFFFF" },
-    { name: "dark", bg: "000000" },
-  ],
-};
-
-// Ensure demoConfig items have stable IDs from the very first run
-ensureIds(demoConfig);
-
-let appState = JSON.parse(JSON.stringify(demoConfig));
-// Drag-and-drop state (separate per list to prevent cross-contamination)
-let _colorDragSrcIdx = null;
-let _roleDragSrcIdx = null;
-const _demoConfigStr = JSON.stringify(demoConfig);
-let activeSidebarTab = "color-groups";
-
-/**
- * 2. UI UTILITIES & FOCUS MANAGEMENT
- * Helpers to ensure smooth DOM updates without losing input focus.
- */
-const debounce = (fn, delay = 150) => {
-  let timeout;
-  return function () {
-    var args = Array.prototype.slice.call(arguments);
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn.apply(null, args), delay);
-  };
-};
-
-function withPreservedFocus(fn) {
-  const activeEl = document.activeElement;
-  const activeId = activeEl ? activeEl.id : null;
-  const start = activeEl ? activeEl.selectionStart : null;
-  const end = activeEl ? activeEl.selectionEnd : null;
-
-  fn();
-
-  if (activeId) {
-    const newEl = document.getElementById(activeId);
-    if (newEl) {
-      newEl.focus();
-      if (start !== null && (newEl.type === "text" || newEl.type === "number")) {
-        try {
-          newEl.setSelectionRange(start, end);
-        } catch (e) {}
-      }
-    }
-  }
-}
-
-/**
- * 3. COLOR MATH UTILITIES
- * Ported verbatim from Web_App/JS/Utils.js — single source of truth for color math.
- * Keep in sync with Utils.js; never add DOM-aware logic here.
+ * 0. DOM & STATE INITIALIZATION
+ * Utilities and State are now managed in:
+ * - src/utils.js (Color math & helpers)
+ * - src/state.js (Central store & appState)
  */
 
-function validHex(hex) {
-  if (typeof hex !== "string") return false;
-  return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex.trim());
-}
-
-function normalizeHex(hex) {
-  if (!validHex(hex)) return null;
-  hex = hex.trim().replace(/^#/, "");
-  if (hex.length === 3)
-    hex = hex
-      .split("")
-      .map((c) => c + c)
-      .join("");
-  return "#" + hex.toUpperCase();
-}
-
-function hexToRgb(hex) {
-  const nhex = normalizeHex(hex);
-  if (!nhex) return null;
-  const bigint = parseInt(nhex.replace(/^#/, ""), 16);
-  return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-}
-
-function rgbToHsl(r, g, b) {
-  if ([r, g, b].some((v) => typeof v !== "number" || v < 0 || v > 255)) return null;
-  r /= 255;
-  g /= 255;
-  b /= 255;
-  const max = Math.max(r, g, b),
-    min = Math.min(r, g, b);
-  let h,
-    s,
-    l = (max + min) / 2;
-  if (max === min) {
-    h = s = 0;
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r:
-        h = (g - b) / d + (g < b ? 6 : 0);
-        break;
-      case g:
-        h = (b - r) / d + 2;
-        break;
-      default:
-        h = (r - g) / d + 4;
-        break;
-    }
-    h *= 60;
-  }
-  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
-}
-
-function hexToHsl(hex) {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return null;
-  return rgbToHsl(rgb[0], rgb[1], rgb[2]);
-}
-
-function hexToHue(hex) {
-  const hsl = hexToHsl(hex);
-  return hsl ? hsl[0] : null;
-}
-function hexToSat(hex) {
-  const hsl = hexToHsl(hex);
-  return hsl ? hsl[1] : null;
-}
-function hexToLum(hex) {
-  const hsl = hexToHsl(hex);
-  return hsl ? hsl[2] : null;
-}
-
-function hslToRgb(h, s, l) {
-  if (typeof h !== "number" || typeof s !== "number" || typeof l !== "number" || h < 0 || h > 360 || s < 0 || s > 100 || l < 0 || l > 100) return null;
-  s /= 100;
-  l /= 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0,
-    g = 0,
-    b = 0;
-  if (h < 60) [r, g, b] = [c, x, 0];
-  else if (h < 120) [r, g, b] = [x, c, 0];
-  else if (h < 180) [r, g, b] = [0, c, x];
-  else if (h < 240) [r, g, b] = [0, x, c];
-  else if (h < 300) [r, g, b] = [x, 0, c];
-  else [r, g, b] = [c, 0, x];
-  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-}
-
-function rgbToHex(r, g, b) {
-  if ([r, g, b].some((v) => typeof v !== "number" || v < 0 || v > 255)) return null;
-  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
-}
-
-function hslToHex(h, s, l) {
-  const rgb = hslToRgb(h, s, l);
-  if (!rgb) return null;
-  return rgbToHex(rgb[0], rgb[1], rgb[2]);
-}
-
-function relLum(hex) {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return null;
-  const [r, g, b] = rgb.map((v) => {
-    const x = v / 255;
-    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrastRatio(hex1, hex2) {
-  const n1 = normalizeHex(hex1),
-    n2 = normalizeHex(hex2);
-  if (!n1 || !n2) return null;
-  const l1 = relLum(n1),
-    l2 = relLum(n2);
-  if (l1 === null || l2 === null) return null;
-  return Number(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)).toFixed(2));
-}
-
-function shortestHueDiff(current, target) {
-  return ((((target - current + 180) % 360) + 360) % 360) - 180;
-}
-
-function contrastRating(hex1, hex2) {
-  const ratio = contrastRatio(hex1, hex2);
-  if (ratio === null) return null;
-  if (ratio < 3) return "Fail";
-  if (ratio < 4.5) return "AA Large";
-  if (ratio < 7) return "AA";
-  return "AAA";
-}
-
-function seriesMaker(x) {
-  const out = [];
-  for (let i = 1; i <= x; i++) out.push(i);
-  return out;
-}
-
-function slugify(str) {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+// Drag-and-drop state, appState, and UI prefs are now managed globally in src/state.js
 
 /**
  * 4. COLOR ENGINE (UI THREAD)
@@ -319,20 +33,32 @@ function translateConfigForPreview(state) {
     stepNames = names.slice(0, count);
   }
   const variations = state.variations && state.variations.length > 0 ? state.variations : [1, 2, 3, 4, 5].map((n) => ({ _id: String(n), name: String(n), shortName: String(n), description: "" }));
-  const themes = state.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
+  const themes = state.themes || [{ name: "light", bg: "FFFFFF" }, { name: "dark", bg: "000000" }];
+  
+  // Normalize themes for clrGen (must have names 'light' and 'dark')
+  const normalizedThemes = [
+    { name: "light", bg: themes[0]?.bg || "FFFFFF" },
+    { name: "dark", bg: themes[1]?.bg || "000000" }
+  ];
+
   return {
     name: state.name || "ctm316",
-    colors: (state.colors || []).map((g) => ({ name: g.name, shortName: g.shortName, value: g.value, solverMode: g.solverMode || "natural" })),
+    colors: (state.colors || []).map((g) => ({ 
+      name: g.name, 
+      shortName: g.shortName || g.name.substring(0, 2).toLowerCase(), 
+      value: normalizeHex(g.value) || "#000000", 
+      solverMode: g.solverMode || "natural" 
+    })),
     roles: (state.roles || []).map((role) => ({
       name: role.name,
       shortName: role.shortName || role.name.substring(0, 2).toLowerCase(),
-      minContrast: String(role.minContrast !== undefined ? role.minContrast : "4.5"),
+      minContrast: parseFloat(role.minContrast) || 4.5,
       spread: Math.max(1, parseInt(role.spread) || 1),
       baseIndex: role.baseIndex !== undefined ? parseInt(role.baseIndex) : Math.floor(count / 2),
       darkBaseIndex: role.darkBaseIndex !== undefined ? parseInt(role.darkBaseIndex) : undefined,
       baseContrast: parseFloat(role.baseContrast) || 4.5,
       contrastGap: parseFloat(role.contrastGap) || 1.5,
-      variationTargets: role.variationTargets || (role.variations ? Object.values(role.variations) : variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5)),
+      variationTargets: role.variationTargets || [],
       variationOverride: role.variationOverride || false,
       roleVariations: role.roleVariations || [],
     })),
@@ -344,332 +70,10 @@ function translateConfigForPreview(state) {
     roleMapping: state.pluginMode === "direct" ? (state.baseSelection === "Manual" ? "Direct Manual" : "Direct Contrast") : state.baseSelection || "By Contrast",
     colorStepNames: stepNames,
     variations,
-    themes: [
-      { name: "light", bg: themes[0].bg || "FFFFFF" },
-      { name: "dark", bg: themes[1].bg || "000000" },
-    ],
+    themes: normalizedThemes,
   };
 }
 
-function colorRampMaker(hexIn, rampLength, rampType = "Natural") {
-  const hue = hexToHue(hexIn);
-  const satu = hexToSat(hexIn);
-  const N = rampLength;
-
-  if (rampType === "Linear") {
-    const inc = 100 / (N + 1);
-    const out = [];
-    for (let i = 1; i <= N; i++) out.push(hslToHex(hue, satu, i * inc) || "#000000");
-    return out.reverse();
-  }
-
-  const C_max = (21 * N) / (N + 1);
-  const uMax = Math.log(0.05 * C_max);
-  const uMin = Math.log(1.05 / C_max);
-
-  function stepLum(i) {
-    const u = N === 1 ? (uMax + uMin) / 2 : uMax - (i / (N - 1)) * (uMax - uMin);
-    return Math.exp(u) - 0.05;
-  }
-
-  function findL(targetLum, getS, getH) {
-    let lo = 0,
-      hi = 100,
-      L = 50;
-    for (let j = 0; j < 30; j++) {
-      const mid = (lo + hi) / 2;
-      const lum = relLum(hslToHex(getH(mid), getS(mid), mid));
-      L = mid;
-      if (Math.abs(lum - targetLum) < 0.0001) break;
-      if (lum < targetLum) lo = mid;
-      else hi = mid;
-    }
-    return L;
-  }
-
-  const tapS = (L) => satu * (1 - Math.pow(Math.abs(L - 50) / 50, 1.5) * 0.4);
-
-  if (rampType === "Uniform") {
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      const L = findL(
-        stepLum(i),
-        () => satu,
-        () => hue,
-      );
-      out.push(hslToHex(hue, satu, L) || "#000000");
-    }
-    return out;
-  }
-
-  if (rampType === "Natural") {
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      const L = findL(stepLum(i), tapS, () => hue);
-      out.push(hslToHex(hue, tapS(L), L) || "#000000");
-    }
-    return out;
-  }
-
-  if (rampType === "Expressive") {
-    const shiftH = (L) => {
-      const d = (L - 50) / 50;
-      return (hue + shortestHueDiff(hue, d > 0 ? 60 : 240) * Math.abs(d) * 0.15 + 360) % 360;
-    };
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      const L = findL(stepLum(i), tapS, shiftH);
-      out.push(hslToHex(shiftH(L), tapS(L), L) || "#000000");
-    }
-    return out;
-  }
-
-  if (rampType === "Symmetric") {
-    const srcLum = relLum(normalizeHex(hexIn)) || 0.18;
-    const uSrc = Math.log(srcLum + 0.05);
-    const mid = Math.floor((N - 1) / 2);
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      let u;
-      if (N === 1) u = uSrc;
-      else if (i === 0) u = uMax;
-      else if (i === N - 1) u = uMin;
-      else if (i <= mid && mid > 0) u = uMax - ((uMax - uSrc) * i) / mid;
-      else u = uSrc - ((uSrc - uMin) * (i - mid)) / (N - 1 - mid);
-      const targetLum = Math.max(0.0001, Math.exp(Math.min(uMax, Math.max(uMin, u))) - 0.05);
-      const L = findL(
-        targetLum,
-        () => satu,
-        () => hue,
-      );
-      out.push(hslToHex(hue, satu, L) || "#000000");
-    }
-    return out;
-  }
-
-  if (rampType === "OKLCH") {
-    const { C: srcC, H: srcH } = hexToOklch(normalizeHex(hexIn));
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      const targetLum = stepLum(i);
-      let lo = 0,
-        hi = 1,
-        oL = 0.5;
-      for (let j = 0; j < 40; j++) {
-        const mid = (lo + hi) / 2;
-        const lum = relLum(oklchToHex(mid, srcC, srcH));
-        oL = mid;
-        if (Math.abs(lum - targetLum) < 0.0001) break;
-        if (lum < targetLum) lo = mid;
-        else hi = mid;
-      }
-      out.push(oklchToHex(oL, srcC, srcH) || "#000000");
-    }
-    return out;
-  }
-
-  if (rampType === "Material") {
-    const { h: srcH, c: srcC } = hexToHct(normalizeHex(hexIn));
-    const out = [];
-    for (let i = 0; i < N; i++) {
-      const targetLum = stepLum(i);
-      let lo = 0,
-        hi = 100,
-        tone = 50;
-      for (let j = 0; j < 40; j++) {
-        const mid = (lo + hi) / 2;
-        const lum = relLum(hctToHex(srcH, srcC, mid));
-        tone = mid;
-        if (Math.abs(lum - targetLum) < 0.0001) break;
-        if (lum < targetLum) lo = mid;
-        else hi = mid;
-      }
-      out.push(hctToHex(srcH, srcC, tone) || "#000000");
-    }
-    return out;
-  }
-
-  return colorRampMaker(hexIn, rampLength, "Natural");
-}
-
-function variableMakerUI(config) {
-  const inputHash = JSON.stringify({ colors: config.colors, steps: config.colorSteps, scaleAlgorithm: config.scaleAlgorithm, themes: config.themes, roles: config.roles, roleMapping: config.roleMapping, colorStepNames: config.colorStepNames, variations: config.variations });
-  if (inputHash === _previewLastHash && _previewCache) return _previewCache;
-
-  const colors = config.colors;
-  const roles = config.roles;
-  const rampLength = config.colorSteps;
-  const stepNames = config.colorStepNames || seriesMaker(rampLength);
-  const lightBg = normalizeHex(config.themes[0].bg) || "#FFFFFF";
-  const darkBg = normalizeHex(config.themes[1].bg) || "#000000";
-  const isDirectContrast = config.pluginMode === "direct" || config.roleMapping === "Direct Contrast";
-  const clrRamps = Object.create(null);
-  const tokens = { light: Object.create(null), dark: Object.create(null) };
-  const errors = { critical: [], warnings: [], notices: [] };
-
-  // Build color ramps — skipped entirely for Direct Contrast
-  if (!isDirectContrast) {
-    for (const color of colors) {
-      const colorRamp = colorRampMaker(color.value, rampLength, config.scaleAlgorithm);
-      const ramp = Object.create(null);
-      clrRamps[color.name] = ramp;
-      for (let i = 0; i < rampLength; i++) {
-        const weight = stepNames[i];
-        const value = normalizeHex(colorRamp[i]) || "#000000";
-        ramp[weight] = {
-          value,
-          stepName: `${color.name}-${weight}`,
-          shortName: `${color.shortName}-${weight}`,
-          contrast: {
-            light: { ratio: contrastRatio(value, lightBg), rating: contrastRating(value, lightBg) },
-            dark: { ratio: contrastRatio(value, darkBg), rating: contrastRating(value, darkBg) },
-          },
-        };
-      }
-    }
-  }
-
-  for (const mode of config.themes) {
-    const modeName = mode.name.toLowerCase();
-    const bgHex = modeName === "dark" ? darkBg : lightBg;
-    for (const color of colors) {
-      const clrName = color.name;
-      const conGroup = Object.create(null);
-      tokens[modeName][clrName] = conGroup;
-      const roleNames = roles.map((_, i) => i);
-
-      if (isDirectContrast) {
-        for (const roleName of roleNames) {
-          const role = roles[roleName];
-          const conRole = Object.create(null);
-          conGroup[roleName] = conRole;
-          const variationTargets = role.variationTargets || config.variations.map(() => 4.5);
-          for (let vi = 0; vi < config.variations.length; vi++) {
-            const variation = String(vi);
-            const targetContrast = parseFloat(variationTargets[vi]) || 4.5;
-            const solved = solveColorForContrast(color.value, targetContrast, bgHex, color.solverMode || "natural");
-            if (solved.warning) errors.warnings.push({ color: clrName, role: role.name, variation, theme: modeName, warning: solved.warning });
-            conRole[variation] = {
-              tknName: `${clrName}-${role.name}-${variation}`,
-              color: clrName,
-              role: role.name,
-              variation,
-              tknRef: null,
-              value: solved.hex,
-              contrast: { ratio: solved.achievedContrast, rating: contrastRating(solved.hex, bgHex) },
-              contrastTarget: targetContrast,
-              achievedContrast: solved.achievedContrast,
-              isAdjusted: solved.clipped || solved.achievedContrast > targetContrast + 0.3,
-            };
-          }
-        }
-      } else {
-        for (const roleName of roleNames) {
-          const role = roles[roleName];
-          const spread = role.spread;
-          const conRole = Object.create(null);
-          conGroup[roleName] = conRole;
-          const cEnd = clrRamps[clrName][stepNames[rampLength - 1]].contrast[modeName].ratio;
-          const cStart = clrRamps[clrName][stepNames[0]].contrast[modeName].ratio;
-          const growthDir = cEnd > cStart ? 1 : -1;
-          const varCount = config.variations.length;
-          const baseVarIdx = Math.floor(varCount / 2);
-          const maxOffset = baseVarIdx * spread;
-          const minAllowed = maxOffset;
-          const maxAllowed = rampLength - 1 - maxOffset;
-
-          let baseIdx;
-          if (config.roleMapping === "By Index") {
-            const isDarkMode = modeName === "dark";
-            const baseIndexSource = isDarkMode && role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex;
-            baseIdx = baseIndexSource !== undefined ? parseInt(baseIndexSource) : rampLength >> 1;
-          } else {
-            baseIdx = -1;
-            const isDark = modeName === "dark";
-            const minC = parseFloat(role.minContrast);
-            if (isDark) {
-              for (let i = rampLength - 1; i >= 0; i--) {
-                if ((clrRamps[clrName][stepNames[i]].contrast[modeName].ratio || 0) >= minC) {
-                  baseIdx = i;
-                  break;
-                }
-              }
-            } else {
-              for (let i = 0; i < rampLength; i++) {
-                if ((clrRamps[clrName][stepNames[i]].contrast[modeName].ratio || 0) >= minC) {
-                  baseIdx = i;
-                  break;
-                }
-              }
-            }
-            if (baseIdx === -1) {
-              let bestIdx = 0,
-                maxC = -1;
-              for (let i = 0; i < rampLength; i++) {
-                const c = clrRamps[clrName][stepNames[i]].contrast[modeName].ratio || 0;
-                if (c > maxC) {
-                  bestIdx = i;
-                  maxC = c;
-                }
-              }
-              baseIdx = bestIdx;
-              errors.critical.push({ color: clrName, role: roleName, theme: modeName, error: `Cannot meet minimum contrast ${minC}.` });
-            }
-          }
-
-          let adjustedBase = false;
-          if (minAllowed > maxAllowed) {
-            baseIdx = Math.floor((rampLength - 1) / 2);
-            adjustedBase = true;
-          } else {
-            if (baseIdx < minAllowed) {
-              baseIdx = minAllowed;
-              adjustedBase = true;
-            }
-            if (baseIdx > maxAllowed) {
-              baseIdx = maxAllowed;
-              adjustedBase = true;
-            }
-          }
-          if (adjustedBase) errors.warnings.push({ color: clrName, role: roleName, theme: modeName, warning: `Base index clamped to ${baseIdx} due to spread constraints.` });
-
-          const offsets = config.variations.map((v, i) => ({
-            key: String(i),
-            offset: (i - baseVarIdx) * spread,
-          }));
-          for (const { key: variation, offset } of offsets) {
-            let idx = baseIdx + offset * growthDir;
-            let adjusted = false;
-            if (idx < 0) {
-              idx = 0;
-              adjusted = true;
-            } else if (idx >= rampLength) {
-              idx = rampLength - 1;
-              adjusted = true;
-            }
-            const data = clrRamps[clrName][stepNames[idx]];
-            conRole[variation] = {
-              tknName: `${clrName}-${role.name}-${variation}`,
-              color: clrName,
-              role: role.name,
-              variation,
-              tknRef: data.stepName,
-              value: data.value,
-              contrast: { ratio: data.contrast[modeName].ratio, rating: data.contrast[modeName].rating },
-              isAdjusted: adjusted,
-            };
-            if (adjusted) errors.warnings.push({ color: clrName, role: roleName, variation, theme: modeName, warning: `Variation '${variation}' clamped due to overflow.` });
-          }
-        }
-      }
-    }
-  }
-
-  const output = { colorRamps: clrRamps, colorTokens: tokens, errors };
-  _previewLastHash = inputHash;
-  _previewCache = output;
-  return output;
-}
 
 /**
  * 5. DYNAMIC DOM GENERATORS
@@ -710,18 +114,11 @@ const renderColorGroups = debounce(() => {
     fragment.appendChild(addButton);
 
     appState.colors.forEach((group, idx) => {
-      const hexValue = normalizeHex(group.value) || "#8E8E93";
-      const lightBgHex = normalizeHex(appState.themes[0].bg) || "#FFFFFF";
-      const darkBgHex = normalizeHex(appState.themes[1].bg) || "#000000";
-      const lightC = contrastRatio(hexValue, lightBgHex) || 0;
-      const darkC = contrastRatio(hexValue, darkBgHex) || 0;
-      const gId = `group-${idx}`;
-
       const card = document.createElement("div");
-      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2";
+      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2 color-group-card-plugin";
       card.draggable = true;
 
-      // ── Color group drag-and-drop ────────────────────────────────────
+      // ── Drag & Drop ──────────────────────────────────────────────────
       card.addEventListener("dragstart", (e) => {
         _colorDragSrcIdx = idx;
         e.dataTransfer.effectAllowed = "move";
@@ -730,97 +127,27 @@ const renderColorGroups = debounce(() => {
       card.addEventListener("dragend", () => {
         _colorDragSrcIdx = null;
         card.style.opacity = "";
-        document.querySelectorAll(".color-group-card-plugin").forEach((c) => {
-          c.classList.remove("border-t-2", "!border-t-[var(--accent)]");
-        });
+        document.querySelectorAll(".color-group-card-plugin").forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
       });
       card.addEventListener("dragover", (e) => {
         if (_colorDragSrcIdx === null || _colorDragSrcIdx === idx) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        document.querySelectorAll(".color-group-card-plugin").forEach((c) => {
-          c.classList.remove("border-t-2", "!border-t-[var(--accent)]");
-        });
+        document.querySelectorAll(".color-group-card-plugin").forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
         card.classList.add("border-t-2", "!border-t-[var(--accent)]");
       });
       card.addEventListener("dragleave", (e) => {
-        if (!card.contains(e.relatedTarget)) {
-          card.classList.remove("border-t-2", "!border-t-[var(--accent)]");
-        }
+        if (!card.contains(e.relatedTarget)) card.classList.remove("border-t-2", "!border-t-[var(--accent)]");
       });
       card.addEventListener("drop", (e) => {
         e.preventDefault();
         if (_colorDragSrcIdx === null || _colorDragSrcIdx === idx) return;
-        const from = _colorDragSrcIdx;
-        const to = idx;
-        const [moved] = appState.colors.splice(from, 1);
-        appState.colors.splice(to, 0, moved);
+        const [moved] = appState.colors.splice(_colorDragSrcIdx, 1);
+        appState.colors.splice(idx, 0, moved);
         renderColorGroups();
       });
-      card.classList.add("color-group-card-plugin");
 
-      card.innerHTML = `
-                <div class="grid grid-cols-[20px_1fr_1fr_40px] gap-2">
-                  <div class="flex flex-col gap-0.5 self-center">
-                    <button onclick="moveGroup(${idx}, -1)" ${idx === 0 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move up">▲</button>
-                    <span class="drag-handle text-[var(--text-muted)] cursor-grab select-none text-[14px] leading-none text-center" title="Drag to reorder">⠿</span>
-                    <button onclick="moveGroup(${idx}, 1)" ${idx === appState.colors.length - 1 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move down">▼</button>
-                  </div>
-                  <div class="flex-[3] space-y-1">
-                    <label for="${gId}-name" class="text-[var(--text-muted)] text-[12px] font-medium">Color Name</label>
-                    <input type="text" id="${gId}-name" value="${group.name}" oninput="updateGroup(${idx}, 'name', this.value)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
-                  </div>
-                  <div class="flex-[4] space-y-1">
-                    <label for="${gId}-hex" class="text-[var(--text-muted)] text-[12px] font-medium">Source Color</label>
-                    <div class="flex items-center gap-2 w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 pl-1 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px]">
-                        <input type="color" value="${hexValue}" onchange="updateGroup(${idx}, 'value', this.value)" class="cursor-pointer size- bg-transparent border-none rounded-[8px]">
-                        <input type="text" id="${gId}-hex" value="${group.value}" oninput="updateGroup(${idx}, 'value', this.value, this)" class="w-full bg-transparent text-[13px] uppercase outline-none text-[var(--text-primary)]">
-                    </div>
-                  </div>
-                  <button onclick="removeGroup(${idx})" class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 self-end size-[40px] flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20">
-                    <svg width="16" height="16" viewBox="0 0 12 14" fill="none"><path d="M8.00021 1.98568C8.00021 1.4562 7.5944 1.03371 7.09136 1.01758C6.72911 1.00599 6.36531 1 6.00021 1C5.63511 1 5.27131 1.00599 4.90906 1.01758C4.40602 1.03371 4.00021 1.4562 4.00021 1.98568V2.0612C4.6618 2.02102 5.32864 2 6.00021 2C6.67179 2 7.33862 2.02102 8.00021 2.0612V1.98568ZM6.00021 3C5.17177 3 4.35078 3.03229 3.53862 3.09505C2.92606 3.14239 2.31853 3.20784 1.71636 3.28971L2.39214 12.0768C2.43227 12.5978 2.86704 13 3.38953 13H8.61089C9.13338 13 9.56815 12.5978 9.60828 12.0768L10.2834 3.28971C9.68144 3.20789 9.07415 3.14237 8.4618 3.09505C7.64964 3.03229 6.82865 3 6.00021 3ZM4.15386 4.50065C4.42969 4.49004 4.66196 4.70468 4.67274 4.98047L4.90386 10.9805C4.91447 11.2564 4.69927 11.4887 4.42339 11.4993C4.14756 11.51 3.91529 11.2953 3.90451 11.0195L3.67339 5.01953C3.66278 4.74367 3.87803 4.51138 4.15386 4.50065ZM7.84656 4.50065C8.12239 4.51138 8.33764 4.74367 8.32703 5.01953L8.09591 11.0195C8.08513 11.2953 7.85287 11.51 7.57703 11.4993C7.30115 11.4887 7.08595 11.2564 7.09656 10.9805L7.32768 4.98047C7.33846 4.70468 7.57073 4.49004 7.84656 4.50065ZM9.00021 2.13737C9.63667 2.19563 10.2681 2.27144 10.8934 2.36589C11.125 2.40085 11.3556 2.43869 11.5855 2.47852C11.8575 2.52564 12.04 2.78399 11.993 3.05599C11.9459 3.32806 11.687 3.51064 11.4149 3.46354C11.3684 3.45548 11.3216 3.44861 11.2749 3.44076L10.605 12.1536C10.5247 13.1955 9.65587 14 8.61089 14H3.38953C2.34455 14 1.47568 13.1955 1.39539 12.1536L0.72482 3.44076C0.678419 3.44858 0.631829 3.45552 0.585497 3.46354C0.313427 3.51064 0.0545012 3.32806 0.00737211 3.05599C-0.0396145 2.78399 0.142913 2.52563 0.414924 2.47852C0.644818 2.43869 0.875465 2.40085 1.10698 2.36589C1.73236 2.27144 2.36375 2.19563 3.00021 2.13737V1.98568C3.00021 0.9427 3.80857 0.0524197 4.87716 0.0182292C5.25006 0.00630041 5.62445 0 6.00021 0C6.37597 0 6.75036 0.00630037 7.12326 0.0182292C8.19185 0.0524197 9.00021 0.9427 9.00021 1.98568V2.13737Z" fill="currentColor"/></svg>
-                  </button>
-                </div>
-                <div class="grid grid-cols-[1fr_1fr_1fr] items-end gap-2">
-                  <div class="flex-[3] space-y-1">
-                    <label for="${gId}-short" class="text-[var(--text-muted)] text-[12px] font-medium">Short Name</label>
-                    <input type="text" id="${gId}-short" value="${group.shortName}" oninput="updateGroup(${idx}, 'shortName', this.value)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
-                  </div>
-                  <div class="flex-[3.5] space-y-1">
-                    <span class="text-[var(--text-muted)] text-[12px] font-medium">Light Contrast</span>
-                    <div class="h-[40px] bg-[var(--bg-input)]/30 border border-[var(--border)] rounded-[8px] px-2 flex items-center justify-between text-[12px] text-[var(--text-primary)]">
-                      <span>${lightC.toFixed(2)}:1</span>
-                      <span class="font-bold ${lightC >= 4.5 ? "text-[var(--success)]" : lightC >= 3 ? "text-[var(--warning)]" : "text-[var(--danger)]"}">${contrastRating(hexValue, lightBgHex)}</span>
-                    </div>
-                  </div>
-                  <div class="flex-[3.5] space-y-1">
-                    <span class="text-[var(--text-muted)] text-[12px] font-medium">Dark Contrast</span>
-                    <div class="h-[40px] bg-[var(--bg-input)]/30 border border-[var(--border)] rounded-[8px] px-2 flex items-center justify-between text-[12px] text-[var(--text-primary)]">
-                      <span>${darkC.toFixed(2)}:1</span>
-                      <span class="font-bold ${darkC >= 4.5 ? "text-[var(--success)]" : darkC >= 3 ? "text-[var(--warning)]" : "text-[var(--danger)]"}">${contrastRating(hexValue, darkBgHex)}</span>
-                    </div>
-                  </div>
-                </div>
-                ${
-                  appState.pluginMode === "direct"
-                    ? `
-                <div class="space-y-1">
-                  <label class="text-[var(--text-muted)] text-[12px] font-medium">Color Solver</label>
-                  <select onchange="updateGroup(${idx}, 'solverMode', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
-                    <option value="natural"          ${(group.solverMode || "natural") === "natural" ? "selected" : ""}>Balanced — adjusts hue and vibrancy naturally</option>
-                    <option value="saturated"        ${(group.solverMode || "natural") === "saturated" ? "selected" : ""}>Vivid — preserves saturation, adjusts brightness only</option>
-                    <option value="luminance"        ${(group.solverMode || "natural") === "luminance" ? "selected" : ""}>Muted — fades toward neutral at low/high lightness</option>
-                    <option value="hue-locked"       ${(group.solverMode || "natural") === "hue-locked" ? "selected" : ""}>Hue Faithful — locks hue angle, adjusts brightness and vibrancy</option>
-                    <option value="chroma-maximized" ${(group.solverMode || "natural") === "chroma-maximized" ? "selected" : ""}>Max Vibrancy — most saturated color that meets contrast</option>
-                  </select>
-                </div>`
-                    : ""
-                }
-                <div class="space-y-1">
-                  <label for="${gId}-desc" class="text-[var(--text-muted)] text-[12px] font-medium">Description</label>
-                  <input type="text" id="${gId}-desc" value="${(group.description || "").replace(/"/g, "&quot;")}" oninput="updateGroup(${idx}, 'description', this.value)" placeholder="Color description (optional)" class="w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[14px] outline-none focus:border-[var(--border-focus)] h-[40px] text-[var(--text-primary)]">
-                </div>
-              `;
+      card.innerHTML = Components.ColorGroupCard(group, idx, appState);
       // Prevent accidental drags from interactive children
       card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
       fragment.appendChild(card);
@@ -842,8 +169,6 @@ const renderRoles = debounce(() => {
     addButton.innerHTML = `<span>+ Add Color Role</span>`;
     addButton.onclick = addRole;
     fragment.appendChild(addButton);
-
-    const trashSvg = `<svg width="14" height="14" viewBox="0 0 12 14" fill="none"><path d="M8.00021 1.98568C8.00021 1.4562 7.5944 1.03371 7.09136 1.01758C6.72911 1.00599 6.36531 1 6.00021 1C5.63511 1 5.27131 1.00599 4.90906 1.01758C4.40602 1.03371 4.00021 1.4562 4.00021 1.98568V2.0612C4.6618 2.02102 5.32864 2 6.00021 2C6.67179 2 7.33862 2.02102 8.00021 2.0612V1.98568ZM6.00021 3C5.17177 3 4.35078 3.03229 3.53862 3.09505C2.92606 3.14239 2.31853 3.20784 1.71636 3.28971L2.39214 12.0768C2.43227 12.5978 2.86704 13 3.38953 13H8.61089C9.13338 13 9.56815 12.5978 9.60828 12.0768L10.2834 3.28971C9.68144 3.20789 9.07415 3.14237 8.4618 3.09505C7.64964 3.03229 6.82865 3 6.00021 3ZM4.15386 4.50065C4.42969 4.49004 4.66196 4.70468 4.67274 4.98047L4.90386 10.9805C4.91447 11.2564 4.69927 11.4887 4.42339 11.4993C4.14756 11.51 3.91529 11.2953 3.90451 11.0195L3.67339 5.01953C3.66278 4.74367 3.87803 4.51138 4.15386 4.50065ZM7.84656 4.50065C8.12239 4.51138 8.33764 4.74367 8.32703 5.01953L8.09591 11.0195C8.08513 11.2953 7.85287 11.51 7.57703 11.4993C7.30115 11.4887 7.08595 11.2564 7.09656 10.9805L7.32768 4.98047C7.33846 4.70468 7.57073 4.49004 7.84656 4.50065ZM9.00021 2.13737C9.63667 2.19563 10.2681 2.27144 10.8934 2.36589C11.125 2.40085 11.3556 2.43869 11.5855 2.47852C11.8575 2.52564 12.04 2.78399 11.993 3.05599C11.9459 3.32806 11.687 3.51064 11.4149 3.46354C11.3684 3.45548 11.3216 3.44861 11.2749 3.44076L10.605 12.1536C10.5247 13.1955 9.65587 14 8.61089 14H3.38953C2.34455 14 1.47568 13.1955 1.39539 12.1536L0.72482 3.44076C0.678419 3.44858 0.631829 3.45552 0.585497 3.46354C0.313427 3.51064 0.0545012 3.32806 0.00737211 3.05599C-0.0396145 2.78399 0.142913 2.52563 0.414924 2.47852C0.644818 2.43869 0.875465 2.40085 1.10698 2.36589C1.73236 2.27144 2.36375 2.19563 3.00021 2.13737V1.98568C3.00021 0.9427 3.80857 0.0524197 4.87716 0.0182292C5.25006 0.00630041 5.62445 0 6.00021 0C6.37597 0 6.75036 0.00630037 7.12326 0.0182292C8.19185 0.0524197 9.00021 0.9427 9.00021 1.98568V2.13737Z" fill="currentColor"/></svg>`;
 
     appState.roles.forEach((role, idx) => {
       const card = document.createElement("div");
@@ -1048,23 +373,19 @@ const renderRoles = debounce(() => {
                       var ruleVal;
                       if (isDirectMode) {
                         const _bc = parseFloat(role.baseContrast) || 4.5;
-                        const _cg = parseFloat(role.contrastGap)  || 1.5;
+                        const _cg = parseFloat(role.contrastGap) || 1.5;
                         ruleVal = Math.max(1.01, _bc + (vi - baseVarIdx) * _cg);
                       } else {
                         ruleVal = storedTarget !== undefined ? storedTarget : undefined;
                       }
-                      const rawVal = isManualInline
-                        ? (storedTarget !== undefined ? storedTarget : ruleVal)
-                        : ruleVal;
+                      const rawVal = isManualInline ? (storedTarget !== undefined ? storedTarget : ruleVal) : ruleVal;
                       const displayVal = rawVal !== undefined ? parseFloat(parseFloat(rawVal).toFixed(2)) : "";
                       const tInput = `<input type="number" step="0.1"
                         min="${isDirectMode ? 1 : 0}" max="${isDirectMode ? 21 : (appState.colorSteps || 25) - 1}"
                         value="${displayVal}"
                         ${isManualInline ? `oninput="updateRoleVariationTargetInline(${idx},${vi},this.value)"` : "disabled"}
                         class="w-[60px] h-[32px] border rounded-[8px] px-2 text-[12px] outline-none text-[var(--text-primary)]
-                          ${isManualInline
-                            ? "bg-[var(--bg-input)] border-[var(--border)] focus:border-[var(--border-focus)]"
-                            : "bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed opacity-60"}">`;
+                          ${isManualInline ? "bg-[var(--bg-input)] border-[var(--border)] focus:border-[var(--border-focus)]" : "bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-muted)] cursor-not-allowed opacity-60"}">`;
                       return `
                     <div class="flex items-center gap-1.5">
                       <div class="flex flex-col gap-0.5 shrink-0">
@@ -1091,31 +412,8 @@ const renderRoles = debounce(() => {
             `
         : "";
 
-      card.innerHTML = `
-              <div class="flex items-end gap-2">
-                <div class="flex flex-col gap-0.5 self-center flex-shrink-0">
-                  <button onclick="moveRole(${idx}, -1)" ${idx === 0 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move up">▲</button>
-                  <span class="drag-handle text-[var(--text-muted)] cursor-grab select-none text-[14px] leading-none text-center" title="Drag to reorder">⠿</span>
-                  <button onclick="moveRole(${idx}, 1)" ${idx === appState.roles.length - 1 ? "disabled" : ""} class="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-20 disabled:cursor-not-allowed transition-all" title="Move down">▼</button>
-                </div>
-                <div class="flex-1 space-y-1">
-                  <label for="role-${idx}-name" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Role Name</label>
-                  <div class="flex items-center gap-1">
-                    <input type="text" id="role-${idx}-name" value="${role.name || ""}" oninput="updateRole(${idx}, 'name', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                  </div>
-                </div>
-                <div class="w-[72px] space-y-1">
-                  <label for="role-${idx}-short" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Short</label>
-                  <input type="text" id="role-${idx}-short" value="${role.shortName || ""}" oninput="updateRole(${idx}, 'shortName', this.value)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-                </div>
-                <button onclick="removeRole(${idx})" class="bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 size-[40px] shrink-0 flex items-center justify-center rounded-[8px] transition-all hover:bg-[var(--danger)]/20">${trashSvg}</button>
-              </div>
-              <div class="space-y-1">
-                <label for="role-${idx}-desc" class="text-[var(--text-muted)] text-[11px] font-bold tracking-wider ml-1">Description</label>
-                <input type="text" id="role-${idx}-desc" value="${(role.description || "").replace(/"/g, "&quot;")}" oninput="updateRole(${idx}, 'description', this.value)" placeholder="Role description (optional)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-              </div>
-              ${secondRowHtml}
-              ${overrideSection}`;
+      card.innerHTML = Components.RoleGroupCard(role, idx, appState, secondRowHtml, overrideSection);
+
       // Prevent accidental drags from interactive children
       card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
       fragment.appendChild(card);
@@ -1330,7 +628,9 @@ function toggleRoleVariationOverride(roleIdx) {
   role.variationOverride = !role.variationOverride;
   if (role.variationOverride) {
     if (!role.roleVariations || role.roleVariations.length === 0) {
-      role.roleVariations = appState.variations.map(function(v) { return Object.assign({}, v, { _id: generateId() }); });
+      role.roleVariations = appState.variations.map(function (v) {
+        return Object.assign({}, v, { _id: generateId() });
+      });
     }
   } else {
     role.variationManual = false;
@@ -1673,8 +973,9 @@ function renderPreviewPanel(result) {
       const numDisplay = section.querySelector(`#spec-num-${colorName}`);
       for (const [weight, data] of Object.entries(ramp)) {
         const step = document.createElement("div");
-        step.className = `preview-swatch bg-[${data.value}] flex-1 h-full hover:flex-[4] hover:z-10 hover:[transform:scaleY(1.15)] hover:rounded-[8px] hover:[box-shadow:0_15px_40px_#00000044]`;
+        step.className = `preview-swatch flex-1 h-full hover:flex-[4] hover:z-10 hover:[transform:scaleY(1.15)] hover:rounded-[8px] hover:[box-shadow:0_15px_40px_#00000044]`;
         step.setAttribute("data-copy", data.value);
+        step.style.backgroundColor = data.value;
         step.onmouseenter = () => {
           hexDisplay.textContent = data.value;
           numDisplay.textContent = weight;
@@ -1756,69 +1057,79 @@ function renderPreviewPanel(result) {
   renderThemePanel("preview-light", result.colorTokens.light, lightBgHex);
   renderThemePanel("preview-dark", result.colorTokens.dark, darkBgHex);
 
-  // Error bar
-  const allErrors = result.errors;
-  const critCount = allErrors.critical.length;
-  const warnCount = allErrors.warnings.length;
-  const errBar = document.getElementById("preview-errors-bar");
-  if (critCount + warnCount > 0) {
-    errBar.classList.remove("hidden");
-    document.getElementById("preview-errors-count").textContent = `${critCount} critical · ${warnCount} warnings`;
-    const body = document.getElementById("preview-errors-body");
-    body.innerHTML = "";
-    for (const e of allErrors.critical) {
-      const item = document.createElement("div");
-      item.className = "py-1 px-3 text-[10px] text-[var(--text-muted)] border-t border-[var(--border)]";
-      item.textContent = `⛔ ${e.color} · ${e.role} [${e.theme}]: ${e.error}`;
-      body.appendChild(item);
+  // Show consolidated errors in banners, including accessibility audit
+  showSystemBanners(result.errors, result);
+}
+
+/**
+ * Displays critical errors and warnings using the BannerManager system.
+ * Consolidates all issues into a single persistent banner as requested.
+ * Includes a small audit for accessibility fails.
+ * @param {Object} errors - { critical: [], warnings: [] }
+ * @param {Object} [result] - Full generation result for auditing
+ */
+function showSystemBanners(errors, result = null) {
+  if (!errors) return;
+
+  const accessFails = [];
+  if (result && result.colorTokens) {
+    // Perform a quick accessibility audit for 'Fail' ratings
+    for (const mode of ["light", "dark"]) {
+      const modeTokens = result.colorTokens[mode];
+      if (!modeTokens) continue;
+      for (const clrName in modeTokens) {
+        for (const roleId in modeTokens[clrName]) {
+          const roleTokens = modeTokens[clrName][roleId];
+          for (const varKey in roleTokens) {
+            const tkn = roleTokens[varKey];
+            if (tkn.contrast && tkn.contrast.rating === "Fail") {
+              accessFails.push(`<b>${clrName}/${tkn.role}</b> (${mode})`);
+            }
+          }
+        }
+      }
     }
-    for (const e of allErrors.warnings) {
-      const item = document.createElement("div");
-      item.className = "py-1 px-3 text-[10px] text-[var(--warning)] border-t border-[var(--border)]";
-      item.textContent = `⚠️ ${e.color} · ${e.role} [${e.theme}]: ${e.warning}`;
-      body.appendChild(item);
-    }
-  } else {
-    errBar.classList.add("hidden");
   }
-}
 
-function togglePreviewErrors() {
-  document.getElementById("preview-errors-body").classList.toggle("open");
-}
-
-function toggleRunErrors() {
-  document.getElementById("run-errors-body").classList.toggle("open");
-}
-
-function renderRunErrors(errors) {
-  const bar = document.getElementById("run-errors-bar");
-  const body = document.getElementById("run-errors-body");
-  if (!errors) {
-    bar.classList.add("hidden");
-    return;
-  }
   const critCount = errors.critical.length;
   const warnCount = errors.warnings.length;
-  if (critCount + warnCount === 0) {
-    bar.classList.add("hidden");
+  const auditCount = accessFails.length;
+
+  if (critCount === 0 && warnCount === 0 && auditCount === 0) {
+    BannerManager.clear();
     return;
   }
-  bar.classList.remove("hidden");
-  document.getElementById("run-errors-count").textContent = `${critCount} critical · ${warnCount} warnings`;
-  body.innerHTML = "";
-  for (const e of errors.critical) {
-    const item = document.createElement("div");
-    item.className = "py-1 px-3 text-[10px] text-[var(--text-muted)] border-t border-[var(--border)]";
-    item.textContent = `⛔ ${e.color} · ${e.role} [${e.theme}]: ${e.error}`;
-    body.appendChild(item);
+
+  // Consolidate details for the "Show more" section
+  let detailHtml = "";
+  if (critCount > 0) {
+    detailHtml += `<div class="mb-2"><p class="font-bold text-red-400 mb-1">Critical Issues:</p>`;
+    errors.critical.forEach(e => {
+      detailHtml += `<div class="ml-2 text-[10px] opacity-90">• <b>${e.color}/${e.role}</b>: ${e.error}</div>`;
+    });
+    detailHtml += `</div>`;
   }
-  for (const w of errors.warnings) {
-    const item = document.createElement("div");
-    item.className = "py-1 px-3 text-[10px] text-[var(--warning)] border-t border-[var(--border)]";
-    item.textContent = `⚠ ${w.color} · ${w.role}${w.variation ? ` · ${w.variation}` : ""} [${w.theme}]: ${w.warning}`;
-    body.appendChild(item);
+  if (warnCount > 0) {
+    detailHtml += `<div class="mb-2"><p class="font-bold text-amber-400 mb-1">Warnings:</p>`;
+    errors.warnings.forEach(w => {
+      detailHtml += `<div class="ml-2 text-[10px] opacity-90">• <b>${w.color}/${w.role}</b>: ${w.warning}</div>`;
+    });
+    detailHtml += `</div>`;
   }
+  if (auditCount > 0) {
+    detailHtml += `<div><p class="font-bold text-blue-400 mb-1">Accessibility Concerns:</p>`;
+    detailHtml += `<div class="ml-2 text-[10px] opacity-90">${accessFails.slice(0, 8).join("<br>")}${auditCount > 8 ? `<br>...and ${auditCount - 8} more` : ""}</div>`;
+    detailHtml += `</div>`;
+  }
+
+  BannerManager.show({
+    id: "system-status-banner",
+    type: critCount > 0 ? "error" : (warnCount > 0 ? "warning" : "info"),
+    title: critCount > 0 ? "Color System Errors" : "System Audit Results",
+    message: `${critCount > 0 ? `${critCount} Critical · ` : ""}${warnCount} Warnings · ${auditCount} Access concerns detected.`,
+    detail: `<div class="flex flex-col gap-1 mt-2 border-t border-white/10 pt-2">${detailHtml}</div>`,
+    dismissable: true
+  });
 }
 
 function showToast(msg) {
@@ -1892,7 +1203,7 @@ document.getElementById("btn-run").onclick = () => handleSubmit("all");
 document.getElementById("btn-import").onclick = () => document.getElementById("file-input").click();
 
 document.getElementById("btn-preview").onclick = () => {
-  const result = variableMakerUI(translateConfigForPreview(appState));
+  const result = variableMaker(translateConfigForPreview(appState));
   // Reset to Color Ramps tab each time
   document.querySelectorAll(".preview-tab-btn").forEach((b, i) => b.classList.toggle("active", i === 0));
   document.querySelectorAll(".preview-panel").forEach((p, i) => p.classList.toggle("active", i === 0));
@@ -1903,6 +1214,7 @@ document.getElementById("btn-preview").onclick = () => {
 document.getElementById("preview-close").onclick = () => {
   hideOverlay("preview-overlay");
   document.getElementById("preview-overlay").classList.remove("theme-light", "theme-dark", "theme-ramps");
+  BannerManager.clear();
 };
 
 // Sidebar Tab Logic
@@ -2273,7 +1585,6 @@ window.onmessage = (event) => {
 
   if (msg.type === "finish") {
     hideOverlay("loading-overlay");
-    document.getElementById("run-errors-body").classList.remove("open");
     showOverlay("success-overlay");
     document.getElementById("success-results").innerHTML = `
             <p class="text-sm">Created: <span class="text-white font-bold">${msg.tally.created}</span></p>
@@ -2281,7 +1592,7 @@ window.onmessage = (event) => {
             ${msg.tally.renamed > 0 ? `<p class="text-sm">Renamed: <span class="text-blue-300 font-bold">${msg.tally.renamed}</span></p>` : ""}
             <p class="text-sm">Failed: <span class="text-red-400 font-bold">${msg.tally.failed}</span></p>
           `;
-    renderRunErrors(msg.errors || null);
+    showSystemBanners(msg.errors || null);
   }
   if (msg.type === "capabilities") {
     if (!msg.capabilities.multiMode) {

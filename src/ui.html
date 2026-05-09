@@ -368,6 +368,8 @@
     <title>ctm316</title>
   </head>
   <body class="bg-[var(--bg-app)] text-[var(--text-primary)] selection:bg-[var(--accent)] selection:text-white overflow-hidden">
+    <!-- Notifications Slot -->
+    <div id="banner-slot" class="fixed top-0 left-0 right-0 z-[1000] pointer-events-none [&>*]:pointer-events-auto"></div>
     <!-- Main Screen -->
     <div id="main-screen" class="h-full flex flex-col relative overflow-hidden">
       <!-- Header -->
@@ -750,16 +752,6 @@
           </div>
           <button onclick="hideOverlay('success-overlay')" class="mt-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-[var(--accent-glow)]">Back to Editor</button>
         </div>
-        <!-- Collapsible error summary (shown only when errors exist) -->
-        <div id="run-errors-bar" class="preview-errors-bar hidden">
-          <div class="preview-errors-header" onclick="toggleRunErrors()">
-            <span id="run-errors-count"></span>
-            <svg id="run-errors-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M8 10.888L2.646 5.146c-.195-.195-.195-.512 0-.707s.512-.195.707 0L8 9.793l4.646-5.354c.195-.195.512-.195.707 0s.195.512 0 .707L8 10.888z" fill="var(--text-muted)" />
-            </svg>
-          </div>
-          <div id="run-errors-body" class="preview-errors-body"></div>
-        </div>
       </div>
       <!-- error-overlay -->
       <div id="error-overlay" class="hidden absolute inset-0 bg-[var(--bg-app)] z-50 flex items-center justify-center p-8 text-center flex-col gap-4">
@@ -795,15 +787,8 @@
             <div id="preview-dark" class="preview-panel"></div>
           </div>
         </div>
-        <!-- Error Bar -->
-        <div id="preview-errors-bar" class="preview-errors-bar hidden">
-          <div class="preview-errors-header" onclick="togglePreviewErrors()">
-            <span id="preview-errors-count"></span>
-            <svg id="preview-errors-chevron" width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M8 10.888L2.646 5.146c-.195-.195-.195-.512 0-.707s.512-.195.707 0L8 9.793l4.646-5.354c.195-.195.512-.195.707 0s.195.512 0 .707L8 10.888z" fill="var(--text-muted)" />
-            </svg>
+            <div id="preview-dark" class="preview-panel"></div>
           </div>
-          <div id="preview-errors-body" class="preview-errors-body"></div>
         </div>
       </div>
 
@@ -991,8 +976,12 @@
       </svg>
     </div>
     <script src="src/bannerManager.js"></script>
+    <script src="src/utils.js"></script>
+    <script src="src/state.js"></script>
+    <script src="src/ui-components.js"></script>
     <script src="src/clrSpaces.js"></script>
     <script src="src/clrSolver.js"></script>
+    <script src="src/clrGen.js"></script>
     <script src="src/uiGen.js"></script>
   </body>
 </html>
