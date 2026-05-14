@@ -46,7 +46,6 @@ const demoConfig = {
   pluginMode: "ramp", // "ramp" or "direct"
   baseSelection: "By Contrast",
   spreadUnit: "steps",
-  roleSteps: 5,
   variations: null,
   colors: [
     { name: "Primary", shorthand: "pr", value: "0067DD", description: "" },
@@ -84,14 +83,10 @@ const UI_DIMS = {
   maxHeight: 1400,
 };
 
-const UI_SCALES = [0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5];
-const UI_THEMES = ["figma", "dark", "light"]; // "figma" = follow Figma's own theme
-
-let uiPrefs = { scale: 1.0, theme: "figma" };
+let uiPrefs = { scale: 1.0, theme: "dark" };
 let activeSidebarTab = "color-groups";
 let _colorDragSrcIdx = null;
 let _roleDragSrcIdx = null;
-
 
 // Ensures appState.variations exists and all roles have matching variationTargets arrays.
 function ensureVariations() {
@@ -107,7 +102,7 @@ function ensureVariations() {
     const vLen = roleVars.length;
     if (!role.variationTargets || role.variationTargets.length !== vLen) {
       const oldVals = role.variations ? Object.values(role.variations) : Array.isArray(role.variationTargets) ? role.variationTargets : [];
-      role.variationTargets = roleVars.map((_, i) => oldVals[i] || (appState.pluginMode === "direct" ? [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5 : Math.floor(((appState.colorSteps || 25) / Math.max(1, vLen - 1)) * i)));
+      role.variationTargets = roleVars.map((_, i) => oldVals[i] || (appState.pluginMode === "direct" ? DEFAULT_VARIATION_TARGETS[i] || 4.5 : Math.floor(((appState.colorSteps || 25) / Math.max(1, vLen - 1)) * i)));
       delete role.variations;
     }
   }

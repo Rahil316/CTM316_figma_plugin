@@ -50,16 +50,27 @@
     console.warn("Failed to load uiPrefsMeta:", e);
   }
 
-  // Load saved config
+  // Load saved config — primary: document plugin data; fallback: old STRING variable (one-time migration)
   try {
-    const vars = await figma.variables.getLocalVariablesAsync("STRING");
-    const cfgVar = vars.find((v) => v.name === "__ctm316_config__");
-    if (cfgVar) {
-      const modeId = Object.keys(cfgVar.valuesByMode)[0];
-      const savedConfigStr = cfgVar.valuesByMode[modeId];
-      if (typeof savedConfigStr === "string") {
-        figma.ui.postMessage({ type: "load-config", state: JSON.parse(savedConfigStr) });
+    let savedConfigStr = figma.root.getPluginData("ctm316_state");
+
+    if (!savedConfigStr) {
+      // One-time migration from the old __ctm316_config__ STRING variable approach
+      const vars = await figma.variables.getLocalVariablesAsync("STRING");
+      const cfgVar = vars.find((v) => v.name === "__ctm316_config__");
+      if (cfgVar) {
+        const modeId = Object.keys(cfgVar.valuesByMode)[0];
+        savedConfigStr = cfgVar.valuesByMode[modeId] || null;
+        if (savedConfigStr) {
+          // Migrate to new storage and remove the old variable
+          figma.root.setPluginData("ctm316_state", savedConfigStr);
+          try { cfgVar.remove(); } catch (e) { console.warn("Could not remove legacy config variable:", e); }
+        }
       }
+    }
+
+    if (savedConfigStr) {
+      figma.ui.postMessage({ type: "load-config", state: JSON.parse(savedConfigStr) });
     }
   } catch (e) {
     console.warn("Failed to load saved config:", e);

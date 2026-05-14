@@ -74,8 +74,8 @@ function _mapRoles(appState, variations, count) {
     baseContrast: parseFloat(role.baseContrast) || 4.5,
     contrastGap: parseFloat(role.contrastGap) || 1.5,
     useContrastGap: !!role.useContrastGap,
-    variationTargets: role.variationTargets || (appState.pluginMode === "direct" 
-      ? variations.map((_, i) => [1.5, 3, 4.5, 7, 12][i] || 1.5 + i * 1.5) 
+    variationTargets: role.variationTargets || (appState.pluginMode === "direct"
+      ? variations.map((_, i) => DEFAULT_VARIATION_TARGETS[i] || 4.5)
       : variations.map((_, i) => Math.floor(count / 2 + (i - Math.floor(variations.length / 2))))),
     description: role.description || "",
     variationOverride: role.variationOverride || false,

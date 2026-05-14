@@ -36,21 +36,22 @@ function hideOverlay(id) {
 
 function updateGroup(idx, key, value, el) {
   if (key === "value") {
-    const clean = value
-      .replace(/[^0-9A-Fa-f]/g, "")
-      .toUpperCase()
-      .substring(0, 6);
+    const clean = sanitizeHex(value);
     if (el && el.value !== clean) {
-      const start = el.selectionStart;
+      const pos = el.selectionStart;
       el.value = clean;
-      el.setSelectionRange(start, start);
+      el.setSelectionRange(pos, pos);
     }
     appState.colors[idx].value = clean;
-    renderColorGroups();
+    // Sync sibling inputs in-place — no re-render needed
+    const textEl = document.getElementById(`clr-${idx}-hex`);
+    const pickerEl = document.getElementById(`clr-${idx}-picker`);
+    if (textEl && textEl !== el) textEl.value = clean;
+    if (pickerEl && pickerEl !== el && clean.length === 6) pickerEl.value = "#" + clean;
   } else {
     appState.colors[idx][key] = value;
-    if (key === "name") renderColorGroups();
   }
+  schedulePreview();
 }
 
 function removeGroup(idx) {
@@ -78,7 +79,7 @@ function updateRole(idx, key, value) {
   if (key.startsWith("variationTarget:")) {
     const vi = parseInt(key.slice("variationTarget:".length));
     if (!appState.roles[idx].variationTargets) {
-      appState.roles[idx].variationTargets = appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5);
+      appState.roles[idx].variationTargets = defaultVariationTargets(appState.variations.length, "direct", appState.colorSteps);
     }
     let v = parseFloat(value);
     if (isNaN(v) || v < 1) v = 1;
@@ -98,7 +99,12 @@ function updateRole(idx, key, value) {
   } else {
     appState.roles[idx][key] = value;
   }
-  renderRoles();
+  // Text-only fields don't need a full re-render — the live input already shows the value
+  if (key === "name" || key === "shorthand") {
+    schedulePreview();
+  } else {
+    renderRoles();
+  }
 }
 
 function removeRole(idx) {
@@ -126,7 +132,7 @@ function addRole() {
     minContrast: 4.5,
     baseIndex: mid,
     darkBaseIndex: mid,
-    variationTargets: appState.variations.map((_, i) => [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5),
+    variationTargets: defaultVariationTargets(appState.variations.length, appState.pluginMode, appState.colorSteps),
     description: "",
     variationOverride: false,
     roleVariations: [],
@@ -137,7 +143,6 @@ function addRole() {
 
 // Variation CRUD
 function addSharedVariation() {
-  ensureVariations();
   const n = appState.variations.length + 1;
   appState.variations.push({ _id: generateId(), name: String(n), shorthand: String(n) });
   ensureVariations();
@@ -240,19 +245,10 @@ function resetRoleVariationsToShared(roleIdx) {
   schedulePreview();
 }
 
-function updateRoleVariationTargetInline(roleIdx, varIdx, value) {
-  if (!appState.roles[roleIdx].variationTargets) {
-    const vLen = getRoleVariations(appState.roles[roleIdx], appState).length;
-    appState.roles[roleIdx].variationTargets = Array.from({ length: vLen }, (_, i) => (appState.pluginMode === "direct" ? [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5 : Math.floor((appState.colorSteps || 25) / 2)));
-  }
-  appState.roles[roleIdx].variationTargets[varIdx] = parseFloat(value) || 0;
-  schedulePreview();
-}
-
 function updateRoleVariationTarget(roleIdx, varIdx, value) {
   if (!appState.roles[roleIdx].variationTargets) {
     const vLen = getRoleVariations(appState.roles[roleIdx], appState).length;
-    appState.roles[roleIdx].variationTargets = Array.from({ length: vLen }, (_, i) => (appState.pluginMode === "direct" ? [1.5, 3.0, 4.5, 7.0, 12.0][i] || 4.5 : Math.floor((appState.colorSteps || 25) / 2)));
+    appState.roles[roleIdx].variationTargets = defaultVariationTargets(vLen, appState.pluginMode, appState.colorSteps);
   }
   appState.roles[roleIdx].variationTargets[varIdx] = parseFloat(value) || 0;
   schedulePreview();

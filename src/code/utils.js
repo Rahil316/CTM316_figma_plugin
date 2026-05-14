@@ -76,11 +76,6 @@ function hexToSat(hex) {
   const hsl = hexToHsl(hex);
   return hsl ? hsl[1] : null;
 }
-function hexToLum(hex) {
-  const hsl = hexToHsl(hex);
-  return hsl ? hsl[2] : null;
-}
-
 function hslToRgb(h, s, l) {
   if (typeof h !== "number" || typeof s !== "number" || typeof l !== "number" || h < 0 || h > 360 || s < 0 || s > 100 || l < 0 || l > 100) return null;
   s /= 100;
@@ -156,14 +151,21 @@ function seriesMaker(x) {
   return out;
 }
 
-function slugify(str) {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+// Shared constants — single source of truth for values used across UI and engine
+const DEFAULT_VARIATION_TARGETS = [1.5, 3.0, 4.5, 7.0, 12.0];
+
+// Strip non-hex chars, uppercase, clamp to 6 chars. Returns raw hex without '#'.
+function sanitizeHex(val) {
+  return (val || "").replace(/[^0-9A-Fa-f]/g, "").toUpperCase().substring(0, 6);
+}
+
+// Build a default variationTargets array for a role that doesn't yet have one.
+function defaultVariationTargets(len, pluginMode, colorSteps) {
+  return Array.from({ length: len }, (_, i) =>
+    pluginMode === "direct"
+      ? DEFAULT_VARIATION_TARGETS[i] || 4.5
+      : Math.floor((colorSteps || 25) / 2)
+  );
 }
 
 const debounce = (fn, delay = 150) => {

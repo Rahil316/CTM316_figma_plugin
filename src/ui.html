@@ -346,14 +346,10 @@
       <header class="bg-[var(--bg-panel)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between sticky top-0 z-10">
         <h1 class="text-[24px] font-bold">ctm316</h1>
         <div class="flex gap-1.5">
-          <button id="btn-more" title="More Options" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]">
-          </button>
-          <button id="btn-import" title="Import JSON" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]">
-          </button>
-          <button id="btn-preview" title="Preview Colors" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]">
-          </button>
-          <button id="btn-run" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] flex items-center gap-2 px-4 py-2 rounded-[8px] transition-all shadow-[0_4px_12px_var(--accent-glow)]">
-          </button>
+          <button id="btn-more" title="More Options" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]"></button>
+          <button id="btn-import" title="Import JSON" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]"></button>
+          <button id="btn-preview" title="Preview Colors" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]"></button>
+          <button id="btn-run" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] flex items-center gap-2 px-4 py-2 rounded-[8px] transition-all shadow-[0_4px_12px_var(--accent-glow)]"></button>
         </div>
       </header>
       <!-- Banner slot: runtime notifications rendered here via BannerManager -->
@@ -365,8 +361,7 @@
           <button class="sidebar-tab-btn active" data-tab="color-groups">Palettes</button>
           <button class="sidebar-tab-btn" data-tab="roles-config">Color Roles</button>
         </div>
-        <button id="btn-settings" title="Settings" class="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-        </button>
+        <button id="btn-settings" title="Settings" class="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"></button>
       </div>
 
       <!-- Scrollable Content -->
@@ -375,8 +370,7 @@
       </main>
 
       <!-- Toast -->
-      <div id="toast" class="toast">
-      </div>
+      <div id="toast" class="toast"></div>
 
       <!-- Overlays -->
       <div id="overlay" class="overlay absolute inset-0 bg-black/50 z-20 backdrop-blur-sm"></div>
@@ -627,32 +621,28 @@
           <div class="space-y-1">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-3 mb-2">Export</h3>
             <button id="opt-save-config" class="w-full flex items-center gap-3 p-3 hover:bg-[var(--bg-hover)] rounded-[8px] transition-colors text-[var(--text-primary)]">
-              <div id="opt-save-config-icon" class="w-8 h-8 rounded-lg bg-[var(--success)]/10 flex items-center justify-center text-[var(--success)]">
-              </div>
+              <div id="opt-save-config-icon" class="w-8 h-8 rounded-lg bg-[var(--success)]/10 flex items-center justify-center text-[var(--success)]"></div>
               <div class="text-left">
                 <p class="text-[14px] font-medium">Save Config JSON</p>
                 <p class="text-[11px] text-[var(--text-muted)]">Full plugin config — reimportable</p>
               </div>
             </button>
             <button id="opt-export-css" class="w-full flex items-center gap-3 p-3 hover:bg-[var(--bg-hover)] rounded-[8px] transition-colors text-[var(--text-primary)]">
-              <div id="opt-export-css-icon" class="w-8 h-8 rounded-lg bg-[var(--creative)]/10 flex items-center justify-center text-[var(--creative)]">
-              </div>
+              <div id="opt-export-css-icon" class="w-8 h-8 rounded-lg bg-[var(--creative)]/10 flex items-center justify-center text-[var(--creative)]"></div>
               <div class="text-left">
                 <p class="text-[14px] font-medium">Export CSS Variables</p>
                 <p class="text-[11px] text-[var(--text-muted)]">CSS custom properties</p>
               </div>
             </button>
             <button id="opt-export-csv" class="w-full flex items-center gap-3 p-3 hover:bg-[var(--bg-hover)] rounded-[8px] transition-colors text-[var(--text-primary)]">
-              <div id="opt-export-csv-icon" class="w-8 h-8 rounded-lg bg-[var(--discovery)]/10 flex items-center justify-center text-[var(--discovery)]">
-              </div>
+              <div id="opt-export-csv-icon" class="w-8 h-8 rounded-lg bg-[var(--discovery)]/10 flex items-center justify-center text-[var(--discovery)]"></div>
               <div class="text-left">
                 <p class="text-[14px] font-medium">Export CSV</p>
                 <p class="text-[11px] text-[var(--text-muted)]">Color token spreadsheet</p>
               </div>
             </button>
             <button id="opt-export-scss" class="w-full flex items-center gap-3 p-3 hover:bg-[var(--bg-hover)] rounded-[8px] transition-colors text-[var(--text-primary)]">
-              <div id="opt-export-scss-icon" class="w-8 h-8 rounded-lg bg-[var(--secondary)]/10 flex items-center justify-center text-[var(--secondary)]">
-              </div>
+              <div id="opt-export-scss-icon" class="w-8 h-8 rounded-lg bg-[var(--secondary)]/10 flex items-center justify-center text-[var(--secondary)]"></div>
               <div class="text-left">
                 <p class="text-[14px] font-medium">Export SCSS</p>
                 <p class="text-[11px] text-[var(--text-muted)]">SCSS variable maps</p>
@@ -662,8 +652,7 @@
 
           <div class="pt-2 border-t border-[var(--border)]">
             <button id="opt-clear" class="w-full flex items-center gap-3 p-3 hover:bg-[var(--danger)]/10 text-[var(--danger)] rounded-[8px] transition-colors">
-              <div id="opt-clear-icon" class="w-8 h-8 rounded-lg bg-[var(--danger)]/10 flex items-center justify-center">
-              </div>
+              <div id="opt-clear-icon" class="w-8 h-8 rounded-lg bg-[var(--danger)]/10 flex items-center justify-center"></div>
               <span class="text-[14px] font-bold">Clear All</span>
             </button>
           </div>
@@ -679,8 +668,7 @@
       <!-- success overlay -->
       <div id="success-overlay" class="hidden absolute inset-0 bg-[var(--bg-app)] z-50 flex flex-col">
         <div class="flex-1 flex items-center justify-center p-8 text-center flex-col gap-4">
-          <div id="success-icon" class="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
-          </div>
+          <div id="success-icon" class="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center text-green-500"></div>
           <h2 class="text-2xl font-bold text-[var(--text-primary)]">Success!</h2>
           <div id="success-results" class="text-[var(--text-muted)] space-y-1">
             <!-- Tally results -->
@@ -690,8 +678,7 @@
       </div>
       <!-- error-overlay -->
       <div id="error-overlay" class="hidden absolute inset-0 bg-[var(--bg-app)] z-50 flex items-center justify-center p-8 text-center flex-col gap-4">
-        <div id="error-icon" class="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500">
-        </div>
+        <div id="error-icon" class="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"></div>
         <h2 class="text-2xl font-bold text-[var(--text-primary)]">Error</h2>
         <p id="error-message" class="text-[var(--danger)]"></p>
         <button onclick="hideOverlay('error-overlay')" class="mt-4 bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] px-8 py-3 rounded-xl font-bold text-[var(--text-primary)]">Dismiss</button>
@@ -735,20 +722,20 @@
         // Inject icons into static elements
         function injectIcons() {
           const iconMap = {
-            'btn-more': Icons.More,
-            'btn-import': Icons.Import,
-            'btn-preview': Icons.Preview,
-            'btn-run': Icons.Run + '<span class="text-[14px] font-bold">Run</span>',
-            'btn-settings': Icons.Settings,
-            'toast': Icons.Check + '<span id="toast-msg">Copied!</span>',
-            'opt-save-config-icon': Icons.Save,
-            'opt-export-css-icon': Icons.Code,
-            'opt-export-csv-icon': Icons.File,
-            'opt-export-scss-icon': Icons.Layers,
-            'opt-clear-icon': Icons.TrashLarge,
-            'success-icon': Icons.Check,
-            'error-icon': Icons.Close,
-            'drop-overlay-icon': Icons.Upload
+            "btn-more": Icons.More,
+            "btn-import": Icons.Import,
+            "btn-preview": Icons.Preview,
+            "btn-run": Icons.Run + '<span class="text-[14px] font-bold">Run</span>',
+            "btn-settings": Icons.Settings,
+            toast: Icons.Check + '<span id="toast-msg">Copied!</span>',
+            "opt-save-config-icon": Icons.Save,
+            "opt-export-css-icon": Icons.Code,
+            "opt-export-csv-icon": Icons.File,
+            "opt-export-scss-icon": Icons.Layers,
+            "opt-clear-icon": Icons.TrashLarge,
+            "success-icon": Icons.Check,
+            "error-icon": Icons.Close,
+            "drop-overlay-icon": Icons.Upload,
           };
 
           for (const [id, html] of Object.entries(iconMap)) {
@@ -758,7 +745,7 @@
         }
 
         // Run after all scripts are loaded
-        window.addEventListener('load', injectIcons);
+        window.addEventListener("load", injectIcons);
       </script>
 
       <!-- Confirmation Overlay -->

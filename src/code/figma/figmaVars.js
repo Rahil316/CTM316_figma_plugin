@@ -9,7 +9,7 @@ const VariableManager = {
   async applyRenames(collection, renameMap) {
     if (!collection || !renameMap || Object.keys(renameMap).length === 0) return 0;
     let renamed = 0;
-    const colVars = this.cache.variables.filter((v) => v.variableCollectionId === collection.id && v.name !== "__ctm316_config__");
+    const colVars = this.cache.variables.filter((v) => v.variableCollectionId === collection.id);
     const occupiedNames = new Set(colVars.map((v) => v.name));
 
     for (let pass = 0; pass < 2; pass++) {
@@ -163,44 +163,11 @@ const VariableManager = {
     }
 
     // Persist config so the plugin can restore state on next launch
-    if (appState) {
-      await this.saveConfig(appState, rampCollectionName);
-    }
+    if (appState) savePluginConfig(appState);
 
-    figma.ui.postMessage({ type: "finish", tally: this.tally, errors: result ? result.errors : null });
+    figma.ui.postMessage({ type: "finish", tally: this.tally, errors: result ? result.errors : null, result });
   },
 
-  async saveConfig(appState, colorName) {
-    try {
-      // Use whichever collection already holds __ctm316_config__; fall back to the
-      // first collection in the cache (the one this run created/touched first).
-      const existingCfgCol = this.cache.collections.find((col) => this.cache.variables.some((v) => v.name === "__ctm316_config__" && v.variableCollectionId === col.id));
-      const targetCol = existingCfgCol || this.cache.collections[0] || (await this.getOrCreateCollection(rampCollectionName));
-      const modeId = targetCol.modes[0].modeId;
-
-      // Remove any stale copies of __ctm316_config__ in other collections to avoid
-      // ambiguous restore on next launch when embedDirectly has been toggled.
-      for (const v of this.cache.variables) {
-        if (v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id) {
-          try {
-            v.remove();
-          } catch (e) {
-            console.warn("Stale config cleanup failed:", e);
-          }
-        }
-      }
-      this.cache.variables = this.cache.variables.filter((v) => !(v.name === "__ctm316_config__" && v.variableCollectionId !== targetCol.id));
-
-      let cfgVar = this.cache.variables.find((v) => v.name === "__ctm316_config__" && v.variableCollectionId === targetCol.id);
-      if (!cfgVar) {
-        cfgVar = figma.variables.createVariable("__ctm316_config__", targetCol, "STRING");
-        this.cache.variables.push(cfgVar);
-      }
-      cfgVar.setValueForMode(modeId, JSON.stringify(appState));
-    } catch (e) {
-      console.warn("saveConfig failed:", e);
-    }
-  },
 
   async refreshCache() {
     this.cache.variables = await figma.variables.getLocalVariablesAsync();
@@ -296,10 +263,18 @@ const VariableManager = {
   },
 };
 
-// Converts hex to Figma's { r, g, b } (0–1 range). Lives here because it bridges color math and Figma API.
-// Converts a hex string to Figma's { r, g, b } format (0–1 range).
+// Converts hex to Figma's { r, g, b } (0–1 range).
 function hexToFigmaRgb(hex) {
   const rgb = hexToRgb(hex);
   if (!rgb) return { r: 0, g: 0, b: 0 };
   return { r: rgb[0] / 255, g: rgb[1] / 255, b: rgb[2] / 255 };
+}
+
+// Persists appState to document plugin data — invisible to users, travels with the file.
+function savePluginConfig(appState) {
+  try {
+    figma.root.setPluginData("ctm316_state", JSON.stringify(appState));
+  } catch (e) {
+    console.warn("savePluginConfig failed:", e);
+  }
 }

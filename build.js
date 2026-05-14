@@ -18,7 +18,7 @@ try {
 
 console.log("Building scripts.js...");
 const jsHdr = "/* AUTO-GENERATED — do not edit. Source: src/  Run: npm run build */\n";
-const jsFiles = ["code/utils.js", "code/color/clrSpaces.js", "code/color/clrSolver.js", "code/color/clrGen.js", "code/figma/docGen.js", "code/figma/figmaVars.js", "code/figma/config.js", "code/figma/main.js"];
+const jsFiles = ["code/utils.js", "code/color/clrSpaces.js", "code/color/clrSolver.js", "code/color/clrGen.js", "code/figma/docGen.js", "code/figma/config.js", "code/figma/figmaVars.js", "code/figma/main.js"];
 const jsContent = jsFiles.map((f) => fs.readFileSync(path.join(srcDir, f), "utf8")).join("\n");
 fs.writeFileSync(path.join(outDir, "scripts.js"), jsHdr + jsContent);
 

@@ -5,21 +5,25 @@
  * ============================================================================
  */
 
-function validateUniqueness() {
+function validateState() {
+  if (!appState.colors || appState.colors.length === 0) return "Add at least one color before running.";
+  if (!appState.roles || appState.roles.length === 0) return "Add at least one color role before running.";
+
+  const hasDup = (arr) => new Set(arr).size !== arr.length;
   const colorNames = appState.colors.map((c) => c.name.trim().toLowerCase()).filter(Boolean);
   const colorShorts = appState.colors.map((c) => (c.shorthand || "").trim().toLowerCase()).filter(Boolean);
   const roleNames = appState.roles.map((r) => r.name.trim().toLowerCase()).filter(Boolean);
   const roleShorts = appState.roles.map((r) => (r.shorthand || "").trim().toLowerCase()).filter(Boolean);
-  const hasDup = (arr) => new Set(arr).size !== arr.length;
-  if (hasDup(colorNames)) return "Two or more color groups share the same name. Each color name must be unique.";
-  if (colorShorts.length && hasDup(colorShorts)) return "Two or more color groups share the same short name. Each color short name must be unique.";
+
+  if (hasDup(colorNames)) return "Two or more colors share the same name. Each color name must be unique.";
+  if (colorShorts.length && hasDup(colorShorts)) return "Two or more colors share the same shorthand. Each shorthand must be unique.";
   if (hasDup(roleNames)) return "Two or more roles share the same name. Each role name must be unique.";
-  if (roleShorts.length && hasDup(roleShorts)) return "Two or more roles share the same short name. Each role short name must be unique.";
+  if (roleShorts.length && hasDup(roleShorts)) return "Two or more roles share the same shorthand. Each shorthand must be unique.";
   return null;
 }
 
 function handleSubmit(scope = "all") {
-  const dupError = validateUniqueness();
+  const dupError = validateState();
   if (dupError) {
     showOverlay("error-overlay");
     document.getElementById("error-message").textContent = dupError;
@@ -67,10 +71,8 @@ function refreshRunDialog() {
   const shortR = appState.useShorthandRoles;
   const scope = pendingScope || "all";
 
-  // Sync all toggle states (settings sheet + run dialog)
   syncOutputToggles();
 
-  // Hide scope selector and skip-ramps toggle in Direct Contrast mode
   const scopeSection = document.getElementById("rd-scope-section");
   if (scopeSection) scopeSection.classList.toggle("hidden", isDirect);
   const skipRampsRow = document.getElementById("rd-skip-ramps-row");
@@ -79,21 +81,31 @@ function refreshRunDialog() {
   // Collections
   const colsEl = document.getElementById("rd-collections");
   if (colsEl) {
-    const rows = [];
+    colsEl.innerHTML = "";
+    const entries = [];
     if (!skipRamps && scope !== "roles") {
-      const rampsExists = existing.includes(colorName);
-      rows.push(collectionRow(colorName, rampsExists ? "UPDATE" : "CREATE", rampsExists));
+      const exists = existing.includes(colorName);
+      entries.push([colorName, exists ? "UPDATE" : "CREATE", exists]);
     }
     if (scope !== "groups") {
-      const ctxExists = existing.includes(ctxName);
-      rows.push(collectionRow(ctxName, ctxExists ? "UPDATE" : "CREATE", ctxExists));
+      const exists = existing.includes(ctxName);
+      entries.push([ctxName, exists ? "UPDATE" : "CREATE", exists]);
     }
     if (appState.includeGlobalColors) {
       const constName = appState.globalColorsCollectionName || "_constants";
-      const constExists = existing.includes(constName);
-      rows.push(collectionRow(constName, constExists ? "UPDATE" : "CREATE", constExists));
+      const exists = existing.includes(constName);
+      entries.push([constName, exists ? "UPDATE" : "CREATE", exists]);
     }
-    colsEl.innerHTML = rows.length ? rows.join("") : `<p class="text-[12px] text-[var(--text-muted)] px-1">No collections will be modified for this scope.</p>`;
+    if (entries.length) {
+      entries.forEach(([name, label, isExisting]) => {
+        colsEl.appendChild(el("div", { class: "flex items-center justify-between bg-[var(--bg-card)] border border-[var(--border)] rounded-[8px] px-3 py-2" }, [
+          el("span", { class: "text-[13px] text-[var(--text-primary)] font-mono" }, name),
+          el("span", { class: `text-[11px] font-bold px-2 py-0.5 rounded ${isExisting ? "bg-[var(--warning)]/15 text-[var(--warning)]" : "bg-[var(--success)]/15 text-[var(--success)]"}` }, label),
+        ]));
+      });
+    } else {
+      colsEl.appendChild(el("p", { class: "text-[12px] text-[var(--text-muted)] px-1" }, "No collections will be modified for this scope."));
+    }
   }
 
   // Name preview
@@ -114,26 +126,27 @@ function refreshRunDialog() {
     const rampCount = isDirect ? 0 : (summary && summary.rampCount) || 0;
     const ctxCount = (summary && summary.contextualCount) || 0;
     const changes = ((summary && summary.changes) || []).filter((ch) => (isDirect ? ch.type !== "stepNames" : true));
-    const totalRenames = rampCount + ctxCount;
 
-    if (totalRenames > 0 && changes.length > 0) {
+    if (rampCount + ctxCount > 0 && changes.length > 0) {
       renameEl.classList.remove("hidden");
+      renameListEl.innerHTML = "";
       const typeLabels = { color: "Color", role: "Role", stepNames: "Scale Steps", roleStepNames: "Variation Levels", grouping: "Grouping" };
-      let html = "";
-      for (const ch of changes) {
-        const label = typeLabels[ch.type] || ch.type;
-        html += `<div class="flex items-center gap-2 bg-[var(--bg-card)] border border-[var(--border)] rounded-[8px] px-3 py-2 min-w-0">
-                <span class="text-[11px] text-[var(--text-muted)] w-[68px] shrink-0">${label}</span>
-                <span class="text-[11px] font-mono text-[var(--text-primary)] truncate flex-1">${ch.from}</span>
-                <span class="text-[11px] text-[var(--accent)] shrink-0 px-0.5">→</span>
-                <span class="text-[11px] font-mono text-[var(--accent)] truncate flex-1">${ch.to}</span>
-              </div>`;
-      }
-      html += `<div class="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] px-1 pt-0.5">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)] shrink-0"></span>
-              <span>${[rampCount > 0 ? `${rampCount} scale var${rampCount > 1 ? "s" : ""}` : "", ctxCount > 0 ? `${ctxCount} token var${ctxCount > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ")} will be renamed</span>
-            </div>`;
-      renameListEl.innerHTML = html;
+      changes.forEach((ch) => {
+        renameListEl.appendChild(el("div", { class: "flex items-center gap-2 bg-[var(--bg-card)] border border-[var(--border)] rounded-[8px] px-3 py-2 min-w-0" }, [
+          el("span", { class: "text-[11px] text-[var(--text-muted)] w-[68px] shrink-0" }, typeLabels[ch.type] || ch.type),
+          el("span", { class: "text-[11px] font-mono text-[var(--text-primary)] truncate flex-1" }, ch.from),
+          el("span", { class: "text-[11px] text-[var(--accent)] shrink-0 px-0.5" }, "→"),
+          el("span", { class: "text-[11px] font-mono text-[var(--accent)] truncate flex-1" }, ch.to),
+        ]));
+      });
+      const parts = [
+        rampCount > 0 ? `${rampCount} scale var${rampCount > 1 ? "s" : ""}` : "",
+        ctxCount > 0 ? `${ctxCount} token var${ctxCount > 1 ? "s" : ""}` : "",
+      ].filter(Boolean).join(" · ");
+      renameListEl.appendChild(el("div", { class: "flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] px-1 pt-0.5" }, [
+        el("span", { class: "inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)] shrink-0" }),
+        el("span", {}, `${parts} will be renamed`),
+      ]));
     } else {
       renameEl.classList.add("hidden");
     }
@@ -142,22 +155,27 @@ function refreshRunDialog() {
   // Summary
   const sumEl = document.getElementById("rd-summary");
   if (sumEl) {
+    sumEl.innerHTML = "";
     const colorList = appState.colors.map((c) => `${c.name}${c.shorthand ? ` (${c.shorthand})` : ""}`).join(", ");
     const roleList = appState.roles.map((r) => `${r.name}${r.shorthand ? ` (${r.shorthand})` : ""}`).join(", ");
-    sumEl.innerHTML = [
-      summaryRow("Project Name", appState.name || "—"),
-      summaryRow(`Colors x${appState.colors.length}`, `${colorList}`),
-      summaryRow(`Roles x${appState.roles.length}`, `${roleList}`),
-      summaryRow("Mode", appState.pluginMode === "direct" ? "Adaptive Engine" : "Palette-Based"),
-      ...(appState.pluginMode === "direct"
-        ? []
-        : [
-            summaryRow("Base Selection", appState.baseSelection || "By Contrast"),
-            ...(appState.baseSelection !== "Manual" ? [summaryRow("Spread Unit", (appState.spreadUnit || "steps") === "contrast" ? "Contrast Gap" : "Steps")] : []),
-            summaryRow("Color Steps", String(appState.colorSteps || 25)),
-            summaryRow("Scale Algorithm", appState.scaleAlgorithm || "Natural"),
-          ]),
-    ].join("");
+    const rows = [
+      ["Project Name", appState.name || "—"],
+      [`Colors x${appState.colors.length}`, colorList],
+      [`Roles x${appState.roles.length}`, roleList],
+      ["Mode", isDirect ? "Adaptive Engine" : "Palette-Based"],
+      ...(isDirect ? [] : [
+        ["Base Selection", appState.baseSelection || "By Contrast"],
+        ...(appState.baseSelection !== "Manual" ? [["Spread Unit", (appState.spreadUnit || "steps") === "contrast" ? "Contrast Gap" : "Steps"]] : []),
+        ["Color Steps", String(appState.colorSteps || 25)],
+        ["Scale Algorithm", appState.scaleAlgorithm || "Natural"],
+      ]),
+    ];
+    rows.forEach(([label, value]) => {
+      sumEl.appendChild(el("div", { class: "flex items-start justify-between gap-2 text-[12px] py-1 border-b border-[var(--border)]/40 last:border-0" }, [
+        el("span", { class: "text-[var(--text-muted)] shrink-0" }, label),
+        el("span", { class: "text-[var(--text-primary)] text-right text-[11px]" }, value),
+      ]));
+    });
   }
 
   // Warnings
@@ -170,20 +188,6 @@ function refreshRunDialog() {
     } else {
       warnEl.classList.add("hidden");
     }
-  }
-
-  function collectionRow(name, label, isExisting) {
-    return `<div class="flex items-center justify-between bg-[var(--bg-card)] border border-[var(--border)] rounded-[8px] px-3 py-2">
-            <span class="text-[13px] text-[var(--text-primary)] font-mono">${name}</span>
-            <span class="text-[11px] font-bold px-2 py-0.5 rounded ${isExisting ? "bg-[var(--warning)]/15 text-[var(--warning)]" : "bg-[var(--success)]/15 text-[var(--success)]"}">${label}</span>
-          </div>`;
-  }
-
-  function summaryRow(label, value) {
-    return `<div class="flex items-start justify-between gap-2 text-[12px] py-1 border-b border-[var(--border)]/40 last:border-0">
-            <span class="text-[var(--text-muted)] shrink-0">${label}</span>
-            <span class="text-[var(--text-primary)] text-right text-[11px]">${value}</span>
-          </div>`;
   }
 }
 
@@ -270,7 +274,7 @@ function showSystemBanners(errors, result = null) {
           for (const varKey in roleTokens) {
             const tkn = roleTokens[varKey];
             if (tkn.contrast && tkn.contrast.rating === "Fail") {
-              accessFails.push(`<b>${clrName}/${tkn.role}</b> (${mode})`);
+              accessFails.push(`${clrName}/${tkn.role} (${mode})`);
             }
           }
         }
@@ -287,25 +291,56 @@ function showSystemBanners(errors, result = null) {
     return;
   }
 
-  let detailHtml = "";
-  if (critCount > 0) {
-    detailHtml += `<div class="mb-2"><p class="font-bold text-red-400 mb-1">Critical Issues:</p>`;
-    errors.critical.forEach((e) => {
-      detailHtml += `<div class="ml-2 text-[10px] opacity-90">• <b>${e.color}/${e.role}</b>: ${e.error}</div>`;
+  const detailNode = document.createElement("div");
+  detailNode.className = "flex flex-col gap-1 mt-2 border-t border-white/10 pt-2";
+
+  function _detailSection(headerText, headerClass, items) {
+    const section = document.createElement("div");
+    section.className = "mb-2";
+    const header = document.createElement("p");
+    header.className = `font-bold ${headerClass} mb-1`;
+    header.textContent = headerText;
+    section.appendChild(header);
+    items.forEach((text) => {
+      const row = document.createElement("div");
+      row.className = "ml-2 text-[10px] opacity-90";
+      row.textContent = `• ${text}`;
+      section.appendChild(row);
     });
-    detailHtml += `</div>`;
+    return section;
+  }
+
+  if (critCount > 0) {
+    detailNode.appendChild(_detailSection(
+      "Critical Issues:", "text-red-400",
+      errors.critical.map((e) => `${e.color}/${e.role}: ${e.error}`)
+    ));
   }
   if (warnCount > 0) {
-    detailHtml += `<div class="mb-2"><p class="font-bold text-amber-400 mb-1">Warnings:</p>`;
-    errors.warnings.forEach((w) => {
-      detailHtml += `<div class="ml-2 text-[10px] opacity-90">• <b>${w.color}/${w.role}</b>: ${w.warning}</div>`;
-    });
-    detailHtml += `</div>`;
+    detailNode.appendChild(_detailSection(
+      "Warnings:", "text-amber-400",
+      errors.warnings.map((w) => `${w.color}/${w.role}: ${w.warning}`)
+    ));
   }
   if (auditCount > 0) {
-    detailHtml += `<div><p class="font-bold text-blue-400 mb-1">Accessibility Concerns:</p>`;
-    detailHtml += `<div class="ml-2 text-[10px] opacity-90">${accessFails.slice(0, 8).join("<br>")}${auditCount > 8 ? `<br>...and ${auditCount - 8} more` : ""}</div>`;
-    detailHtml += `</div>`;
+    const section = document.createElement("div");
+    const header = document.createElement("p");
+    header.className = "font-bold text-blue-400 mb-1";
+    header.textContent = "Accessibility Concerns:";
+    section.appendChild(header);
+    const body = document.createElement("div");
+    body.className = "ml-2 text-[10px] opacity-90";
+    const shown = accessFails.slice(0, 8);
+    shown.forEach((text, i) => {
+      if (i > 0) body.appendChild(document.createElement("br"));
+      body.appendChild(document.createTextNode(text));
+    });
+    if (auditCount > 8) {
+      body.appendChild(document.createElement("br"));
+      body.appendChild(document.createTextNode(`...and ${auditCount - 8} more`));
+    }
+    section.appendChild(body);
+    detailNode.appendChild(section);
   }
 
   BannerManager.show({
@@ -313,7 +348,7 @@ function showSystemBanners(errors, result = null) {
     type: critCount > 0 ? "error" : warnCount > 0 ? "warning" : "info",
     title: critCount > 0 ? "Color System Errors" : "System Audit Results",
     message: `${critCount > 0 ? `${critCount} Critical · ` : ""}${warnCount} Warnings · ${auditCount} Access concerns detected.`,
-    detail: `<div class="flex flex-col gap-1 mt-2 border-t border-white/10 pt-2">${detailHtml}</div>`,
+    detailNode,
     dismissable: true,
   });
 }

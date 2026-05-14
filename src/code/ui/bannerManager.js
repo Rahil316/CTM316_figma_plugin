@@ -142,8 +142,8 @@ const BannerManager = (() => {
     h += `<div class="${CLASSES.content}">`;
     if (cfg.title) h += `<p class="${CLASSES.title}">${cfg.title}</p>`;
     h += `<p class="${CLASSES.message}">${cfg.message || ""}</p>`;
-    if (cfg.detail) {
-      h += `<div class="${CLASSES.detail} bn-hidden">${cfg.detail}</div>`;
+    if (cfg.detail || cfg.detailNode) {
+      h += `<div class="${CLASSES.detail} bn-hidden">${cfg.detail || ""}</div>`;
       h += `<button class="${CLASSES.expand}">Show more ▾</button>`;
     }
     if (cfg.actions && cfg.actions.length) {
@@ -160,6 +160,12 @@ const BannerManager = (() => {
     if (cfg.autoClose) h += `<div class="${CLASSES.barWrap}"><div class="${CLASSES.bar}"></div></div>`;
     el.innerHTML = h;
 
+    // Inject DOM node into detail container (alternative to detail HTML string)
+    if (cfg.detailNode) {
+      const detEl = el.querySelector(".banner__detail");
+      if (detEl) detEl.appendChild(cfg.detailNode);
+    }
+
     // onClick on body (excluding interactive children)
     if (cfg.onClick) {
       el.querySelector(".banner__body").addEventListener("click", (e) => {
@@ -170,7 +176,7 @@ const BannerManager = (() => {
     }
 
     // Expand / collapse detail
-    if (cfg.detail) {
+    if (cfg.detail || cfg.detailNode) {
       const btn = el.querySelector(".banner__expand");
       const det = el.querySelector(".banner__detail");
       btn.addEventListener("click", () => {

@@ -14,61 +14,69 @@ const UI_MODES = {
   selection: ["By Contrast", "By Index", "Manual"],
 };
 
-let _previewLastHash = null;
-let _previewCache = null;
 let pendingScope = "all";
 let savedState = null;
 let lastCollectionCheckResult = [];
 let lastRenameData = null;
 
 // 2. CORE RENDERERS
+
+// Attaches drag-and-drop reorder behaviour to a card element.
+function bindDragDrop(card, idx, { cardSelector, getIdx, setIdx, onDrop }) {
+  card.draggable = true;
+  card.addEventListener("dragstart", (e) => {
+    setIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+    card.style.opacity = "0.5";
+  });
+  card.addEventListener("dragend", () => {
+    setIdx(null);
+    card.style.opacity = "";
+    document.querySelectorAll(cardSelector).forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
+  });
+  card.addEventListener("dragover", (e) => {
+    const src = getIdx();
+    if (src === null || src === idx) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    document.querySelectorAll(cardSelector).forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
+    card.classList.add("border-t-2", "!border-t-[var(--accent)]");
+  });
+  card.addEventListener("dragleave", (e) => {
+    if (!card.contains(e.relatedTarget)) card.classList.remove("border-t-2", "!border-t-[var(--accent)]");
+  });
+  card.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const src = getIdx();
+    if (src === null || src === idx) return;
+    onDrop(src, idx);
+  });
+}
+
 const renderColorGroups = debounce(() => {
   if (activeSidebarTab !== "color-groups") return;
   withPreservedFocus(() => {
     const container = document.getElementById("sidebar-content-container");
     const fragment = document.createDocumentFragment();
-
-    const addButton = inputsUI.actionButton("+ Add Color", addGroup);
-    fragment.appendChild(addButton);
+    fragment.appendChild(inputsUI.actionButton("+ Add Color", addGroup));
 
     appState.colors.forEach((group, idx) => {
       const card = document.createElement("div");
-      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2 color-group-card-plugin shadow-sm space-y-4 hover:shadow-md transition-all group relative overflow-hidden";
-      card.draggable = true;
+      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2 color-group-card-plugin shadow-sm hover:shadow-md transition-all group relative overflow-hidden";
 
-      // Drag & Drop Setup
-      card.addEventListener("dragstart", (e) => {
-        _colorDragSrcIdx = idx;
-        e.dataTransfer.effectAllowed = "move";
-        card.style.opacity = "0.5";
-      });
-      card.addEventListener("dragend", () => {
-        _colorDragSrcIdx = null;
-        card.style.opacity = "";
-        document.querySelectorAll(".color-group-card-plugin").forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
-      });
-      card.addEventListener("dragover", (e) => {
-        if (_colorDragSrcIdx === null || _colorDragSrcIdx === idx) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        document.querySelectorAll(".color-group-card-plugin").forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
-        card.classList.add("border-t-2", "!border-t-[var(--accent)]");
-      });
-      card.addEventListener("dragleave", (e) => {
-        if (!card.contains(e.relatedTarget)) card.classList.remove("border-t-2", "!border-t-[var(--accent)]");
-      });
-      card.addEventListener("drop", (e) => {
-        e.preventDefault();
-        if (_colorDragSrcIdx === null || _colorDragSrcIdx === idx) return;
-        const [moved] = appState.colors.splice(_colorDragSrcIdx, 1);
-        appState.colors.splice(idx, 0, moved);
-        renderColorGroups();
-        schedulePreview();
+      bindDragDrop(card, idx, {
+        cardSelector: ".color-group-card-plugin",
+        getIdx: () => _colorDragSrcIdx,
+        setIdx: (v) => { _colorDragSrcIdx = v; },
+        onDrop: (src, dst) => {
+          const [moved] = appState.colors.splice(src, 1);
+          appState.colors.splice(dst, 0, moved);
+          renderColorGroups();
+          schedulePreview();
+        }
       });
 
-      card.innerHTML = "";
-      const nodes = Components.ColorGroupCard(group, idx, appState);
-      nodes.forEach(node => card.appendChild(node));
+      Components.ColorGroupCard(group, idx, appState).forEach((node) => card.appendChild(node));
       card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
       fragment.appendChild(card);
     });
@@ -83,48 +91,25 @@ const renderRoles = debounce(() => {
   withPreservedFocus(() => {
     const container = document.getElementById("sidebar-content-container");
     const fragment = document.createDocumentFragment();
-
-    const addButton = inputsUI.actionButton("+ Add Color Role", addRole);
-    fragment.appendChild(addButton);
+    fragment.appendChild(inputsUI.actionButton("+ Add Color Role", addRole));
 
     appState.roles.forEach((role, idx) => {
       const card = document.createElement("div");
       card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2 role-card-plugin";
-      card.draggable = true;
 
-      // Role drag-and-drop
-      card.addEventListener("dragstart", (e) => {
-        _roleDragSrcIdx = idx;
-        e.dataTransfer.effectAllowed = "move";
-        card.style.opacity = "0.5";
-      });
-      card.addEventListener("dragend", () => {
-        _roleDragSrcIdx = null;
-        card.style.opacity = "";
-        document.querySelectorAll(".role-card-plugin").forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
-      });
-      card.addEventListener("dragover", (e) => {
-        if (_roleDragSrcIdx === null || _roleDragSrcIdx === idx) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        document.querySelectorAll(".role-card-plugin").forEach((c) => c.classList.remove("border-t-2", "!border-t-[var(--accent)]"));
-        card.classList.add("border-t-2", "!border-t-[var(--accent)]");
-      });
-      card.addEventListener("dragleave", (e) => {
-        if (!card.contains(e.relatedTarget)) card.classList.remove("border-t-2", "!border-t-[var(--accent)]");
-      });
-      card.addEventListener("drop", (e) => {
-        e.preventDefault();
-        if (_roleDragSrcIdx === null || _roleDragSrcIdx === idx) return;
-        const [moved] = appState.roles.splice(_roleDragSrcIdx, 1);
-        appState.roles.splice(idx, 0, moved);
-        renderRoles();
-        schedulePreview();
+      bindDragDrop(card, idx, {
+        cardSelector: ".role-card-plugin",
+        getIdx: () => _roleDragSrcIdx,
+        setIdx: (v) => { _roleDragSrcIdx = v; },
+        onDrop: (src, dst) => {
+          const [moved] = appState.roles.splice(src, 1);
+          appState.roles.splice(dst, 0, moved);
+          renderRoles();
+          schedulePreview();
+        }
       });
 
-      card.innerHTML = "";
-      const nodes = Components.RoleGroupCard(role, idx, appState);
-      nodes.forEach(node => card.appendChild(node));
+      Components.RoleGroupCard(role, idx, appState).forEach((node) => card.appendChild(node));
       card.querySelectorAll("input, select, button, label").forEach((el) => el.setAttribute("draggable", "false"));
       fragment.appendChild(card);
     });
@@ -133,32 +118,6 @@ const renderRoles = debounce(() => {
     container.appendChild(fragment);
   });
 }, 50);
-
-function renderSettingsVariations() {
-  const container = document.getElementById("settings-variations-list");
-  if (!container) return;
-  const vars = appState.variations || [];
-  const canDelete = vars.length > 1;
-  container.innerHTML = vars
-    .map(
-      (v, idx) => `
-          <div class="flex items-center gap-1.5">
-            <div class="flex flex-col gap-0.5 shrink-0">
-              <button onclick="moveSharedVariation(${idx},-1)" ${idx === 0 ? "disabled" : ""} class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]">▲</button>
-              <button onclick="moveSharedVariation(${idx},1)" ${idx === vars.length - 1 ? "disabled" : ""} class="w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]">▼</button>
-            </div>
-            <input type="text" value="${(v.name || "").replace(/"/g, "&quot;")}" placeholder="Name"
-              oninput="updateSharedVariation(${idx},'name',this.value)"
-              class="flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-            <input type="text" value="${(v.shorthand || "").replace(/"/g, "&quot;")}" placeholder="Shorthand"
-              oninput="updateSharedVariation(${idx},'shorthand',this.value)"
-              class="w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]">
-            <button onclick="removeSharedVariation(${idx})" ${!canDelete ? "disabled" : ""} class="w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]">✕</button>
-          </div>
-        `,
-    )
-    .join("");
-}
 
 // 3. MESSAGE HANDLING
 window.onmessage = (event) => {
@@ -199,14 +158,24 @@ window.onmessage = (event) => {
   }
 
   if (msg.type === "finish") {
+    // Snapshot current state as the new baseline for rename detection
+    savedState = JSON.parse(JSON.stringify(appState));
     hideOverlay("loading-overlay");
     showOverlay("success-overlay");
-    document.getElementById("success-results").innerHTML = `
-            <p class="text-sm">Created: <span class="text-white font-bold">${msg.tally.created}</span></p>
-            <p class="text-sm">Updated: <span class="text-white font-bold">${msg.tally.updated}</span></p>
-            ${msg.tally.renamed > 0 ? `<p class="text-sm">Renamed: <span class="text-blue-300 font-bold">${msg.tally.renamed}</span></p>` : ""}
-            <p class="text-sm">Failed: <span class="text-red-400 font-bold">${msg.tally.failed}</span></p>
-          `;
+    const resultsEl = document.getElementById("success-results");
+    resultsEl.innerHTML = "";
+    const t = msg.tally;
+    [
+      ["Created", t.created, "text-white"],
+      ["Updated", t.updated, "text-white"],
+      ...(t.renamed > 0 ? [["Renamed", t.renamed, "text-blue-300"]] : []),
+      ["Failed", t.failed, "text-red-400"],
+    ].forEach(([label, count, cls]) => {
+      resultsEl.appendChild(el("p", { class: "text-sm" }, [
+        `${label}: `,
+        el("span", { class: `${cls} font-bold` }, String(count)),
+      ]));
+    });
     showSystemBanners(msg.errors || null, msg.result || null);
   }
 
@@ -229,10 +198,25 @@ window.onmessage = (event) => {
 };
 
 // 4. UI PREFERENCES & RESIZE
+
+// Detects Figma's current theme. Checks both <html> and <body> since Figma
+// applies figma-dark to the root element in some versions. Falls back to the
+// OS preference (via matchMedia) when neither class is present.
+function _detectFigmaTheme() {
+  const html = document.documentElement;
+  const body = document.body;
+  if (html.classList.contains("figma-dark") || body.classList.contains("figma-dark")) return "dark";
+  if (html.classList.contains("figma-light") || body.classList.contains("figma-light")) return "light";
+  // matchMedia fallback: covers the case where Figma hasn't added its class yet
+  // or where the plugin is loaded in a browser context for testing.
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+  return "light";
+}
+
 function applyUiPrefs() {
   document.documentElement.style.setProperty("--ui-scale", uiPrefs.scale);
-  document.body.style.zoom = uiPrefs.scale; // Fallback for some layouts
-  const theme = uiPrefs.theme === "figma" ? (document.body.classList.contains("figma-dark") ? "dark" : "light") : uiPrefs.theme;
+  document.body.style.zoom = uiPrefs.scale;
+  const theme = uiPrefs.theme === "figma" ? _detectFigmaTheme() : uiPrefs.theme;
   document.body.setAttribute("data-ui-theme", theme);
 }
 
@@ -338,8 +322,8 @@ document.getElementById("preview-close").onclick = () => {
   BannerManager.clear();
 };
 
-document.getElementById("btn-sync-confirm").onclick = () => {
-  hideOverlay("confirm-sync-overlay");
+document.getElementById("btn-run-confirm").onclick = () => {
+  hideOverlay("run-dialog-overlay");
   proceedWithSync();
 };
 
@@ -440,3 +424,18 @@ renderRoles();
 syncInputsFromState();
 syncUiSettingsInputs();
 applyUiPrefs();
+
+// Re-apply whenever Figma toggles its dark/light class — watch both <html> and <body>
+// because Figma applies the class to the root element in some plugin API versions.
+const _themeObserver = new MutationObserver(() => {
+  if (uiPrefs.theme === "figma") applyUiPrefs();
+});
+_themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+_themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+// Also react to system-level dark/light changes (used as fallback in _detectFigmaTheme).
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (uiPrefs.theme === "figma") applyUiPrefs();
+  });
+}
