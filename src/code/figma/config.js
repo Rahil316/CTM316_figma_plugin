@@ -45,8 +45,6 @@ function translateConfig(appState) {
   };
 }
 
-// ── Translation Helpers ─────────────────────────────────────────────────────
-
 function _parseStepNames(appState, count) {
   const raw = Array.isArray(appState.colorStepNames) ? appState.colorStepNames.join(",") : appState.colorStepNames || "";
   const userNames = raw.trim() ? raw.split(",").map((n) => n.trim()) : null;
@@ -119,8 +117,6 @@ function buildVariableRenameMap(savedAppState, newAppState) {
     },
   };
 }
-
-// ── Rename Map Helpers ──────────────────────────────────────────────────────
 
 function _mapIdToLabel(oldItems, newItems, oldShort, newShort) {
   const getMap = (items, useShort) => {

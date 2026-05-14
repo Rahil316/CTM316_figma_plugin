@@ -2,7 +2,7 @@
 const VariableManager = {
   tally: { created: 0, updated: 0, renamed: 0, failed: 0 },
   cache: { variables: [], collections: [] },
-  rampVarNameMap: {}, // stepName ("primary-1") → figma variable name ("primary/1")
+  rampVarNameMap: {}, // entry.stepName (e.g. "Primary-18") → Figma variable path (e.g. "Primary/18")
 
   // Renames variables in a collection according to a { oldName: newName } map.
   // Two-pass strategy handles chain renames (A→B when B is being renamed to C).
@@ -263,14 +263,14 @@ const VariableManager = {
   },
 };
 
-// Converts hex to Figma's { r, g, b } (0–1 range).
+// Figma expects color channels in 0–1 range, not 0–255.
 function hexToFigmaRgb(hex) {
   const rgb = hexToRgb(hex);
   if (!rgb) return { r: 0, g: 0, b: 0 };
   return { r: rgb[0] / 255, g: rgb[1] / 255, b: rgb[2] / 255 };
 }
 
-// Persists appState to document plugin data — invisible to users, travels with the file.
+// Stored on the document (not clientStorage) so config travels with the Figma file.
 function savePluginConfig(appState) {
   try {
     figma.root.setPluginData("ctm316_state", JSON.stringify(appState));
