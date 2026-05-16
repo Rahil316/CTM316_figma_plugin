@@ -43,7 +43,7 @@ const VariableManager = {
 
     const rampCollectionName = (appState && appState.tonalScaleCollectionName) || "_scale";
     const contextualName = (appState && appState.tokenCollectionName) || "contextual";
-    const skipRamps = config.embedDirectly || config.pluginMode === "direct";
+    const skipRamps = config.embedDirectly || config.pluginMode === "adaptiveEngine";
     const variableStructure = config.variableStructure || "color";
     const useShortColor = config.useShorthandColors || false;
     const useShortRole = config.useShorthandRoles || false;
@@ -61,7 +61,7 @@ const VariableManager = {
     };
 
     // Build tknRef → Figma variable name map using the same naming as stage 1
-    for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
+    for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
       for (const [weightName, entry] of Object.entries(ramp)) {
         this.rampVarNameMap[entry.stepName] = `${colorLabel(colorName)}/${weightName}`;
       }
@@ -84,7 +84,7 @@ const VariableManager = {
       const include = config.includeDescriptions !== false;
       const allRampVars = [];
 
-      for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
+      for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
         const cLabel = colorLabel(colorName);
         for (const [weightName, entry] of Object.entries(ramp)) {
           const contrastNote = include ? `L:${entry.contrast.light.ratio}(${entry.contrast.light.rating}) D:${entry.contrast.dark.ratio}(${entry.contrast.dark.rating})` : "";
@@ -167,7 +167,6 @@ const VariableManager = {
 
     figma.ui.postMessage({ type: "finish", tally: this.tally, errors: result ? result.errors : null, result });
   },
-
 
   async refreshCache() {
     this.cache.variables = await figma.variables.getLocalVariablesAsync();

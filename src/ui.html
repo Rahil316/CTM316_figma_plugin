@@ -280,7 +280,7 @@
         background-color: #0a0a0a;
         color: #eee;
       }
-      #preview-overlay.theme-ramps {
+      #preview-overlay.theme-tonalscales {
         background-color: var(--bg-app);
         color: var(--text-primary);
       }
@@ -386,7 +386,7 @@
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1 uppercase">Token Creation Mode</h3>
             <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-              <button id="mode-btn-ramp" onclick="setPluginMode(0)" class="seg-btn active flex-1" data-tooltip="Uses a pre-defined tonal scale for maximum system consistency. Offers several methods to auto-map tokens to steps.">Palette-Based</button>
+              <button id="mode-btn-ramp" onclick="setPluginMode(0)" class="seg-btn active flex-1" data-tooltip="Uses a pre-defined tonal scale for maximum system consistency. Offers several methods to auto-map tokens to steps.">Tonal Scale Based</button>
               <button id="mode-btn-direct" onclick="setPluginMode(1)" class="seg-btn flex-1" data-tooltip="Uses an adaptive engine to generate mathematically perfect colors for every role based on target contrasts.">Adaptive Engine</button>
             </div>
           </div>
@@ -461,8 +461,15 @@
               </div>
               <button id="toggle-allowRoleVariations" class="toggle-pill" onclick="toggleBoolSetting('allowRoleVariations')"></button>
             </div>
+            <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+              <div>
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Per-role Controls</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Each role sets its own base selection and spread unit</p>
+              </div>
+              <button id="toggle-perRoleControls" class="toggle-pill" onclick="toggleBoolSetting('perRoleControls')"></button>
+            </div>
             <div class="space-y-1">
-              <label for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
+              <label id="label-baseSelection" for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
               <select
                 id="setting-baseSelection"
                 onchange="setBaseSelection(this.selectedIndex)"
@@ -474,7 +481,7 @@
               </select>
             </div>
             <div id="settings-spread-unit-row" class="space-y-1">
-              <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Spread Unit</label>
+              <label id="label-spreadUnit" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Spread Unit</label>
               <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
                 <button id="su-btn-steps" onclick="setSpreadUnit(0)" class="seg-btn active flex-1">Steps</button>
                 <button id="su-btn-contrast" onclick="setSpreadUnit(1)" class="seg-btn flex-1">Contrast</button>
@@ -507,7 +514,7 @@
           <div class="space-y-3">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1">Output Options</h3>
 
-            <!-- Skip colors ramps -->
+            <!-- Skip tonal scales -->
             <div id="settings-embed-directly-row" class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
               <div>
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Embed Colors Directly</p>
@@ -769,13 +776,13 @@
           <!-- OUTPUT OPTIONS (editable inline) -->
           <div class="space-y-2">
             <h3 class="text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px]">OUTPUT OPTIONS</h3>
-            <div id="rd-skip-ramps-row" class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+            <div id="embed-colors-directly" class="items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
               <div>
                 <p class="text-[13px] font-medium text-[var(--text-primary)]">Embed Colors Directly</p>
-                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Write hex values into tokens instead of referencing the Tonal Scale collection</p>
+                <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Write hex values into tokens instead of referencing the Tonal Scales</p>
               </div>
               <button
-                id="rd-toggle-embedDirectly"
+                id="toggle-embedDirectly"
                 class="toggle-pill"
                 onclick="
                   toggleBoolSetting('embedDirectly');

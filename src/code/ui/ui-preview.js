@@ -18,10 +18,10 @@ function renderPreviewPanel(result) {
   // Color Ramps Tab
   const colorEl = document.getElementById("preview-colors");
   colorEl.innerHTML = "";
-  if (Object.keys(result.colorRamps).length === 0) {
+  if (Object.keys(result.tonalScales).length === 0) {
     colorEl.innerHTML = `<p class="text-[12px] text-[var(--text-muted)] px-1 py-4 text-center">No tonal scale in Adaptive Engine mode. Colors are solved directly per variation target.</p>`;
   } else {
-    for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
+    for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
       const baseColor = ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value;
       const section = document.createElement("div");
       section.className = "grid grid-cols-[28px_auto_1fr] grid-rows-[28px_auto] items-center gap-2 mb-2";
@@ -75,7 +75,7 @@ function renderThemePanel(panelId, themeTokens, bgHex, result) {
   };
 
   for (const [colorName, roles] of Object.entries(themeTokens)) {
-    const ramp = result.colorRamps[colorName];
+    const ramp = result.tonalScales[colorName];
     const srcColor = (appState.colors.find((c) => c.name === colorName) || {}).value || "888888";
     const baseColor = ramp ? ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value : `#${srcColor.replace(/^#/, "")}`;
 

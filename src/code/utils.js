@@ -19,7 +19,7 @@ function sanitizeHex(val) {
 
 // Build a default variationTargets array for a role that doesn't yet have one.
 function defaultVariationTargets(len, pluginMode, scaleLength) {
-  return Array.from({ length: len }, (_, i) => (pluginMode === "direct" ? DEFAULT_VARIATION_TARGETS[i] || 4.5 : Math.floor((scaleLength || 25) / 2)));
+  return Array.from({ length: len }, (_, i) => (pluginMode === "adaptiveEngine" ? DEFAULT_VARIATION_TARGETS[i] || 4.5 : Math.floor((scaleLength || 25) / 2)));
 }
 
 const debounce = (fn, delay = 150) => {

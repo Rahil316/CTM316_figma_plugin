@@ -20,7 +20,7 @@ const ExportFormatter = {
     // Section 1: color ramps
     lines.push("COLOR RAMPS");
     lines.push("Group,Weight,Hex,Light Contrast,Light Rating,Dark Contrast,Dark Rating");
-    for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
+    for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
       for (const [weightName, entry] of Object.entries(ramp)) {
         lines.push([csvField(colorName), csvField(weightName), csvField(entry.value), csvField(entry.contrast.light.ratio), csvField(entry.contrast.light.rating), csvField(entry.contrast.dark.ratio), csvField(entry.contrast.dark.rating)].join(","));
       }
@@ -56,7 +56,7 @@ const ExportFormatter = {
 
     // Color ramps in :root
     css += `:root {\n  /* ── Color Ramps ── */\n`;
-    for (const [colorName, ramp] of Object.entries(result.colorRamps)) {
+    for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
       css += `\n  /* ${colorName} */\n`;
       for (const [weightName, entry] of Object.entries(ramp)) {
         css += `  --${cssSlug(colorName)}-${cssSlug(String(weightName))}: ${entry.value};\n`;
@@ -113,7 +113,7 @@ function scssSlug(str) {
 }
 
 function generateScss(result, config) {
-  if (!result || !result.colorRamps) return "";
+  if (!result || !result.tonalScales) return "";
   const configVariations = (config && config.variations) || [];
   const systemName = (config && config.name) || "tokens";
   const date = new Date().toISOString();
@@ -125,7 +125,7 @@ function generateScss(result, config) {
 
   // ── 1. Flat ramp variables ($primary-1, $primary-2 …)
   scss += hr("COLOR RAMP VARIABLES");
-  for (const [group, weights] of Object.entries(result.colorRamps)) {
+  for (const [group, weights] of Object.entries(result.tonalScales)) {
     scss += `// ${group}\n`;
     for (const [weight, data] of Object.entries(weights)) {
       if (!data || !data.value) continue;
@@ -136,7 +136,7 @@ function generateScss(result, config) {
 
   // ── 2. Per-color nested maps (for programmatic access via map.get)
   scss += hr("PER-COLOR RAMP MAPS");
-  for (const [group, weights] of Object.entries(result.colorRamps)) {
+  for (const [group, weights] of Object.entries(result.tonalScales)) {
     scss += `$ramp-${scssSlug(group)}: (\n`;
     for (const [weight, data] of Object.entries(weights)) {
       if (!data || !data.value) continue;

@@ -32,12 +32,12 @@ function ensureIds(state) {
 const demoConfig = {
   name: "CTM316",
   tonalScaleCollectionName: "_scale",
-  tokenCollectionName: "contextual",
+  tokenCollectionName: "color tokens",
   embedDirectly: false,
   includeGlobalColors: false,
-  globalColorsCollectionName: "_constants",
+  globalColorsCollectionName: "global",
   includeAlphaTints: false,
-  alphaValues: "10, 25, 50, 75, 90",
+  alphaValues: "5, 10, 20, 25, 50, 75, 80, 90, 95",
   variableStructure: "color",
   useShorthandColors: false,
   useShorthandRoles: false,
@@ -45,9 +45,10 @@ const demoConfig = {
   scaleLength: 25,
   scaleAlgorithm: "Natural",
   scaleStepNames: "",
-  pluginMode: "ramp", // "ramp" or "direct"
+  pluginMode: "tonalScalesBased", // "tonalScalesBased" or "adaptiveEngine"
   baseSelection: "By Contrast",
   spreadUnit: "steps",
+  perRoleControls: false, // when true: each role card shows its own base/spread toggles
   variations: null,
   colors: [
     { name: "Primary", shorthand: "pr", value: "0067DD", description: "" },
@@ -102,7 +103,7 @@ function ensureVariations() {
     const vLen = roleVars.length;
     if (!role.variationTargets || role.variationTargets.length !== vLen) {
       const oldVals = role.variations ? Object.values(role.variations) : Array.isArray(role.variationTargets) ? role.variationTargets : [];
-      role.variationTargets = roleVars.map((_, i) => oldVals[i] || (appState.pluginMode === "direct" ? DEFAULT_VARIATION_TARGETS[i] || 4.5 : Math.floor(((appState.scaleLength || 25) / Math.max(1, vLen - 1)) * i)));
+      role.variationTargets = roleVars.map((_, i) => oldVals[i] || (appState.pluginMode === "adaptiveEngine" ? DEFAULT_VARIATION_TARGETS[i] || 4.5 : Math.floor(((appState.scaleLength || 25) / Math.max(1, vLen - 1)) * i)));
       delete role.variations;
     }
   }
@@ -123,7 +124,9 @@ function setSavedState(snapshot) {
 }
 
 /** @returns {object|null} Last persisted appState snapshot, or null if never synced */
-function getSavedState() { return savedState; }
+function getSavedState() {
+  return savedState;
+}
 
 /**
  * Merges incoming config into appState, re-syncs ids/variations,
@@ -162,10 +165,14 @@ function _computeHash() {
  * Returns true if appState has changed since the last markClean() call.
  * @returns {boolean}
  */
-function isDirty() { return _computeHash() !== _stateHash; }
+function isDirty() {
+  return _computeHash() !== _stateHash;
+}
 
 /** Records the current appState hash as the clean baseline. */
-function markClean() { _stateHash = _computeHash(); }
+function markClean() {
+  _stateHash = _computeHash();
+}
 
 // ── VALIDATION ──
 /**
@@ -177,15 +184,15 @@ function validateState() {
   if (!appState.roles || appState.roles.length === 0) return "Add at least one color role before running.";
 
   const hasDup = (arr) => new Set(arr).size !== arr.length;
-  const colorNames  = appState.colors.map((c) => c.name.trim().toLowerCase()).filter(Boolean);
+  const colorNames = appState.colors.map((c) => c.name.trim().toLowerCase()).filter(Boolean);
   const colorShorts = appState.colors.map((c) => (c.shorthand || "").trim().toLowerCase()).filter(Boolean);
-  const roleNames   = appState.roles.map((r) => r.name.trim().toLowerCase()).filter(Boolean);
-  const roleShorts  = appState.roles.map((r) => (r.shorthand || "").trim().toLowerCase()).filter(Boolean);
+  const roleNames = appState.roles.map((r) => r.name.trim().toLowerCase()).filter(Boolean);
+  const roleShorts = appState.roles.map((r) => (r.shorthand || "").trim().toLowerCase()).filter(Boolean);
 
-  if (hasDup(colorNames))  return "Two or more colors share the same name. Each color name must be unique.";
+  if (hasDup(colorNames)) return "Two or more colors share the same name. Each color name must be unique.";
   if (colorShorts.length && hasDup(colorShorts)) return "Two or more colors share the same shorthand. Each shorthand must be unique.";
-  if (hasDup(roleNames))   return "Two or more roles share the same name. Each role name must be unique.";
-  if (roleShorts.length && hasDup(roleShorts))   return "Two or more roles share the same shorthand. Each shorthand must be unique.";
+  if (hasDup(roleNames)) return "Two or more roles share the same name. Each role name must be unique.";
+  if (roleShorts.length && hasDup(roleShorts)) return "Two or more roles share the same shorthand. Each shorthand must be unique.";
   return null;
 }
 
@@ -212,25 +219,27 @@ function setColor(idx, key, value) {
 function setRole(idx, key, value) {
   if (key.startsWith("variationTarget:")) {
     const vi = parseInt(key.slice("variationTarget:".length));
-    if (!appState.roles[idx].variationTargets)
-      appState.roles[idx].variationTargets = defaultVariationTargets(appState.variations.length, "direct", appState.scaleLength);
+    if (!appState.roles[idx].variationTargets) appState.roles[idx].variationTargets = defaultVariationTargets(appState.variations.length, "adaptiveEngine", appState.scaleLength);
     let v = parseFloat(value);
     if (isNaN(v) || v < 1) v = 1;
     appState.roles[idx].variationTargets[vi] = Math.min(21, v);
     return;
   }
   if (key === "minContrast") {
-    let v = parseFloat(value); if (isNaN(v)) v = 1;
+    let v = parseFloat(value);
+    if (isNaN(v)) v = 1;
     appState.roles[idx].minContrast = Math.max(1, Math.min(21, v));
     return;
   }
   if (key === "spread") {
-    let v = parseInt(value); if (isNaN(v)) v = 1;
+    let v = parseInt(value);
+    if (isNaN(v)) v = 1;
     appState.roles[idx].spread = Math.max(1, Math.min(21, v));
     return;
   }
   if (key === "baseIndex" || key === "darkBaseIndex") {
-    let v = parseInt(value); if (isNaN(v)) v = 0;
+    let v = parseInt(value);
+    if (isNaN(v)) v = 0;
     appState.roles[idx][key] = Math.max(0, Math.min(appState.scaleLength - 1, v));
     return;
   }

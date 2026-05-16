@@ -8,7 +8,7 @@
 function toggleBoolSetting(key) {
   appState[key] = !appState[key];
   syncOutputToggles();
-  if (key === "allowRoleVariations" || key === "includeDescriptions") {
+  if (key === "allowRoleVariations" || key === "includeDescriptions" || key === "perRoleControls") {
     renderColorGroups();
     renderRoles();
   }
@@ -49,7 +49,7 @@ function setBaseSelection(idx) {
 // --- syncOutputToggles broken into focused helpers ---
 
 function _syncTogglePills() {
-  ["embedDirectly", "useShorthandColors", "useShorthandRoles", "useShorthandVariations", "includeGlobalColors", "includeAlphaTints", "allowRoleVariations", "includeDescriptions"].forEach((key) => {
+  ["embedDirectly", "useShorthandColors", "useShorthandRoles", "useShorthandVariations", "includeGlobalColors", "includeAlphaTints", "allowRoleVariations", "includeDescriptions", "perRoleControls"].forEach((key) => {
     ["toggle-" + key, "rd-toggle-" + key].forEach((id) => {
       const btn = document.getElementById(id);
       if (btn) btn.classList.toggle("on", !!appState[key]);
@@ -76,7 +76,7 @@ function _syncGroupingButtons() {
 }
 
 function _syncModeControls() {
-  const isDirect = appState.pluginMode === "direct";
+  const isDirect = appState.pluginMode === "adaptiveEngine";
 
   const mbRamp = document.getElementById("mode-btn-ramp");
   const mbDirect = document.getElementById("mode-btn-direct");
@@ -104,7 +104,7 @@ function _syncModeControls() {
 }
 
 function _syncSpreadUnit() {
-  const isDirect = appState.pluginMode === "direct";
+  const isDirect = appState.pluginMode === "adaptiveEngine";
   const spreadUnitRow = document.getElementById("settings-spread-unit-row");
   if (spreadUnitRow) spreadUnitRow.classList.toggle("hidden", isDirect || appState.baseSelection === "Manual");
 
@@ -128,11 +128,20 @@ function _syncNameFormatPreview() {
   if (previewEl) previewEl.textContent = preview;
 }
 
+function _syncPerRoleControls() {
+  const isPerRole = !!appState.perRoleControls;
+  const bsLabel = document.getElementById("label-baseSelection");
+  const suLabel = document.getElementById("label-spreadUnit");
+  if (bsLabel) bsLabel.textContent = isPerRole ? "Default Base Selection" : "Base Selection";
+  if (suLabel) suLabel.textContent = isPerRole ? "Default Spread Unit" : "Spread Unit";
+}
+
 function syncOutputToggles() {
   _syncTogglePills();
   _syncGroupingButtons();
   _syncModeControls();
   _syncSpreadUnit();
+  _syncPerRoleControls();
   renderSettingsVariations();
   _syncNameFormatPreview();
 }

@@ -8,7 +8,7 @@
 
 // 1. CONSTANTS & SHARED STATE
 const UI_MODES = {
-  plugin: ["ramp", "direct"],
+  plugin: ["tonalScalesBased", "adaptiveEngine"],
   grouping: ["color", "role"],
   spread: ["steps", "contrast"],
   selection: ["By Contrast", "By Index", "Manual"],
@@ -140,8 +140,8 @@ window.onmessage = (event) => {
     setSavedState(msg.state);
     appState = Object.assign({}, JSON.parse(JSON.stringify(demoConfig)), msg.state);
 
-    if (appState.pluginMode === 0) appState.pluginMode = "ramp";
-    else if (appState.pluginMode === 1) appState.pluginMode = "direct";
+    if (appState.pluginMode === 0) appState.pluginMode = "tonalScalesBased";
+    else if (appState.pluginMode === 1) appState.pluginMode = "adaptiveEngine";
 
     ensureIds(appState);
     ensureVariations();
@@ -315,7 +315,7 @@ document.getElementById("btn-preview").onclick = () => {
 };
 document.getElementById("preview-close").onclick = () => {
   hideOverlay("preview-overlay");
-  document.getElementById("preview-overlay").classList.remove("theme-light", "theme-dark", "theme-ramps");
+  document.getElementById("preview-overlay").classList.remove("theme-light", "theme-dark", "theme-tonalscales");
   BannerManager.clear();
 };
 
@@ -378,10 +378,10 @@ document.getElementById("preview-tabs").onclick = (e) => {
   if (!btn) return;
   const target = btn.dataset.target;
   const overlay = document.getElementById("preview-overlay");
-  overlay.classList.remove("theme-light", "theme-dark", "theme-ramps");
+  overlay.classList.remove("theme-light", "theme-dark", "theme-tonalscales");
   if (target === "preview-light") overlay.classList.add("theme-light");
   else if (target === "preview-dark") overlay.classList.add("theme-dark");
-  else overlay.classList.add("theme-ramps");
+  else overlay.classList.add("theme-tonalscales");
   document.querySelectorAll(".preview-tab-btn").forEach((b) => b.classList.remove("active"));
   document.querySelectorAll(".preview-panel").forEach((p) => p.classList.remove("active"));
   btn.classList.add("active");

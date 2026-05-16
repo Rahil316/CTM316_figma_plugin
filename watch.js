@@ -20,12 +20,17 @@ build();
 let debounceTimer = null;
 
 fs.watch(SRC_DIR, { recursive: true }, (_, filename) => {
-  if (!filename || (!filename.endsWith(".js") && !filename.endsWith(".html"))) return;
+  // Only watch .js, .html, and .css files
+  if (!filename || (!filename.endsWith(".js") && !filename.endsWith(".html") && !filename.endsWith(".css"))) return;
 
-  // Debounce: if multiple files are saved within 100ms, only build once
+  // Ignore changes to output.css to prevent infinite loops (since build.js writes to it)
+  if (filename === "output.css") return;
+
+  // Debounce: if multiple files are saved within 400ms, only build once.
+  // This helps when you hit Cmd+S rapidly or when the IDE saves multiple files at once.
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     console.log(`[${new Date().toLocaleTimeString()}] Change detected in src/${filename} — rebuilding...`);
     build();
-  }, 100);
+  }, 400);
 });

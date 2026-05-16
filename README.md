@@ -18,10 +18,10 @@ A Figma plugin that generates multi-theme design token systems from a set of bra
 
 ### Two threads (Figma plugin model)
 
-| File | Thread | Purpose |
-|---|---|---|
+| File              | Thread     | Purpose                                       |
+| ----------------- | ---------- | --------------------------------------------- |
 | `dist/scripts.js` | Figma main | Variable CRUD, color math, config persistence |
-| `dist/ui.html` | UI iframe | Plugin panel — all user interaction |
+| `dist/ui.html`    | UI iframe  | Plugin panel — all user interaction           |
 
 Both are generated from `src/` by `npm run build`. Never edit `dist/` directly.
 
@@ -35,7 +35,7 @@ src/
     utils.js                  — shared utilities (hex, contrast, sanitize, defaults)
     color/
       clrSpaces.js            — color space conversions (sRGB, OKLCH, HCT)
-      clrSolver.js            — direct contrast solver
+      clrSolver.js            — direct contrast solver or Adaptive Engine color solver
       clrGen.js               — tonal scale generator + variableMaker
     figma/
       config.js               — appState → engine config translator + rename detector
@@ -91,6 +91,7 @@ Load in Figma Desktop → Plugins → Development → Import plugin from manifes
 ### Done ✓
 
 **UI architecture**
+
 - [x] Modularised UI into focused files: `ui-actions`, `ui-settings`, `ui-io`, `ui-preview`, `uiGen`
 - [x] `el()` helper + `inputsUI` primitive set: `input`, `colorInput`, `toggle`, `row`, `sectionLabel`, `iconButton`, `actionButton`, `caption`
 - [x] `Components` card architecture: `ColorGroupCard` and `RoleGroupCard` composed from named sub-rows
@@ -100,6 +101,7 @@ Load in Figma Desktop → Plugins → Development → Import plugin from manifes
 - [x] In-place color sync on hex/picker input — no re-render, uses stable element IDs
 
 **State & settings**
+
 - [x] Stable `_id` identity on colors/roles — renames detected correctly across reorders
 - [x] `syncOutputToggles` split into 5 focused helpers in `ui-settings.js`
 - [x] `renderSettingsVariations` in `ui-settings.js`, uses `el()`
@@ -107,25 +109,30 @@ Load in Figma Desktop → Plugins → Development → Import plugin from manifes
 - [x] State validation before sync: requires ≥1 color and ≥1 role, clear error messages
 
 **Persistence**
+
 - [x] Config migrated from Figma STRING variable (`__ctm316_config__`) to `figma.root.setPluginData("ctm316_state")`
 - [x] One-time migration on load: reads old variable → saves to new location → removes old variable
 - [x] `savedState` snapshot updated on every successful sync (fixes rename detection within a session)
 
 **Theme**
+
 - [x] Figma theme detection: checks both `<html>` and `<body>` for `figma-dark`/`figma-light`, `matchMedia` as fallback
 - [x] MutationObserver on both elements + `matchMedia` change listener
 - [x] Dark theme default when no saved preference; dropdown reflects saved value correctly on load
 
 **Banners & dialogs**
+
 - [x] `BannerManager` extended with `detailNode` — passes DOM node instead of raw HTML string for expandable detail
 - [x] `showSystemBanners` and `refreshRunDialog` use DOM nodes throughout
 - [x] Success tally in finish handler uses `el()`, not `innerHTML`
 
 **Build**
+
 - [x] Build strips block + line comments from dist output
 - [x] `/* filename */` markers added per section in both `scripts.js` and `ui.html`
 
 **Code health**
+
 - [x] Dead code removed: `hexToLum`, `slugify`, `_ColorStatsCalculationRow`, `confirm-sync-overlay`, `updateRoleVariationTargetInline`
 - [x] `validateUniqueness` → `validateState` (also checks empty colors/roles)
 - [x] Comment audit on `figma/*`: stale examples fixed, redundant comments removed

@@ -47,7 +47,7 @@ function refreshRunDialog() {
   const existing = lastCollectionCheckResult;
   const colorName = appState.tonalScaleCollectionName || "_scale";
   const ctxName = appState.tokenCollectionName || "contextual";
-  const isDirect = appState.pluginMode === "direct";
+  const isDirect = appState.pluginMode === "adaptiveEngine";
   const skipRamps = appState.embedDirectly || isDirect;
   const tg = appState.variableStructure || "color";
   const shortC = appState.useShorthandColors;
@@ -58,7 +58,7 @@ function refreshRunDialog() {
 
   const scopeSection = document.getElementById("rd-scope-section");
   if (scopeSection) scopeSection.classList.toggle("hidden", isDirect);
-  const skipRampsRow = document.getElementById("rd-skip-ramps-row");
+  const skipRampsRow = document.getElementById("embed-colors-directly");
   if (skipRampsRow) skipRampsRow.classList.toggle("hidden", isDirect);
 
   // Collections
@@ -143,7 +143,7 @@ function refreshRunDialog() {
       ["Project Name", appState.name || "—"],
       [`Colors x${appState.colors.length}`, colorList],
       [`Roles x${appState.roles.length}`, roleList],
-      ["Mode", isDirect ? "Adaptive Engine" : "Palette-Based"],
+      ["Mode", isDirect ? "Adaptive Engine" : "Tonal Scale Based"],
       ...(isDirect
         ? []
         : [
@@ -196,7 +196,7 @@ function handleImportJSON(json) {
 
 function finalizeImport() {
   if (!_pendingImportData) return;
-  loadState(_pendingImportData);   // merges, re-syncs ids/variations, marks clean
+  loadState(_pendingImportData); // merges, re-syncs ids/variations, marks clean
   _pendingImportData = null;
   hideOverlay("confirm-import-overlay");
   syncInputsFromState();

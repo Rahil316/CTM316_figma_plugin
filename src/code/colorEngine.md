@@ -1,7 +1,7 @@
 # Color Engine
 
 Pure, stateless color token generation engine for CTM316.
-Pass a config in, get `{ colorRamps, colorTokens, errors }` out. No side effects, no cache, no state.
+Pass a config in, get `{ tonalScales, colorTokens, errors }` out. No side effects, no cache, no state.
 
 ---
 
@@ -129,7 +129,7 @@ Checks that a Direct Contrast variation array is strictly ascending.
 ## Public API
 
 ```
-variableMaker(config) → { colorRamps, colorTokens, errors }
+variableMaker(config) → { tonalScales, colorTokens, errors }
 ```
 
 **`config` shape:**
@@ -141,7 +141,7 @@ variableMaker(config) → { colorRamps, colorTokens, errors }
 | `scaleLength`       | `number`                    | Number of steps in the tonal scale                          |
 | `scaleStepNames`    | `any[]`                     | Labels per step; defaults to `[1…N]`                        |
 | `scaleAlgorithm`    | `string`                    | One of the tonal algorithm names above                      |
-| `pluginMode`        | `"tonal"\|"direct"`         | Tonal builds ramps; direct uses the solver                  |
+| `pluginMode`        | `"tonal"\|"adaptiveEngine"` | Tonal builds ramps; direct uses the solver                  |
 | `roles`             | `Role[]`                    | Semantic roles (primary, secondary, etc.)                   |
 | `roleMapping`       | `"By Contrast"\|"By Index"` | How base step is found in tonal mode                        |
 | `variations`        | `any[]`                     | Variation slots per role                                    |
@@ -152,7 +152,7 @@ variableMaker(config) → { colorRamps, colorTokens, errors }
 
 | Key           | Description                                                                   |
 | ------------- | ----------------------------------------------------------------------------- |
-| `colorRamps`  | `{ [colorName]: { [stepName]: { value, stepName, shorthand, contrast } } }`   |
+| `tonalScales` | `{ [colorName]: { [stepName]: { value, stepName, shorthand, contrast } } }`   |
 | `colorTokens` | `{ light: { [colorName]: { [roleIdx]: { [varIdx]: token } } }, dark: {...} }` |
 | `errors`      | `{ critical: [], warnings: [], notices: [] }`                                 |
 

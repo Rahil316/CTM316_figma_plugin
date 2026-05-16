@@ -143,7 +143,7 @@ const getRoleVariations = (role, config) => {
 const Components = {
   // --- COLOR COMPONENTS ---
   _ColorMainRow: (group, idx, config) =>
-    el("div", { class: "grid grid-cols-[20px_1fr_72px_40px] gap-2" }, [
+    el("div", { class: "grid grid-cols-[20px_1fr_72px_40px] gap-2 items-end" }, [
       el("div", { class: "flex flex-col gap-0.5 self-center flex-shrink-0" }, [
         el("button", { onclick: () => moveGroup(idx, -1), disabled: idx === 0, class: "w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-20" }, "▲"),
         el("span", { class: "drag-handle text-[var(--text-muted)] cursor-grab text-[14px] leading-none text-center" }, "⠿"),
@@ -157,7 +157,7 @@ const Components = {
   _ColorStatsRow: (group, idx) => inputsUI.colorInput(group.value, (val, el) => updateGroup(idx, "value", val, el), `clr-${idx}`),
 
   _ColorSolverRow: (group, idx, config) => {
-    if (config.pluginMode !== "direct") return null;
+    if (config.pluginMode !== "adaptiveEngine") return null;
     const mode = group.solverMode || "natural";
     return el("div", { class: "space-y-1" }, [
       el("label", { class: "text-[var(--text-muted)] text-[12px] font-medium" }, "Color Solver"),
@@ -189,65 +189,87 @@ const Components = {
     ]),
 
   _RoleSecondRow: (role, idx, config) => {
-    const isDirect = config.pluginMode === "direct";
-    const bSel = config.baseSelection || "By Contrast";
+    const isDirect = config.pluginMode === "adaptiveEngine";
+    // Per-role baseSelection overrides the global setting when set.
+    const bSel = role.baseSelection || config.baseSelection || "By Contrast";
     if (role.variationOverride && role.variationManual) return null;
 
+    // ── ADAPTIVE ENGINE MODE ──
     if (isDirect && bSel === "By Contrast") {
-      const baseC = role.baseContrast || 4.5;
-      const gap = role.contrastGap || 1.5;
-      return el("div", { class: "space-y-1.5" }, [
-        el("div", { class: "grid grid-cols-2 gap-2" }, [
-          inputsUI.input({ id: `role-${idx}-baseC`, type: "number", step: "0.1", value: baseC, onchange: (e) => updateRole(idx, "baseContrast", e.target.value) }, "Base Contrast"),
-          inputsUI.input({ id: `role-${idx}-gap`, type: "number", step: "0.1", value: gap, onchange: (e) => updateRole(idx, "contrastGap", e.target.value) }, "Contrast Gap"),
-        ]),
+      return el("div", { class: "grid grid-cols-2 gap-2" }, [
+        inputsUI.input({ id: `role-${idx}-baseC`, type: "number", step: "0.1", value: role.baseContrast || 4.5, onchange: (e) => updateRole(idx, "baseContrast", e.target.value) }, "Base Contrast"),
+        inputsUI.input({ id: `role-${idx}-gap`, type: "number", step: "0.1", value: role.contrastGap || 1.5, onchange: (e) => updateRole(idx, "contrastGap", e.target.value) }, "Contrast Gap"),
       ]);
     }
 
     if (isDirect && bSel === "Manual") {
       const varTargets = role.variationTargets || config.variations.map((_, i) => DEFAULT_VARIATION_TARGETS[i] || 4.5);
-      const inputs = config.variations.map((v, vi) =>
-        el("div", { class: "space-y-1" }, [
-          el("label", { class: "text-[var(--text-muted)] text-[11px] font-bold ml-1" }, v.name),
-          el("input", { type: "number", step: "0.1", value: varTargets[vi], onchange: (e) => updateRoleVariationTarget(idx, vi, parseFloat(e.target.value)), class: "w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px]" }),
-        ]),
+      return el(
+        "div",
+        { class: "grid gap-1.5", style: { gridTemplateColumns: `repeat(${config.variations.length}, 1fr)` } },
+        config.variations.map((v, vi) =>
+          el("div", { class: "space-y-1" }, [
+            el("label", { class: "text-[var(--text-muted)] text-[11px] font-bold ml-1" }, v.name),
+            el("input", { type: "number", step: "0.1", value: varTargets[vi], onchange: (e) => updateRoleVariationTarget(idx, vi, parseFloat(e.target.value)), class: "w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px]" }),
+          ]),
+        ),
       );
-      return el("div", { class: "grid gap-1.5", style: { gridTemplateColumns: `repeat(${config.variations.length}, 1fr)` } }, inputs);
     }
 
-    // PALETTE MODE: MANUAL
-    if (!isDirect && bSel === "Manual") {
+    // ── PALETTE MODE ──
+    // "Set base by" toggle — per-role, falls back to global. Manual mode is a
+    // global-only setting and bypasses this toggle (step indices shown as-is).
+    const BASE_BY_OPTIONS = [
+      { value: "By Contrast", label: "Contrast" },
+      { value: "By Index", label: "Index" },
+    ];
+
+    if (bSel === "Manual") {
+      // Global Manual: show per-variation step index inputs, no toggle.
       const varTargets = role.variationTargets || config.variations.map(() => Math.floor((config.scaleLength || 25) / 2));
       const maxStep = (config.scaleLength || 25) - 1;
-      const inputs = config.variations.map((v, vi) =>
-        el("div", { class: "space-y-1" }, [
-          el("label", { class: "text-[var(--text-muted)] text-[11px] font-bold ml-1" }, v.name),
-          el("input", { type: "number", min: "0", max: String(maxStep), value: varTargets[vi], oninput: (e) => updateRoleVariationTarget(idx, vi, e.target.value), class: "w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px]" }),
-        ]),
-      );
-      return el("div", { class: "space-y-1" }, [el("div", { class: "grid gap-1.5", style: { gridTemplateColumns: `repeat(${config.variations.length}, 1fr)` } }, inputs), el("p", { class: "text-[10px] text-[var(--text-muted)] px-1" }, `Step indices (0–${maxStep})`)]);
-    }
-
-    // PALETTE MODE: BY CONTRAST
-    if (!isDirect && bSel === "By Contrast") {
-      const isSteps = config.spreadUnit === "steps";
-      return el("div", { class: "grid grid-cols-2 gap-2" }, [
-        inputsUI.input({ type: "number", step: "0.1", value: role.minContrast || "4.5", onchange: (e) => updateRole(idx, "minContrast", e.target.value) }, "Min Contrast"),
-        inputsUI.input({ type: "number", step: isSteps ? "1" : "0.1", value: isSteps ? role.spread || 1 : role.contrastGap || 1.5, onchange: (e) => updateRole(idx, isSteps ? "spread" : "contrastGap", e.target.value) }, isSteps ? "Spread" : "Contrast Gap"),
+      return el("div", { class: "space-y-1" }, [
+        el(
+          "div",
+          { class: "grid gap-1.5", style: { gridTemplateColumns: `repeat(${config.variations.length}, 1fr)` } },
+          config.variations.map((v, vi) =>
+            el("div", { class: "space-y-1" }, [
+              el("label", { class: "text-[var(--text-muted)] text-[11px] font-bold ml-1" }, v.name),
+              el("input", { type: "number", min: "0", max: String(maxStep), value: varTargets[vi], oninput: (e) => updateRoleVariationTarget(idx, vi, e.target.value), class: "w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px]" }),
+            ]),
+          ),
+        ),
+        el("p", { class: "text-[10px] text-[var(--text-muted)] px-1" }, `Step indices (0–${maxStep})`),
       ]);
     }
 
-    // PALETTE MODE: BY INDEX (DEFAULT)
+    // "Set base by" toggle only shown when per-role controls are unlocked in settings.
+    const baseByToggle = config.perRoleControls ? Components._InlineToggle("Set base by", BASE_BY_OPTIONS, bSel, (v) => updateRole(idx, "baseSelection", v)) : null;
+
+    if (bSel === "By Contrast") {
+      return el(
+        "div",
+        { class: "space-y-1.5" },
+        [baseByToggle, el("div", { class: "grid grid-cols-2 gap-2" }, [inputsUI.input({ type: "number", step: "0.1", value: role.minContrast || "4.5", onchange: (e) => updateRole(idx, "minContrast", e.target.value) }, "Min Contrast"), Components._SpreadInput(role, idx, config)])].filter(Boolean),
+      );
+    }
+
+    // By Index (default)
     const mid = Math.floor((config.scaleLength || 25) / 2);
     const lightBase = (role.baseIndex !== undefined ? role.baseIndex : mid) + 1;
     const darkBase = (role.darkBaseIndex !== undefined ? role.darkBaseIndex : role.baseIndex !== undefined ? role.baseIndex : mid) + 1;
-    const isSteps = config.spreadUnit === "steps";
-
-    return el("div", { class: "grid grid-cols-3 gap-2" }, [
-      inputsUI.input({ type: "number", value: lightBase, min: "1", max: String(config.scaleLength), onchange: (e) => updateRole(idx, "baseIndex", parseInt(e.target.value) - 1) }, "Light Base"),
-      inputsUI.input({ type: "number", value: darkBase, min: "1", max: String(config.scaleLength), onchange: (e) => updateRole(idx, "darkBaseIndex", parseInt(e.target.value) - 1) }, "Dark Base"),
-      inputsUI.input({ type: "number", step: isSteps ? "1" : "0.1", value: isSteps ? role.spread || 1 : role.contrastGap || 1.5, onchange: (e) => updateRole(idx, isSteps ? "spread" : "contrastGap", e.target.value) }, isSteps ? "Spread" : "Contrast Gap"),
-    ]);
+    return el(
+      "div",
+      { class: "space-y-1.5" },
+      [
+        baseByToggle,
+        el("div", { class: "grid grid-cols-[1fr,1fr,2fr] gap-2" }, [
+          inputsUI.input({ type: "number", value: lightBase, min: "1", max: String(config.scaleLength), onchange: (e) => updateRole(idx, "baseIndex", parseInt(e.target.value) - 1) }, "Light Base"),
+          inputsUI.input({ type: "number", value: darkBase, min: "1", max: String(config.scaleLength), onchange: (e) => updateRole(idx, "darkBaseIndex", parseInt(e.target.value) - 1) }, "Dark Base"),
+          Components._SpreadInput(role, idx, config),
+        ]),
+      ].filter(Boolean),
+    );
   },
 
   _RoleOverrideSection: (role, idx, config) => {
@@ -257,7 +279,7 @@ const Components = {
       if (!role.variationOverride) return null;
 
       const roleVars = getRoleVariations(role, config);
-      const isDirect = config.pluginMode === "direct";
+      const isDirect = config.pluginMode === "adaptiveEngine";
       const isManual = !!role.variationManual;
 
       const listItems = roleVars.map((v, vi) => {
@@ -369,6 +391,82 @@ const Components = {
     return el("div", { class: "border-t border-[var(--border)] mt-2 pt-2" }, [
       el("div", { class: "flex items-center justify-between" }, [el("span", { class: "text-[12px] font-medium" }, "Custom Variations"), el("button", { onclick: () => toggleRoleVariationOverride(idx), class: `toggle-pill ${role.variationOverride ? "on" : ""}` })]),
       buildVariationsList(),
+    ]);
+  },
+
+  // Renders a row of pill buttons. Used as a suffix in inputs or inline with labels.
+  // Falls back to a <select> when options.length > 2 for future extensibility.
+  _inlineControl: (options, current, onChange) => {
+    if (options.length > 2) {
+      return el(
+        "select",
+        {
+          class: "h-[26px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[6px] px-2 text-[11px] text-[var(--text-primary)] outline-none cursor-pointer",
+          onchange: (e) => onChange(e.target.value),
+        },
+        options.map((opt) => el("option", { value: opt.value, selected: current === opt.value ? "selected" : null }, opt.label)),
+      );
+    }
+    return el(
+      "div",
+      { class: "flex shrink-0 bg-[var(--bg-base)] border border-[var(--border)] rounded-[6px]" },
+      options.map((opt, i) =>
+        el(
+          "button",
+          {
+            class: `text-[10px] font-medium px-2 py-1 transition-all ${i === 0 ? "rounded-l-[5px]" : "rounded-r-[5px]"} ${current === opt.value ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`,
+            onclick: () => onChange(opt.value),
+          },
+          opt.label,
+        ),
+      ),
+    );
+  },
+
+  // Label-row toggle: "Label text ............ [Opt A] [Opt B]"
+  // Switches to a <select> when options > 2.
+  // @param {string}   label
+  // @param {{value,label}[]} options
+  // @param {string}   current  - active option value
+  // @param {Function} onChange - called with the new value
+  _InlineToggle: (label, options, current, onChange) => inputsUI.row(label, Components._inlineControl(options, current, onChange)),
+
+  // Number input with a unit selector embedded as a right-side suffix (Style A).
+  // Reads per-role spreadUnit when perRoleControls is enabled, otherwise uses the global.
+  // Switches to a <select> suffix automatically when options > 2.
+  _SpreadInput: (role, idx, config) => {
+    const isSteps = (role.spreadUnit || config.spreadUnit || "steps") === "steps";
+    const step = isSteps ? "1" : "0.1";
+    const value = isSteps ? role.spread || 1 : role.contrastGap || 1.5;
+    const field = isSteps ? "spread" : "contrastGap";
+
+    const numInput = el("input", {
+      type: "number",
+      step,
+      value,
+      onchange: (e) => updateRole(idx, field, e.target.value),
+      class: "w-full min-w-0 bg-transparent text-[13px] outline-none text-[var(--text-primary)]",
+    });
+
+    // Unit toggle only shown when per-role controls are unlocked — otherwise the
+    // global Spread Unit setting in the settings panel is the authority.
+    const inputChildren = config.perRoleControls
+      ? [
+          numInput,
+          Components._inlineControl(
+            [
+              { value: "steps", label: "steps" },
+              { value: "contrast", label: "contrast" },
+            ],
+            isSteps ? "steps" : "contrast",
+            (v) => updateRole(idx, "spreadUnit", v),
+          ),
+        ]
+      : [numInput];
+
+    return el("div", { class: "space-y-1 flex-1" }, [
+      el("label", { class: "text-[var(--text-muted)] text-[12px] font-medium block ml-1" }, "Spread"),
+      el("div", { class: "flex items-center gap-1.5 w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 h-[40px]" }, inputChildren),
     ]);
   },
 
