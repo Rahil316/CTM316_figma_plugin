@@ -150,3 +150,11 @@ function seriesMaker(x) {
   for (let i = 1; i <= x; i++) out.push(i);
   return out;
 }
+
+// Strip non-hex chars, uppercase, clamp to 6 chars. Returns raw hex without '#'.
+function sanitizeHex(val) {
+  return (val || "")
+    .replace(/[^0-9A-Fa-f]/g, "")
+    .toUpperCase()
+    .substring(0, 6);
+}

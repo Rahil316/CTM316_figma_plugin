@@ -7,12 +7,10 @@
  *
  * Building blocks live in their own files — go there when you want to change
  * HOW something works, not when it fires:
- *   state.js         — appState store, all mutations, validation, dirty hash
- *   ui-components.js — DOM component templates (cards, inputs, inline toggles)
- *   ui-actions.js    — CRUD handlers (add / remove / move colors and roles)
- *   ui-io.js         — Figma sync dispatch, import / export
- *   ui-settings.js   — Settings panel sync and output toggle management
- *   ui-preview.js    — Preview panel rendering
+ *   state.js      — appState store, all mutations, validation, dirty hash
+ *   components.js — DOM utilities, element factory, component templates
+ *   controls.js   — CRUD handlers + settings panel sync
+ *   output.js     — Banners, preview rendering, Figma sync dispatch, import/export
  * ============================================================================
  */
 
@@ -219,8 +217,15 @@ window.onmessage = (event) => {
 
   // Saved UI preferences (scale, theme) loaded from Figma client storage.
   if (msg.type === "load-ui-prefs-meta") {
-    if (msg.prefs.scale !== undefined) uiPrefs.scale = msg.prefs.scale;
-    if (msg.prefs.theme !== undefined) uiPrefs.theme = msg.prefs.theme;
+    const VALID_SCALES = [0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5];
+    const VALID_THEMES = ["figma", "dark", "light"];
+    if (msg.prefs.scale !== undefined) {
+      const s = parseFloat(msg.prefs.scale);
+      if (VALID_SCALES.includes(s)) uiPrefs.scale = s;
+    }
+    if (msg.prefs.theme !== undefined && VALID_THEMES.includes(msg.prefs.theme)) {
+      uiPrefs.theme = msg.prefs.theme;
+    }
     applyUiPrefs();
     syncUiSettingsInputs();
     return;
@@ -355,14 +360,15 @@ document.addEventListener("mouseleave", (e) => {
 // Format: element → what it does → which module handles it.
 
 // Navigation & sheets
-document.getElementById("btn-settings").onclick = () => showSheet("settings-sheet");
+document.getElementById("btn-settings").onclick  = openSettings;
+document.getElementById("settings-cancel").onclick = () => closeSettings(true);
+document.getElementById("settings-done").onclick   = () => closeSettings(false);
+document.querySelectorAll(".settings-tab").forEach((btn) =>
+  btn.addEventListener("click", () => switchSettingsTab(btn.dataset.tab))
+);
 document.getElementById("btn-more").onclick     = () => showSheet("more-sheet");
-document.getElementById("overlay").onclick      = () => {
-  if (document.getElementById("settings-sheet").classList.contains("open")) updateSettingsFromInputs();
-  hideSheets();
-};
-document.getElementById("close-settings").onclick = () => { updateSettingsFromInputs(); hideSheets(); };
-document.getElementById("close-more").onclick     = hideSheets;
+document.getElementById("overlay").onclick      = hideSheets;
+document.getElementById("close-more").onclick   = hideSheets;
 
 // Primary actions
 document.getElementById("btn-run").onclick    = () => handleSubmit("all");                   // ui-io.js

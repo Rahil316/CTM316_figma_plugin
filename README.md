@@ -32,25 +32,21 @@ src/
   ui.html                     — plugin panel markup + script tags (inlined at build)
   input.css / output.css      — Tailwind source / minified output
   code/
-    utils.js                  — shared utilities (hex, contrast, sanitize, defaults)
     color/
-      clrSpaces.js            — color space conversions (sRGB, OKLCH, HCT)
-      clrSolver.js            — direct contrast solver or Adaptive Engine color solver
-      clrGen.js               — tonal scale generator + variableMaker
+      clrUtils.js             — color math + conversions (hex↔RGB↔HSL↔OKLCH↔HCT, WCAG contrast, sanitizeHex)
+      clrEngine.js            — tonal scale generator, contrast solver, variableMaker pipeline
     figma/
       config.js               — appState → engine config translator + rename detector
       figmaVars.js            — Figma variable API (CRUD, rename, sync)
       main.js                 — message router + plugin init
       docGen.js               — CSS / SCSS / CSV export formatters
     ui/
-      state.js                — appState defaults, ensureIds, ensureVariations
-      ui-components.js        — el() helper, inputsUI primitives, Components cards
-      ui-actions.js           — CRUD handlers (add/remove/update color, role, variation)
-      ui-settings.js          — settings sync, syncOutputToggles, renderSettingsVariations
-      ui-io.js                — import/export, run dialog, system banners
-      ui-preview.js           — live preview panel rendering
-      uiGen.js                — top-level renderers, message handler, boot sequence
-      bannerManager.js        — self-contained notification banner system
+      state.js                — appState store, mutations, validation, dirty-hash tracking
+      components.js           — DOM utilities (debounce, focus, clipboard), el(), inputsUI, Components cards
+      controls.js             — all user interactions: CRUD (colors/roles/variations) + settings sync
+      output.js               — BannerManager, preview rendering, Figma sync dispatch, import/export
+      runtime.js              — render pipeline, event wiring, message handling, boot (read this first)
+      temp.js                 — design lab / throwaway prototypes (delete when done)
 ```
 
 ### UI component hierarchy
@@ -148,6 +144,61 @@ Load in Figma Desktop → Plugins → Development → Import plugin from manifes
 - [ ] **Alpha tints in preview** — `includeAlphaTints` flag exists; verify the preview panel reflects alpha token output correctly
 - [ ] **Input validation feedback** — errors currently show in the full error overlay; consider inline feedback closer to the offending field for smaller errors (e.g. duplicate name)
 - [ ] **Rename detection for per-role variations** — `buildVariableRenameMap` handles shared variations but skips per-role variation overrides
+
+---
+
+---
+
+## Role Card — Control Logic Spec
+
+> Permanent reference. Explains the intended behaviour of every control on a role card. Do not implement anything that contradicts this without updating the spec first.
+
+### Always visible (all modes)
+- **Role Name** — free text
+- **Shorthand** — abbreviated label used in variable names when shorthand mode is on
+
+---
+
+### Find base by
+How the system locates the *base step* — the anchor variation from which all others are derived.
+
+| Option | Behaviour |
+|---|---|
+| **By Index** | User enters a step number directly. Light and dark themes have separate inputs because the best-looking base may sit at different points on the scale for each theme background. |
+| **By Min Contrast** | System scans the tonal scale and picks the first step that meets the given contrast ratio target, evaluated against the respective theme background (light bg for light mode, dark bg for dark mode). One contrast value, two independently resolved steps. |
+
+---
+
+### Spread unit
+Defines the *unit of distance* between variations.
+
+| Option | Behaviour |
+|---|---|
+| **Steps** | Each variation is `base ± N steps` on the tonal scale. Spread value = integer step count. |
+| **Contrast** | Each variation targets `base_contrast ± spread` as its contrast against the theme background. Spread value = contrast delta (e.g. 1.5). System resolves each target contrast to the nearest matching step. |
+
+The spread unit determines the column type shown in the variations table (step indices for Steps, contrast values for Contrast).
+
+---
+
+### Mapping mode
+Controls whether the per-variation values are computed or hand-authored.
+
+| Option | Behaviour |
+|---|---|
+| **Auto** | System derives each variation's value from the base + spread rule. Global base and spread inputs are shown. Table displays computed values as read-only — user can see the result of their settings. |
+| **Manual** | User enters every variation's value directly in the table. Base and spread inputs are hidden (rule is irrelevant). Table cells are editable. Switching back to Auto resets values to the computed rule. |
+
+Table columns always follow the active spread unit:
+- **Steps** → `# | Alias | Shorthand | Step · ☀ Light | Step · 🌙 Dark` (separate because light/dark base may differ)
+- **Contrast** → `# | Alias | Shorthand | Min Contrast` (single value, evaluated per theme)
+
+---
+
+### Collapsed header summary
+When the variations section is collapsed, the header shows a one-line summary of the active settings:
+`Variations & Mapping (N)  ·  By Index · Steps · Auto`
+so the user can read the configuration without opening the card.
 
 ---
 

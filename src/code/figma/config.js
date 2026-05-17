@@ -1,3 +1,4 @@
+
 // 3. CONFIG TRANSLATOR: Converts appState (UI format) into the format expected by variableMaker.
 function translateConfig(appState) {
   const count = Math.max(1, parseInt(appState.scaleLength) || 23);

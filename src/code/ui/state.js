@@ -11,6 +11,13 @@
  * ============================================================================
  */
 
+// ── CONSTANTS ──
+const DEFAULT_VARIATION_TARGETS = [1.5, 3.0, 4.5, 7.0, 12.0];
+
+function defaultVariationTargets(len, pluginMode, scaleLength) {
+  return Array.from({ length: len }, (_, i) => (pluginMode === "adaptiveEngine" ? DEFAULT_VARIATION_TARGETS[i] || 4.5 : Math.floor((scaleLength || 25) / 2)));
+}
+
 // ── IDENTITY ──
 function generateId() {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
@@ -217,12 +224,25 @@ function setColor(idx, key, value) {
  * @param {*}      value
  */
 function setRole(idx, key, value) {
+  if (!appState.roles[idx]) return;
   if (key.startsWith("variationTarget:")) {
     const vi = parseInt(key.slice("variationTarget:".length));
     if (!appState.roles[idx].variationTargets) appState.roles[idx].variationTargets = defaultVariationTargets(appState.variations.length, "adaptiveEngine", appState.scaleLength);
     let v = parseFloat(value);
     if (isNaN(v) || v < 1) v = 1;
     appState.roles[idx].variationTargets[vi] = Math.min(21, v);
+    return;
+  }
+  if (key.startsWith("variationTargetL:")) {
+    const vi = parseInt(key.slice("variationTargetL:".length));
+    if (!appState.roles[idx].variationTargetsLight) appState.roles[idx].variationTargetsLight = [];
+    appState.roles[idx].variationTargetsLight[vi] = Math.max(0, Math.min(appState.scaleLength - 1, parseInt(value) || 0));
+    return;
+  }
+  if (key.startsWith("variationTargetD:")) {
+    const vi = parseInt(key.slice("variationTargetD:".length));
+    if (!appState.roles[idx].variationTargetsDark) appState.roles[idx].variationTargetsDark = [];
+    appState.roles[idx].variationTargetsDark[vi] = Math.max(0, Math.min(appState.scaleLength - 1, parseInt(value) || 0));
     return;
   }
   if (key === "minContrast") {
@@ -255,7 +275,8 @@ function setRole(idx, key, value) {
  */
 function setRoleVariation(roleIdx, varIdx, field, value) {
   const role = appState.roles[roleIdx];
-  if (!role.roleVariations || !role.roleVariations[varIdx]) return;
+  if (!role || !role.roleVariations) return;
+  if (varIdx < 0 || varIdx >= role.roleVariations.length) return;
   role.roleVariations[varIdx][field] = value;
 }
 
