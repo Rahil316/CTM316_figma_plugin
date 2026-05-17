@@ -283,8 +283,6 @@ function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, lightBg
       };
     }
   }
-  console.log(collection);
-  console.warn("collection");
   return collection;
 }
 

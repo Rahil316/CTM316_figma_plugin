@@ -9,6 +9,6 @@
   "editorType": ["figma"],
   "ui": "dist/ui.html",
   "networkAccess": {
-    "allowedDomains": ["https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"]
+    "allowedDomains": ["https://fonts.googleapis.com", "https://fonts.gstatic.com"]
   }
 }
