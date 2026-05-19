@@ -32,6 +32,10 @@ function ensureIds(state) {
     state.roles.forEach((r) => {
       if (!r._id) r._id = generateId();
     });
+  if (state.themes)
+    state.themes.forEach((t) => {
+      if (!t._id) t._id = generateId();
+    });
   return state;
 }
 
@@ -69,8 +73,8 @@ const demoConfig = {
     { name: "Border", shorthand: "br", spread: 1, minContrast: 2.0, baseIndex: 11, variationTargets: [1.5, 3.0, 4.5, 7.0, 12.0], description: "" },
   ],
   themes: [
-    { name: "light", bg: "FFFFFF" },
-    { name: "dark", bg: "000000" },
+    { name: "Light", bg: "FFFFFF" },
+    { name: "Dark", bg: "000000" },
   ],
   includeDescriptions: false,
 };
@@ -83,9 +87,9 @@ let appState = JSON.parse(JSON.stringify(demoConfig));
 ensureVariations();
 
 const UI_DIMS = {
-  defaultWidth: 424,
+  defaultWidth: 400,
   defaultHeight: 720,
-  minWidth: 360,
+  minWidth: 400,
   minHeight: 560,
   maxWidth: 1400,
   maxHeight: 1400,
@@ -290,4 +294,23 @@ function setRoleVariation(roleIdx, varIdx, field, value) {
 function setVariation(idx, field, value) {
   if (!appState.variations[idx]) return;
   appState.variations[idx][field] = value;
+}
+
+// ── MUTATIONS: THEMES ──
+
+function addTheme() {
+  if (!appState.themes) appState.themes = [];
+  const n = appState.themes.length + 1;
+  appState.themes.push({ _id: generateId(), name: "Theme " + n, bg: "888888" });
+}
+
+function removeTheme(idx) {
+  if (!appState.themes || appState.themes.length <= 1) return;
+  appState.themes.splice(idx, 1);
+}
+
+function updateTheme(idx, field, value) {
+  if (!appState.themes || !appState.themes[idx]) return;
+  if (field === "bg") value = sanitizeHex(value);
+  appState.themes[idx][field] = value;
 }

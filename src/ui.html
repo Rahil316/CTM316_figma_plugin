@@ -13,7 +13,7 @@
         margin: 0;
         padding: 0;
         overflow: hidden;
-        user-select: none;
+        /* user-select: none; */
       }
       /* body {
         transform: scale(0.75);
@@ -92,7 +92,10 @@
         color: var(--text-muted);
         cursor: pointer;
         white-space: nowrap;
-        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        transition:
+          background 0.15s,
+          color 0.15s,
+          border-color 0.15s;
       }
       .settings-tab.active {
         background: var(--accent);
@@ -191,7 +194,7 @@
       }
       .seg-btn {
         flex: 1;
-        height: 34px;
+        height: 36px;
         border: 1px solid var(--border);
         background: var(--bg-input);
         color: var(--text-muted);
@@ -229,96 +232,60 @@
 
       /* === SIDEBAR TABS === */
       .sidebar-tabs {
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 8px;
         flex-shrink: 0;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 8px;
-        background: var(--bg-panel);
+        gap: 6px;
+        padding: 8px 12px 12px;
+        background: var(--bg-app);
       }
       .sidebar-tab-btn {
-        position: relative;
-        padding: 12px 12px;
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--text-muted);
-        transition: all 0.2s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        background: none;
+        flex: 1;
+        height: 36px;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 9999px;
         border: none;
         cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        color: var(--text-muted);
+        background: var(--bg-input);
       }
       .sidebar-tab-btn:hover {
         color: var(--text-primary);
+        background: var(--bg-hover);
       }
       .sidebar-tab-btn.active {
-        color: var(--accent);
-      }
-      .sidebar-tab-btn.active::after {
-        content: "";
-        position: absolute;
-        bottom: -1px;
-        left: 0;
-        right: 0;
-        height: 2px;
         background: var(--accent);
-        border-radius: 2px 2px 0 0;
+        color: #fff;
       }
 
       /* === PREVIEW PANEL === */
       .preview-tab-btn {
-        padding: 6px 14px;
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--text-muted);
-        border-bottom: 2px solid transparent;
-        transition:
-          color 0.15s,
-          border-color 0.15s;
-        white-space: nowrap;
+        flex: 1;
+        height: 36px;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 9999px;
+        border: none;
         cursor: pointer;
-        background: none;
-        border-top: none;
-        border-left: none;
-        border-right: none;
+        transition: background 0.15s, color 0.15s;
+        color: var(--text-muted);
+        background: var(--bg-input);
+        white-space: nowrap;
+      }
+      .preview-tab-btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
       }
       .preview-tab-btn.active {
-        color: var(--accent);
-        border-bottom-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
       }
       .preview-panel {
         display: none;
       }
       .preview-panel.active {
         display: block;
-      }
-
-      /* === PREMIUM PREVIEW OVERLAY === */
-      #preview-overlay {
-        position: absolute;
-        inset: 0;
-        z-index: 50;
-        transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        display: none;
-        flex-direction: column;
-      }
-      #preview-overlay:not(.hidden) {
-        display: flex;
-      }
-      #preview-overlay.theme-light {
-        background-color: #fcfcfc;
-        color: #111;
-      }
-      #preview-overlay.theme-dark {
-        background-color: #0a0a0a;
-        color: #eee;
-      }
-      #preview-overlay.theme-tonalscales {
-        background-color: var(--bg-app);
-        color: var(--text-primary);
       }
 
       @keyframes fadeIn {
@@ -332,27 +299,20 @@
         }
       }
 
-      /* Toast Notification */
-      .toast {
+      /* Toast Hub */
+      #toast-hub {
         position: absolute;
-        bottom: 24px;
+        bottom: 20px;
         left: 50%;
-        transform: translateX(-50%) translateY(100px);
-        background: var(--accent);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        z-index: 1000;
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        transform: translateX(-50%);
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 8px;
-      }
-      .toast.show {
-        transform: translateX(-50%) translateY(0);
+        gap: 6px;
+        z-index: 1000;
+        pointer-events: none;
+        min-width: 180px;
+        max-width: 320px;
       }
 
       #drop-overlay {
@@ -379,52 +339,64 @@
     <!-- Main Screen -->
     <div id="main-screen" class="h-full flex flex-col relative overflow-hidden">
       <!-- Header -->
-      <header class="bg-[var(--bg-panel)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between sticky top-0 z-10">
-        <h1 class="text-[24px] font-bold">ctm316</h1>
-        <div class="flex gap-1.5">
-          <button id="btn-more" title="More Options" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]"></button>
-          <button id="btn-import" title="Import JSON" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]"></button>
-          <button id="btn-preview" title="Preview Colors" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border)] w-10 h-10 flex items-center justify-center rounded-[8px] transition-colors text-[var(--text-primary)]"></button>
-          <button id="btn-run" class="bg-[var(--accent)] hover:bg-[var(--accent-hover)] flex items-center gap-2 px-4 py-2 rounded-[8px] transition-all shadow-[0_4px_12px_var(--accent-glow)]"></button>
+      <header class="px-4 pt-4 pb-2 flex items-center justify-between sticky top-0 z-10 bg-[var(--bg-app)]">
+        <h1 class="text-[22px] font-bold text-[var(--text-primary)]">ctm316</h1>
+        <div class="flex gap-2 items-center">
+          <button id="btn-more" title="More Options" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] w-10 h-10 flex items-center justify-center rounded-full transition-colors text-[var(--text-primary)]"></button>
+          <button id="btn-import" title="Import JSON" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] w-10 h-10 flex items-center justify-center rounded-full transition-colors text-[var(--text-primary)]"></button>
+          <button id="btn-settings" title="Settings" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] w-10 h-10 flex items-center justify-center rounded-full transition-colors text-[var(--text-primary)]"></button>
+          <button id="btn-run" class="bg-[var(--accent)] hover:opacity-90 flex items-center gap-2 px-5 h-10 rounded-full transition-all font-semibold text-[13px] text-white shadow-[0_4px_12px_var(--accent-glow)]"></button>
         </div>
       </header>
       <!-- Banner slot: runtime notifications rendered here via BannerManager -->
       <div id="banner-slot" class="banner-slot"></div>
 
-      <!-- Sidebar Tabs -->
-      <div class="sidebar-tabs">
-        <div class="flex gap-1">
-          <button class="sidebar-tab-btn active" data-tab="color-groups">Palettes</button>
+      <!-- Main navigation area — hidden when preview is open -->
+      <div id="main-nav-area" class="flex flex-col flex-1 min-h-0">
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab-btn active" data-tab="color-groups">Palette</button>
           <button class="sidebar-tab-btn" data-tab="roles-config">Color Roles</button>
+          <button class="sidebar-tab-btn" data-tab="preview">Preview</button>
         </div>
-        <button id="btn-settings" title="Settings" class="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"></button>
+        <main class="flex-1 overflow-y-auto p-2 space-y-2">
+          <div id="sidebar-content-container"></div>
+        </main>
       </div>
 
-      <!-- Scrollable Content -->
-      <main class="flex-1 overflow-y-auto p-2 space-y-2">
-        <div id="sidebar-content-container"></div>
-      </main>
+      <!-- Preview screen — shown in place of main-nav-area -->
+      <div id="preview-screen" class="hidden flex-col flex-1 min-h-0">
+        <div class="sidebar-tabs">
+          <button id="preview-back" class="flex-none w-10 h-8 flex items-center justify-center rounded-full text-[16px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0">‹</button>
+          <button class="preview-tab-btn active" data-target="preview-colors">Palette</button>
+          <!-- theme tabs injected here by renderPreviewTabs() -->
+        </div>
+        <div id="preview-content" class="flex-1 overflow-y-auto">
+          <div class="p-2">
+            <div id="preview-colors" class="preview-panel active"></div>
+            <div id="preview-theme-panels"></div>
+          </div>
+        </div>
+      </div>
 
-      <!-- Toast -->
-      <div id="toast" class="toast"></div>
+      <!-- Toast Hub -->
+      <div id="toast-hub"></div>
 
       <!-- Overlays -->
       <div id="overlay" class="overlay absolute inset-0 bg-black/50 z-20 backdrop-blur-sm"></div>
 
       <!-- Settings Full-Screen -->
       <div id="settings-screen" class="hidden absolute inset-0 z-40 flex flex-col bg-[var(--bg-app)]">
-
         <!-- Header -->
         <div class="shrink-0 flex items-center justify-between px-4 pt-4 pb-3 border-b border-[var(--border)]">
           <h2 class="text-[18px] font-semibold text-[var(--text-primary)]">Settings</h2>
           <div class="flex gap-2">
-            <button id="settings-cancel" class="h-[34px] px-4 rounded-full border border-[var(--border)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] text-[13px] font-medium text-[var(--text-primary)] transition-colors">Cancel</button>
-            <button id="settings-done"   class="h-[34px] px-4 rounded-full bg-[var(--accent)] hover:opacity-90 text-[13px] font-semibold text-white transition-opacity">Done</button>
+            <button id="settings-cancel" class="h-[36px] px-4 rounded-full border border-[var(--border)] bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] text-[12px] font-medium text-[var(--text-primary)] transition-colors">Cancel</button>
+            <button id="settings-done" class="h-[36px] px-4 rounded-full bg-[var(--accent)] hover:opacity-90 text-[12px] font-semibold text-white transition-opacity">Done</button>
           </div>
         </div>
 
         <!-- Tab bar -->
-        <div class="shrink-0 flex gap-1 px-4 py-2 border-b border-[var(--border)] overflow-x-auto">
+        <div class="shrink-0 flex gap-1 px-2 py-2 border-b border-[var(--border)] overflow-x-auto">
           <button class="settings-tab active" data-tab="project">Project</button>
           <button class="settings-tab" data-tab="palettes">Palettes</button>
           <button class="settings-tab" data-tab="roles">Roles</button>
@@ -434,7 +406,6 @@
 
         <!-- Scrollable content -->
         <div class="flex-1 overflow-y-auto">
-
           <!-- ── PROJECT ── -->
           <div class="settings-panel" data-panel="project">
             <div class="settings-card">
@@ -445,12 +416,9 @@
                   <input type="text" id="setting-name" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
                 </div>
                 <div class="space-y-1">
-                  <label for="setting-light-bg" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Light theme bg</label>
-                  <input type="text" id="setting-light-bg" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] uppercase outline-none focus:border-[var(--accent)]" />
-                </div>
-                <div class="space-y-1">
-                  <label for="setting-dark-bg" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Dark theme bg</label>
-                  <input type="text" id="setting-dark-bg" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] uppercase outline-none focus:border-[var(--accent)]" />
+                  <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Themes (modes)</label>
+                  <div id="settings-themes-list" class="space-y-1.5"></div>
+                  <button id="btn-add-theme" onclick="addThemeRow()" class="mt-1 h-[28px] px-2 rounded-[6px] text-[11px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] border border-dashed border-[var(--border)] w-full transition-colors">+ Add theme</button>
                 </div>
               </div>
             </div>
@@ -516,7 +484,11 @@
               </div>
               <div class="space-y-1">
                 <label id="label-baseSelection" for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
-                <select id="setting-baseSelection" onchange="setBaseSelection(this.selectedIndex)" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+                <select
+                  id="setting-baseSelection"
+                  onchange="setBaseSelection(this.selectedIndex)"
+                  class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer"
+                >
                   <option value="By Contrast">By Contrast</option>
                   <option value="By Index" id="base-selection-opt-byindex">By Index</option>
                   <option value="Manual">Manual</option>
@@ -534,7 +506,7 @@
             <div class="settings-card">
               <div class="flex items-center justify-between mb-2">
                 <p class="settings-section-label mb-0">Variation Levels</p>
-                <button onclick="addSharedVariation()" class="text-[11px] text-[var(--accent)] hover:underline px-1">+ Add</button>
+                <button onclick="addSharedVariation()" class="h-[28px] px-2 text-[11px] font-medium rounded-[6px] bg-transparent border border-transparent text-[var(--accent)] hover:bg-[var(--accent)]/10 cursor-pointer transition-all">+ Add</button>
               </div>
               <div id="settings-variations-list" class="space-y-1.5"></div>
             </div>
@@ -659,14 +631,13 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      <div id="more-sheet" class="bottom-sheet absolute bottom-0 left-0 right-0 bg-[var(--bg-panel)] rounded-t-[16px] border-t border-[var(--border)] z-30 max-h-[90%] flex flex-col">
+      <div id="more-sheet" class="bottom-sheet absolute bottom-0 left-0 right-0 bg-[var(--bg-panel)] rounded-t-[16px] border-t border-[var(--border)] z-30 max-h-[90%] flex flex-col" inert>
         <div class="px-4 py-3 flex flex-row items-center justify-between gap-2 border-b border-[var(--border)]">
           <h2 class="text-[18px] font-semibold text-[var(--text-primary)]">More Options</h2>
-          <button id="close-more" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] py-1.5 px-4 rounded-[8px] text-[13px] font-bold transition-colors text-[var(--text-primary)]">Done</button>
+          <button id="close-more" class="h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-all">Done</button>
         </div>
         <div class="p-2 overflow-y-auto space-y-4">
           <!-- Export Options -->
@@ -725,7 +696,7 @@
           <div id="success-results" class="text-[var(--text-muted)] space-y-1">
             <!-- Tally results -->
           </div>
-          <button onclick="hideOverlay('success-overlay')" class="mt-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-8 py-3 rounded-xl font-bold text-white transition-all shadow-lg shadow-[var(--accent-glow)]">Back to Editor</button>
+          <button onclick="hideOverlay('success-overlay')" class="mt-4 h-[36px] px-6 text-[12px] font-semibold rounded-[8px] bg-[var(--accent)] border border-[var(--accent)] text-white hover:opacity-90 cursor-pointer transition-all">Back to Editor</button>
         </div>
       </div>
       <!-- error-overlay -->
@@ -733,30 +704,7 @@
         <div id="error-icon" class="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"></div>
         <h2 class="text-2xl font-bold text-[var(--text-primary)]">Error</h2>
         <p id="error-message" class="text-[var(--danger)]"></p>
-        <button onclick="hideOverlay('error-overlay')" class="mt-4 bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] px-8 py-3 rounded-xl font-bold text-[var(--text-primary)]">Dismiss</button>
-      </div>
-
-      <!-- Preview Overlay -->
-      <div id="preview-overlay" class="hidden absolute inset-0 bg-[var(--bg-app)] z-50 flex flex-col">
-        <!-- Header -->
-        <div class="bg-[var(--bg-panel)] border-b border-[var(--border)] px-4 py-2 flex items-center justify-between shrink-0">
-          <h2 class="text-[16px] font-semibold text-[var(--text-primary)]">Token Preview</h2>
-          <button id="preview-close" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] py-1.5 px-4 rounded-[8px] text-[13px] font-bold transition-colors text-[var(--text-primary)]">Back to Editor</button>
-        </div>
-        <!-- Tab Navigation -->
-        <div id="preview-tabs" class="flex border-b border-[var(--border)] bg-[var(--bg-panel)] shrink-0 overflow-x-auto">
-          <button id="preview-tab-colors" class="preview-tab-btn active" data-target="preview-colors">Tonal Scale</button>
-          <button class="preview-tab-btn" data-target="preview-light">Light Theme</button>
-          <button class="preview-tab-btn" data-target="preview-dark">Dark Theme</button>
-        </div>
-        <!-- Tab Panels -->
-        <div id="preview-content" class="flex-1 overflow-y-auto">
-          <div class="p-2">
-            <div id="preview-colors" class="preview-panel active"></div>
-            <div id="preview-light" class="preview-panel"></div>
-            <div id="preview-dark" class="preview-panel"></div>
-          </div>
-        </div>
+        <button onclick="hideOverlay('error-overlay')" class="mt-4 h-[36px] px-6 text-[12px] font-medium rounded-[8px] bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-all">Dismiss</button>
       </div>
 
       <!-- Drop Overlay -->
@@ -779,7 +727,7 @@
             "btn-preview": Icons.Preview,
             "btn-run": Icons.Run + '<span class="text-[14px] font-bold">Run</span>',
             "btn-settings": Icons.Settings,
-            toast: Icons.Check + '<span id="toast-msg">Copied!</span>',
+
             "opt-save-config-icon": Icons.Save,
             "opt-export-css-icon": Icons.Code,
             "opt-export-csv-icon": Icons.File,
@@ -805,7 +753,7 @@
       <div id="run-dialog-overlay" class="hidden absolute inset-0 bg-[var(--bg-app)] z-[60] flex flex-col">
         <div class="px-4 py-3 flex items-center justify-between border-b border-[var(--border)]">
           <h2 class="text-[17px] font-bold text-[var(--text-primary)]">Apply to Figma</h2>
-          <button onclick="hideOverlay('run-dialog-overlay')" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] py-1.5 px-4 rounded-[8px] text-[13px] font-bold text-[var(--text-primary)]">Cancel</button>
+          <button onclick="hideOverlay('run-dialog-overlay')" class="h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-all">Cancel</button>
         </div>
         <div class="flex-1 overflow-y-auto p-4 space-y-5">
           <!-- SCOPE -->
@@ -934,7 +882,7 @@
           </div>
         </div>
         <div class="p-4 border-t border-[var(--border)]">
-          <button id="btn-run-confirm" class="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-[var(--accent-glow)] text-white text-[14px]">Apply to Figma</button>
+          <button id="btn-run-confirm" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--accent)] border border-[var(--accent)] text-white hover:opacity-90 cursor-pointer transition-all">Apply to Figma</button>
         </div>
       </div>
 
@@ -952,8 +900,8 @@
           <p class="text-[var(--text-muted)] text-sm leading-relaxed">The collection(s) <span id="confirm-sync-names" class="text-[var(--text-primary)] font-semibold"></span> already exist in this file. Variables inside them will be updated.</p>
         </div>
         <div class="w-full space-y-3">
-          <button id="btn-sync-confirm" class="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-[var(--accent)]/20 text-white">Yes, Update Them</button>
-          <button onclick="hideOverlay('confirm-sync-overlay')" class="w-full text-[var(--text-dim)] hover:text-[var(--text-primary)] py-2 text-sm transition-colors">Cancel</button>
+          <button id="btn-sync-confirm" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--accent)] border border-[var(--accent)] text-white hover:opacity-90 cursor-pointer transition-all">Yes, Update Them</button>
+          <button onclick="hideOverlay('confirm-sync-overlay')" class="w-full h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-transparent border border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-all">Cancel</button>
         </div>
       </div>
 
@@ -970,9 +918,9 @@
           <p class="text-[var(--text-muted)] text-sm leading-relaxed">The current configuration is different from the default. Importing a new file will replace all existing palettes and color roles.</p>
         </div>
         <div class="w-full space-y-3">
-          <button id="btn-import-save" class="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] py-3.5 rounded-xl font-bold transition-all shadow-lg hover:shadow-[var(--accent)]/20 text-white">Save Current & Import</button>
-          <button id="btn-import-now" class="w-full bg-[var(--text-primary)]/10 hover:bg-[var(--text-primary)]/20 py-3.5 rounded-xl font-bold transition-all text-[var(--text-primary)]">Import & Replace</button>
-          <button onclick="hideOverlay('confirm-import-overlay')" class="w-full text-[var(--text-dim)] hover:text-[var(--text-primary)] py-2 text-sm transition-colors">Cancel</button>
+          <button id="btn-import-save" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--accent)] border border-[var(--accent)] text-white hover:opacity-90 cursor-pointer transition-all">Save Current & Import</button>
+          <button id="btn-import-now" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-all">Import & Replace</button>
+          <button onclick="hideOverlay('confirm-import-overlay')" class="w-full h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-transparent border border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-all">Cancel</button>
         </div>
       </div>
     </div>

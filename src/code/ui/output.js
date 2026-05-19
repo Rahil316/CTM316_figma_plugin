@@ -6,6 +6,96 @@
  * ============================================================================
  */
 
+// ── TOAST HUB ────────────────────────────────────────────────────────────────
+//
+// Lightweight stacking toast system. Toasts appear at bottom-center,
+// stack upward, and self-dismiss after a configurable timeout.
+//
+// API:
+//   ToastManager.show(message, opts)   → id
+//   ToastManager.success(message, opts)
+//   ToastManager.error(message, opts)
+//   ToastManager.info(message, opts)
+//   ToastManager.warn(message, opts)
+//   ToastManager.dismiss(id)
+//
+// opts: { timeout (ms, default 2000), icon }
+
+const ToastManager = (() => {
+  const TYPES = {
+    success: { icon: "✓", bg: "rgba(34,197,94,.15)",  border: "rgba(34,197,94,.35)",  text: "rgb(134,239,172)" },
+    error:   { icon: "✕", bg: "rgba(239,68,68,.15)",  border: "rgba(239,68,68,.35)",  text: "rgb(252,165,165)" },
+    info:    { icon: "ℹ", bg: "rgba(59,130,246,.15)", border: "rgba(59,130,246,.35)", text: "rgb(147,197,253)" },
+    warn:    { icon: "⚠", bg: "rgba(234,179,8,.15)",  border: "rgba(234,179,8,.35)",  text: "rgb(253,224,71)"  },
+    neutral: { icon: "·", bg: "rgba(255,255,255,.07)", border: "rgba(255,255,255,.14)", text: "rgba(255,255,255,.8)" },
+  };
+  const DEFAULT_TIMEOUT = 2000;
+  const MAX_STACK = 5;
+  const _timers = new Map();
+  let _uid = 0;
+
+  function _hub() { return document.getElementById("toast-hub"); }
+
+  function _remove(id) {
+    clearTimeout(_timers.get(id));
+    _timers.delete(id);
+    const node = document.getElementById("toast-" + id);
+    if (!node) return;
+    node.style.opacity = "0";
+    node.style.transform = "translateY(8px) scale(0.96)";
+    setTimeout(() => node && node.remove(), 220);
+  }
+
+  function show(message, opts = {}) {
+    const hub = _hub();
+    if (!hub) return;
+    const type = TYPES[opts.type] || TYPES.neutral;
+    const timeout = opts.timeout ?? DEFAULT_TIMEOUT;
+    const id = ++_uid;
+
+    // cap stack
+    const existing = hub.querySelectorAll(".toast-item");
+    if (existing.length >= MAX_STACK) existing[0].remove();
+
+    const node = document.createElement("div");
+    node.id = "toast-" + id;
+    node.className = "toast-item";
+    node.style.cssText = `
+      display:flex;align-items:center;gap:7px;
+      padding:7px 12px 7px 10px;
+      border-radius:8px;
+      border:1px solid ${type.border};
+      background:${type.bg};
+      color:${type.text};
+      font-size:11px;font-weight:500;
+      backdrop-filter:blur(8px);
+      box-shadow:0 4px 16px rgba(0,0,0,.3);
+      pointer-events:auto;cursor:default;
+      opacity:0;transform:translateY(10px) scale(0.97);
+      transition:opacity .18s ease,transform .18s cubic-bezier(.2,.8,.3,1);
+    `;
+    node.innerHTML = `<span style="font-size:12px;opacity:.9">${opts.icon || type.icon}</span><span>${message}</span>`;
+    node.onclick = () => _remove(id);
+
+    hub.appendChild(node);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      node.style.opacity = "1";
+      node.style.transform = "translateY(0) scale(1)";
+    }));
+
+    if (timeout > 0) _timers.set(id, setTimeout(() => _remove(id), timeout));
+    return id;
+  }
+
+  const success = (msg, opts) => show(msg, { type: "success", ...opts });
+  const error   = (msg, opts) => show(msg, { type: "error",   ...opts });
+  const info    = (msg, opts) => show(msg, { type: "info",    ...opts });
+  const warn    = (msg, opts) => show(msg, { type: "warn",    ...opts });
+  const dismiss = (id)        => _remove(id);
+
+  return { show, success, error, info, warn, dismiss };
+})();
+
 // ── BANNERS ──────────────────────────────────────────────────────────────────
 //
 // BannerManager — self-contained notification banner system.
@@ -402,63 +492,143 @@ const BannerManager = (() => {
 
 // ── PREVIEW ──────────────────────────────────────────────────────────────────
 
+function useWhiteLabel(hex) {
+  const lum = relLum(normalizeHex(hex) || "#888888");
+  return 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.05;
+}
+
 const schedulePreview = debounce(() => {
-  if (document.getElementById("preview-overlay").classList.contains("hidden")) return;
+  if (document.getElementById("preview-screen").classList.contains("hidden")) return;
   const result = variableMaker(translateConfig(appState));
   renderPreviewPanel(result);
 }, 500);
 
 function renderPreviewPanel(result) {
-  const lightBgHex = normalizeHex(appState.themes[0].bg) || "#FFFFFF";
-  const darkBgHex = normalizeHex(appState.themes[1].bg) || "#000000";
+  const themes = appState.themes || [];
 
   const colorEl = document.getElementById("preview-colors");
   colorEl.innerHTML = "";
   if (Object.keys(result.tonalScales).length === 0) {
     colorEl.innerHTML = `<p class="text-[12px] text-[var(--text-muted)] px-1 py-4 text-center">No tonal scale in Adaptive Engine mode. Colors are solved directly per variation target.</p>`;
   } else {
+    const themeKeys = themes.map((t) => t.name.toLowerCase());
     for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
-      const baseColor = ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value;
-      const section = document.createElement("div");
-      section.className = "grid grid-cols-[28px_auto_1fr] grid-rows-[28px_auto] items-center gap-2 mb-2";
-      section.innerHTML = `
-                <div class="size-6 rounded-md bg-[${baseColor}]"></div>
-                <div class="text-[12px] font-bold">${colorName}</div>
-                <div class="flex items-center gap-2 text-[12px] font-mono">
-                  <span id="spec-num-${colorName}"></span>
-                  <span id="spec-hex-${colorName}" class="font-bold"></span>
-                  <span id="spec-info-${colorName}" class="ml-auto"></span>
-                </div>
-                <div id="preview-spectrum" class="col-span-3 flex w-full h-20 rounded-[10px] overflow-hidden [box-shadow:0_10px_30px_#0000001f] border border-[#8888881A] cursor-crosshair"></div>
-                `;
-      const spectrum = section.querySelector("#preview-spectrum");
-      const hexDisplay = section.querySelector(`#spec-hex-${colorName}`);
-      const infoDisplay = section.querySelector(`#spec-info-${colorName}`);
-      const numDisplay = section.querySelector(`#spec-num-${colorName}`);
+      const colorEntry = appState.colors.find((c) => c.name === colorName);
+      const srcHex = "#" + (colorEntry ? colorEntry.value.replace(/^#/, "") : "888888");
+      const colorIdx = appState.colors.findIndex((c) => c.name === colorName);
+
+      const hexDisplay = el("span", { class: "text-[12px] font-bold font-mono" });
+      const numDisplay = el("span", { class: "text-[11px] text-[var(--text-muted)] font-mono" });
+      const infoDisplay = el("span", { class: "ml-auto text-[10px] text-[var(--text-muted)]" });
+
+      // Source color swatch — also acts as an inline color picker
+      const pickerInput = el("input", {
+        type: "color",
+        value: srcHex,
+        class: "absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10",
+        oninput: (e) => {
+          const clean = e.target.value.replace("#", "").toUpperCase();
+          if (colorIdx >= 0) {
+            updateGroup(colorIdx, "value", clean);
+            swatchDiv.style.background = "#" + clean;
+          }
+        },
+        title: "Click to edit color",
+      });
+      const swatchDiv = el("div", {
+        class: "size-6 rounded-md shrink-0",
+        style: `background:${srcHex}`,
+        title: "Click to edit source color",
+      });
+      const swatchWrap = el("div", { class: "relative size-6 shrink-0 cursor-pointer", title: "Click to edit color" }, [pickerInput, swatchDiv]);
+
+      const spectrum = el("div", {
+        class: "col-span-3 flex w-full h-20 rounded-[10px] overflow-hidden cursor-crosshair",
+        style: "box-shadow:0 10px 30px #0000001f;border:1px solid #8888881A",
+      });
+
       for (const [weight, data] of Object.entries(ramp)) {
-        const step = document.createElement("div");
-        step.className = `preview-swatch flex-1 h-full hover:flex-[4] hover:z-10 hover:[transform:scaleY(1.15)] hover:rounded-[8px] hover:[box-shadow:0_15px_40px_#00000044]`;
-        step.setAttribute("data-copy", data.value);
-        step.style.backgroundColor = data.value;
+        const labelEl = el("div", {
+          class: "absolute inset-0 flex flex-col items-center justify-center gap-0.5 opacity-0 hover:opacity-100 transition-opacity pointer-events-none",
+          style: `color:${useWhiteLabel(data.value) ? "#fff" : "#000"}`,
+        }, [
+          el("span", { class: "text-[10px] font-bold leading-none" }, weight),
+          el("span", { class: "text-[9px] font-mono leading-none opacity-80" }, data.value),
+        ]);
+        const step = el("div", {
+          class: "preview-swatch relative flex-1 h-full hover:flex-[4] hover:z-10 hover:rounded-[8px] transition-all cursor-pointer",
+          style: `background:${data.value}`,
+          title: `${weight} · ${data.value} — click to copy`,
+          onclick: () => { copyToClipboard(data.value); ToastManager.success(`Copied ${data.value}`); },
+        }, [labelEl]);
         step.onmouseenter = () => {
           hexDisplay.textContent = data.value;
-          numDisplay.textContent = weight;
-          infoDisplay.textContent = `☀️ ${data.contrast.light.ratio} | ${data.contrast.dark.ratio} 🌙`;
           hexDisplay.style.color = data.value;
+          numDisplay.textContent = weight;
+          const ratios = themeKeys.map((k) => data.contrast[k] ? `${k}: ${data.contrast[k].ratio}` : "").filter(Boolean).join(" · ");
+          infoDisplay.textContent = ratios;
         };
         spectrum.appendChild(step);
       }
+
+      const section = el("div", { class: "grid items-center gap-2 mb-3", style: "grid-template-columns:28px 1fr auto;grid-template-rows:28px auto" }, [
+        swatchWrap,
+        el("div", { class: "text-[12px] font-bold text-[var(--text-primary)]" }, colorName),
+        el("div", { class: "flex items-center gap-2" }, [numDisplay, hexDisplay, infoDisplay]),
+        spectrum,
+      ]);
       colorEl.appendChild(section);
     }
   }
 
-  renderThemePanel("preview-light", result.colorTokens.light, lightBgHex, result);
-  renderThemePanel("preview-dark", result.colorTokens.dark, darkBgHex, result);
+  // render one panel per theme
+  const panelArea = document.getElementById("preview-theme-panels");
+  if (!panelArea) return;
+  // ensure correct number of panels
+  themes.forEach((theme, i) => {
+    const panelId = `preview-theme-panel-${i}`;
+    let panel = panelArea.querySelector(`[data-theme-idx="${i}"]`);
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.className = "preview-panel preview-theme-panel";
+      panel.dataset.themeIdx = i;
+      panel.id = panelId;
+      panelArea.appendChild(panel);
+    } else {
+      panel.id = panelId;
+    }
+    const themeKey = theme.name.toLowerCase();
+    const bgHex = normalizeHex(theme.bg) || "#FFFFFF";
+    const tokens = result.colorTokens[themeKey] || {};
+    renderThemePanel(panel, tokens, bgHex, result);
+  });
+  // remove extras
+  panelArea.querySelectorAll(".preview-theme-panel").forEach((p) => {
+    if (parseInt(p.dataset.themeIdx) >= themes.length) p.remove();
+  });
 }
 
-function renderThemePanel(panelId, themeTokens, bgHex, result) {
-  const el = document.getElementById(panelId);
-  el.innerHTML = "";
+function renderThemePanel(panelOrId, themeTokens, bgHex, result) {
+  const panelEl = typeof panelOrId === "string" ? document.getElementById(panelOrId) : panelOrId;
+  panelEl.innerHTML = "";
+  panelEl.style.backgroundColor = bgHex || "";
+
+  // Derive adaptive UI colors from the panel background luminance.
+  // Use actual contrast ratio against black vs white to pick the higher-contrast ink,
+  // then derive muted/border/hover from that same ink at reduced opacity.
+  const bgLum = relLum(bgHex || "#FFFFFF");
+  const useWhiteInk = 1.05 / (bgLum + 0.05) >= (bgLum + 0.05) / 0.05;
+  const ink           = useWhiteInk ? "255,255,255" : "0,0,0";
+  const pvText        = `rgb(${ink})`;
+  const pvMuted       = `rgba(${ink},0.55)`;
+  const pvBorder      = `rgba(${ink},0.15)`;
+  const pvHover       = `rgba(${ink},0.07)`;
+  const pvHoverBorder = `rgba(${ink},0.25)`;
+  panelEl.style.setProperty("--pv-text",         pvText);
+  panelEl.style.setProperty("--pv-muted",        pvMuted);
+  panelEl.style.setProperty("--pv-border",       pvBorder);
+  panelEl.style.setProperty("--pv-hover",        pvHover);
+  panelEl.style.setProperty("--pv-hover-border", pvHoverBorder);
 
   const varLabel = (varKey) => {
     const i = parseInt(varKey);
@@ -473,54 +643,62 @@ function renderThemePanel(panelId, themeTokens, bgHex, result) {
     const srcColor = (appState.colors.find((c) => c.name === colorName) || {}).value || "888888";
     const baseColor = ramp ? ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value : `#${srcColor.replace(/^#/, "")}`;
 
-    const section = document.createElement("div");
-    section.className = "mb-4";
-    section.innerHTML = `
-            <div class="grid grid-cols-[32px_1fr_auto] items-center mb-2">
-              <div class="size-6 rounded-md bg-[${baseColor}]"></div>
-              <div class="text-[12px] font-bold">${colorName}</div>
-            </div>
-            <div class="preview-section-content space-y-3"></div>`;
+    const section = el("div", { class: "mb-4 px-2 pt-2" }, [
+      el("div", { class: "flex items-center gap-2 mb-2" }, [
+        el("div", { class: "size-5 rounded-md shrink-0", style: `background:${baseColor}` }),
+        el("div", { class: "text-[12px] font-bold", style: "color:var(--pv-text)" }, colorName),
+      ]),
+      el("div", { class: "space-y-3" }),
+    ]);
+    const content = section.querySelector(".space-y-3");
 
-    const content = section.querySelector(".preview-section-content");
     for (const [roleIdx, variations] of Object.entries(roles)) {
-      const roleGroup = document.createElement("div");
-      roleGroup.className = "mb-2";
       const rName = (appState.roles[roleIdx] && appState.roles[roleIdx].name) || `Role ${roleIdx}`;
-      roleGroup.innerHTML = `
-              <div class="flex items-center gap-1 mb-2">
-                <div class="text-[11px] font-extrabold opacity-40 tracking-[0.15em]">${rName}</div>
-                <div class="flex-1 h-px bg-current opacity-10"></div>
-              </div>
-              <div class="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(96px,1fr))]"></div>`;
+      const roleGroup = el("div", { class: "mb-2" }, [
+        el("div", { class: "flex items-center gap-1 mb-1.5" }, [
+          el("div", { class: "text-[10px] font-extrabold tracking-[0.12em] uppercase", style: "color:var(--pv-muted)" }, rName),
+          el("div", { class: "flex-1 h-px", style: "background:var(--pv-border)" }),
+        ]),
+        el("div", { style: "display:grid;gap:4px;grid-template-columns:repeat(auto-fill,minmax(88px,1fr))" }),
+      ]);
+      const grid = roleGroup.querySelector("div[style*='grid']");
 
-      const grid = roleGroup.querySelector(".grid");
       for (const [varKey, token] of Object.entries(variations)) {
-        const swatch = document.createElement("div");
-        swatch.className = "group relative p-1.5 rounded-lg border border-transparent hover:border-[var(--border)] hover:bg-[var(--bg-input)] transition-all cursor-pointer";
-        swatch.onclick = (e) => {
-          const text = e.altKey && token.tknName ? token.tknName : token.value;
-          copyToClipboard(text);
-          BannerManager.success(`Copied ${text}`);
-        };
-
         const cData = token.contrast || { ratio: 1, rating: "FAIL" };
-        const ratingColor = cData.ratio >= 4.5 ? "text-green-500" : cData.ratio >= 3 ? "text-orange-500" : "text-red-500";
+        const ratio = typeof cData.ratio === "number" ? cData.ratio.toFixed(2) : cData.ratio;
+        const ratingClr = cData.ratio >= 4.5 ? "#22c55e" : cData.ratio >= 3 ? "#f59e0b" : "#ef4444";
 
-        swatch.innerHTML = `
-                <div class="h-10 rounded-md mb-1.5 shadow-inner border border-black/5" style="background-color: ${token.value}"></div>
-                <div class="flex flex-col gap-0.5">
-                  <div class="text-[10px] font-bold truncate">${varLabel(varKey)}</div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-[9px] opacity-60 font-mono">${token.value}</span>
-                    <span class="text-[9px] font-bold ${ratingColor}">${cData.ratio}</span>
-                  </div>
-                </div>`;
-        grid.appendChild(swatch);
+        const card = el("div", {
+          class: "relative p-1.5 rounded-lg transition-all cursor-pointer",
+          style: "border:1px solid transparent",
+          onclick: (e) => {
+            const text = e.altKey && token.tknName ? token.tknName : token.value;
+            copyToClipboard(text);
+            ToastManager.success(`Copied ${text}`);
+          },
+          onmouseenter: (e) => {
+            e.currentTarget.style.borderColor = "var(--pv-hover-border)";
+            e.currentTarget.style.backgroundColor = "var(--pv-hover)";
+          },
+          onmouseleave: (e) => {
+            e.currentTarget.style.borderColor = "transparent";
+            e.currentTarget.style.backgroundColor = "";
+          },
+        }, [
+          el("div", { class: "h-9 rounded-md mb-1.5", style: `background:${token.value};box-shadow:inset 0 0 0 1px rgba(128,128,128,.15)` }),
+          el("div", { class: "flex flex-col gap-0.5" }, [
+            el("div", { class: "text-[10px] font-semibold truncate", style: "color:var(--pv-text)" }, varLabel(varKey)),
+            el("div", { class: "flex items-center justify-between" }, [
+              el("span", { class: "text-[9px] font-mono", style: "color:var(--pv-muted)" }, token.value),
+              el("span", { class: "text-[9px] font-bold", style: `color:${ratingClr}` }, String(ratio)),
+            ]),
+          ]),
+        ]);
+        grid.appendChild(card);
       }
       content.appendChild(roleGroup);
     }
-    el.appendChild(section);
+    panelEl.appendChild(section);
   }
 }
 

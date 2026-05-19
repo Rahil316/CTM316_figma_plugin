@@ -74,6 +74,8 @@ const Icons = {
   Close: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   Upload: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
   TrashLarge: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+  ChevronDown: `<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.26974 7.35999C7.02426 7.56025 6.66199 7.54569 6.43315 7.31686L0.183152 1.06686C-0.0609254 0.822781 -0.0609255 0.427147 0.183152 0.183069C0.427229 -0.0610085 0.822864 -0.0610085 1.06694 0.183069L6.87505 5.99117L12.6832 0.183069C12.9272 -0.0610087 13.3229 -0.0610087 13.5669 0.183069C13.811 0.427146 13.811 0.822781 13.5669 1.06686L7.31694 7.31686L7.26974 7.35999Z" fill="#ECEEF1"/></svg>`,
+  Cog: `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6.13542C12 6.01321 11.9116 5.90876 11.791 5.88867L11.1953 5.78971C10.7136 5.70943 10.3599 5.36233 10.196 4.96745C10.0306 4.56911 10.04 4.07821 10.3223 3.68294L10.6738 3.19076C10.7448 3.09132 10.7335 2.95487 10.6471 2.86849L10.1315 2.35286C10.0451 2.26652 9.90867 2.25522 9.80925 2.32617L9.31771 2.67773C8.92232 2.96016 8.43103 2.96948 8.03255 2.80404C7.63764 2.64005 7.29058 2.28647 7.21029 1.80469L7.11133 1.20898C7.09124 1.08844 6.98679 1 6.86458 1H6.13542C6.01321 1 5.90876 1.08844 5.88867 1.20898L5.78971 1.80469C5.70942 2.28643 5.36234 2.64009 4.96745 2.80404C4.56911 2.9694 4.07822 2.95995 3.68294 2.67773L3.19076 2.32617C3.09141 2.25538 2.9555 2.26672 2.86914 2.35286L2.35286 2.86849C2.26648 2.95491 2.2558 3.09132 2.32682 3.19076L2.67773 3.68229C2.96016 4.07768 2.96948 4.56897 2.80404 4.96745C2.64005 5.36236 2.28647 5.70942 1.80469 5.78971L1.20898 5.88867C1.08844 5.90876 1 6.01321 1 6.13542V6.86458C1 6.98679 1.08844 7.09124 1.20898 7.11133L1.80469 7.21029C2.28642 7.29058 2.64009 7.63766 2.80404 8.03255C2.9694 8.43089 2.95996 8.92179 2.67773 9.31706L2.32617 9.80925C2.25522 9.90868 2.26648 10.0451 2.35286 10.1315L2.86849 10.6471C2.95489 10.7335 3.09133 10.7448 3.19076 10.6738L3.68229 10.3223C4.07767 10.0399 4.56898 10.0305 4.96745 10.196C5.36236 10.3599 5.70942 10.7135 5.78971 11.1953L5.88867 11.791C5.90876 11.9116 6.01321 12 6.13542 12H6.86458C6.98679 12 7.09124 11.9116 7.11133 11.791L7.21029 11.1953C7.29058 10.7136 7.63765 10.3599 8.03255 10.196C8.43089 10.0306 8.92177 10.0401 9.31706 10.3223L9.80925 10.6738C9.90858 10.7446 10.0445 10.7333 10.1309 10.6471L10.6471 10.1315C10.7335 10.0452 10.7447 9.90867 10.6738 9.80925L10.3223 9.31771C10.0399 8.92233 10.0305 8.43102 10.196 8.03255C10.3599 7.63764 10.7135 7.29058 11.1953 7.21029L11.791 7.11133C11.9116 7.09124 12 6.98679 12 6.86458V6.13542ZM8.00065 6.5C8.00064 5.67164 7.32899 5.0001 6.50065 5C5.67223 5 5.00066 5.67158 5.00065 6.5C5.00065 7.32843 5.67222 8 6.50065 8C7.32899 7.9999 8.00065 7.32837 8.00065 6.5ZM9.00065 6.5C9.00065 7.88065 7.88128 8.9999 6.50065 9C5.11994 9 4.00065 7.88071 4.00065 6.5C4.00066 5.1193 5.11994 4 6.50065 4C7.88127 4.0001 9.00064 5.11936 9.00065 6.5ZM13 6.86458C13 7.47556 12.5584 7.99711 11.9557 8.09766L11.3594 8.19727C11.2756 8.21136 11.1757 8.28153 11.1198 8.41602C11.0652 8.54742 11.085 8.66485 11.1361 8.73633L11.487 9.22787C11.8421 9.72509 11.7862 10.4065 11.3542 10.8385L10.8385 11.3542C10.4065 11.7862 9.72508 11.8427 9.22787 11.4876L8.73633 11.1361C8.66488 11.085 8.54737 11.0653 8.41602 11.1198C8.28149 11.1757 8.21132 11.2756 8.19727 11.3594L8.09766 11.9557C7.99711 12.5584 7.47556 13 6.86458 13H6.13542C5.52444 13 5.00289 12.5584 4.90234 11.9557L4.80273 11.3594C4.78865 11.2756 4.71847 11.1757 4.58398 11.1198C4.45258 11.0652 4.33515 11.085 4.26367 11.1361L3.77214 11.4876C3.27492 11.8428 2.59353 11.7862 2.16146 11.3542L1.64583 10.8385C1.21377 10.4065 1.15723 9.72509 1.51237 9.22787L1.86393 8.73633C1.91495 8.6649 1.93474 8.54735 1.88021 8.41602C1.82434 8.28148 1.72441 8.21131 1.64062 8.19727L1.04427 8.09766C0.44165 7.99711 0 7.47556 0 6.86458V6.13542C0 5.52444 0.441649 5.00289 1.04427 4.90234L1.64062 4.80273C1.72443 4.78864 1.82432 4.71846 1.88021 4.58398C1.93477 4.45258 1.91498 4.33516 1.86393 4.26367L1.51302 3.77214C1.15786 3.27492 1.21379 2.59354 1.64583 2.16146L2.16146 1.64583C2.59348 1.21381 3.27492 1.15734 3.77214 1.51237L4.26367 1.86393C4.33511 1.91496 4.45264 1.93474 4.58398 1.88021C4.71852 1.82434 4.78868 1.72442 4.80273 1.64062L4.90234 1.04427C5.00289 0.44165 5.52444 0 6.13542 0H6.86458C7.47556 0 7.99711 0.441649 8.09766 1.04427L8.19727 1.64062C8.21136 1.72443 8.28154 1.82433 8.41602 1.88021C8.54742 1.93477 8.66484 1.91498 8.73633 1.86393L9.22787 1.51237C9.72508 1.15723 10.4065 1.2138 10.8385 1.64583L11.3542 2.16146C11.7862 2.59352 11.8428 3.27491 11.4876 3.77214L11.1361 4.26367C11.085 4.3351 11.0653 4.45265 11.1198 4.58398C11.1757 4.71853 11.2756 4.78869 11.3594 4.80273L11.9557 4.90234C12.5584 5.00289 13 5.52444 13 6.13542V6.86458Z" fill="currentColor"/></svg>`,
 };
 
 // ── ELEMENT FACTORY ──
@@ -122,15 +124,7 @@ const el = (tag, attrs = {}, children = []) => {
 
 const inputsUI = {
   // Dashed "add" call-to-action button.
-  actionButton: (label, onClick, icon = null) =>
-    el(
-      "button",
-      {
-        class: "w-full h-10 px-4 mb-2 bg-transparent text-[var(--accent)] border-2 border-dashed border-[var(--accent)] rounded-[8px] text-[13px] font-semibold cursor-pointer transition-colors duration-150 hover:bg-[var(--accent)]/10 flex items-center justify-center gap-2",
-        onclick: onClick,
-      },
-      [icon ? el("span", { class: "flex items-center justify-center" }, icon) : null, el("span", {}, label)],
-    ),
+  actionButton: (label, onClick, icon = null) => inputsUI.btn("dashed", { label, icon, onclick: onClick, size: "xl", class: "w-full mb-2" }),
 
   // Text/number input with optional label above.
   input: (attrs = {}, label = null) => {
@@ -147,62 +141,80 @@ const inputsUI = {
   // Native color picker + hex text input, both wired to the same update handler.
   // onUpdate(value, inputEl?) — inputEl is passed so callers can do in-place correction.
   colorInput: (value, onUpdate, idPrefix = null) =>
-    el("div", { class: "flex items-center gap-2 w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 pl-1 h-[40px]" }, [
+    el("div", { class: "flex items-center gap-2 w-full bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] overflow-hidden h-[40px]" }, [
       el("input", {
         type: "color",
         value: normalizeHex(value) || "#000000",
         id: idPrefix ? `${idPrefix}-picker` : null,
-        class: "cursor-pointer size-5 bg-transparent border-none rounded-[4px]",
+        class: "cursor-pointer h-full w-10 shrink-0 bg-transparent border-none rounded-none p-0.5",
         onchange: (e) => onUpdate(e.target.value, null),
       }),
       el("input", {
         type: "text",
         value: value,
         id: idPrefix ? `${idPrefix}-hex` : null,
-        class: "w-full bg-transparent text-[13px] uppercase outline-none text-[var(--text-primary)]",
+        class: "w-full bg-transparent text-[13px] uppercase outline-none text-[var(--text-primary)] pr-2",
         oninput: (e) => onUpdate(e.target.value, e.target),
       }),
     ]),
 
   // ── BUTTON ──
-  // Universal button primitive used by all other button helpers.
+  // Universal button primitive. All interactive buttons in the UI go through here.
+  //
   // variant: "primary" | "secondary" | "ghost" | "danger" | "icon"
-  // size:    "sm" | "md" (default) | "lg"
-  // opts:    { label, icon, disabled, class, id, onclick, ... }
+  // size:    "xs"(20) | "sm"(28) | "md"(32) | "lg"(36, default) | "xl"(40)
+  // square:  true → forces equal width/height (for icon-only knob buttons)
+  // opts:    { label, icon, disabled, square, class, id, onclick, ... }
+  //
+  // Size token table (keep in sync with ui.html interactive element heights):
+  //   xs  20px — in-card directional arrows, tiny table controls
+  //   sm  28px — pill selectors, compact inline buttons
+  //   md  32px — icon knob buttons (gear, trash in cards)
+  //   lg  36px — labeled action buttons, tabs, Cancel/Done
+  //   xl  40px — text inputs, header buttons, primary CTAs
   btn: (variant, opts = {}) => {
-    const { label, icon, disabled, size = "md", class: extraCls = "", ...rest } = opts;
+    const { label, icon, disabled, size = "lg", square = false, class: extraCls = "", ...rest } = opts;
 
     const base = "inline-flex items-center justify-center gap-1.5 font-medium transition-all border select-none";
     const sizes = {
-      sm: "h-[28px] px-2.5 text-[11px] rounded-[6px]",
-      md: "h-[36px] px-3 text-[12px] rounded-[8px]",
-      lg: "h-[40px] px-4 text-[13px] rounded-[8px]",
+      xs: "h-5     px-1     text-[10px] rounded-[4px]",
+      sm: "h-[28px] px-2   text-[11px] rounded-[6px]",
+      md: "h-[32px] px-2.5 text-[12px] rounded-[7px]",
+      lg: "h-[36px] px-3   text-[12px] rounded-[8px]",
+      xl: "h-[40px] px-4   text-[13px] rounded-[8px]",
+    };
+    const squareSizes = {
+      xs: "size-5      text-[10px] rounded-[4px]",
+      sm: "size-[28px] text-[11px] rounded-[6px]",
+      md: "size-[32px] text-[12px] rounded-[7px]",
+      lg: "size-[36px] text-[12px] rounded-[8px]",
+      xl: "size-[40px] text-[13px] rounded-[8px]",
     };
     const variants = {
-      primary:   "bg-[var(--accent)] border-[var(--accent)] text-white hover:opacity-90 cursor-pointer",
+      primary: "bg-[var(--accent)] border-[var(--accent)] text-white hover:opacity-90 cursor-pointer",
       secondary: "bg-[var(--bg-input)] border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] cursor-pointer",
-      ghost:     "bg-transparent border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer",
-      danger:    "bg-[var(--danger)]/10 border-[var(--danger)]/20 text-[var(--danger)] hover:bg-[var(--danger)]/20 cursor-pointer",
-      icon:      "bg-transparent border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer size-[36px] !p-0",
+      ghost: "bg-transparent border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer",
+      danger: "bg-[var(--danger)]/10 border-[var(--danger)]/20 text-[var(--danger)] hover:bg-[var(--danger)]/20 cursor-pointer",
+      icon: "bg-transparent border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer",
+      dashed: "bg-transparent border-2 border-dashed border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)]/10 cursor-pointer",
     };
+    const isSquare = square || variant === "icon";
+    const sizeToken = (isSquare ? squareSizes : sizes)[size] ?? (isSquare ? squareSizes.lg : sizes.lg);
     const disabledCls = disabled ? "opacity-40 cursor-not-allowed pointer-events-none" : "";
-    const cls = [base, sizes[size] ?? sizes.md, variants[variant] ?? variants.secondary, disabledCls, extraCls]
-      .filter(Boolean).join(" ");
+    const cls = [base, sizeToken, variants[variant] ?? variants.secondary, disabledCls, extraCls].filter(Boolean).join(" ");
 
-    const inner = [
-      icon  ? el("span", { class: "flex items-center justify-center shrink-0" }, icon) : null,
-      label ? el("span", {}, label) : null,
-    ].filter(Boolean);
+    const inner = [icon ? el("span", { class: "flex items-center justify-center shrink-0" }, icon) : null, label ? el("span", {}, label) : null].filter(Boolean);
 
-    return el("button", { ...rest, class: cls, disabled: disabled || null },
-      inner.length === 1 ? inner[0] : inner
-    );
+    return el("button", { ...rest, class: cls, disabled: disabled || null }, inner.length === 1 ? inner[0] : inner);
   },
 
-  // Square icon button — delegates to btn(). variant: "danger" | "ghost"
+  // Square icon-only knob button (md = 32px). variant: "danger" | "ghost"
   iconButton: (icon, onClick, variant = "danger") =>
     inputsUI.btn(variant === "danger" ? "danger" : "ghost", {
-      icon, onclick: onClick, size: "md", class: "!size-[40px] !rounded-[8px]",
+      icon,
+      onclick: onClick,
+      size: "lg",
+      square: true,
     }),
 
   // Toggle pill button. Controlled: pass isOn state, onChange fires with no args (caller flips state).
@@ -242,26 +254,35 @@ function _getRoleUI(id) {
 }
 
 function _pills(options, current, onChange) {
-  return el("div", { class: "flex bg-[var(--bg-base)] border border-[var(--border)] rounded-[6px] overflow-hidden h-[28px]" },
-    options.map(opt => el("button", {
-      class: `flex-1 text-[10px] font-medium px-2 transition-all ${current === opt.value ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`,
-      onclick: () => onChange(opt.value),
-    }, opt.label))
+  return el(
+    "div",
+    { class: "flex bg-[var(--bg-base)] border border-[var(--border)] rounded-[6px] overflow-hidden h-[28px]" },
+    options.map((opt) =>
+      el(
+        "button",
+        {
+          class: `flex-1 text-[10px] font-medium px-2 transition-all ${current === opt.value ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`,
+          onclick: () => onChange(opt.value),
+        },
+        opt.label,
+      ),
+    ),
   );
 }
 
 function _settingsRow(label, control) {
-  return el("div", { class: "flex items-center justify-between gap-3" }, [
-    el("span", { class: "text-[11px] text-[var(--text-muted)] shrink-0 w-[110px]" }, label),
-    el("div", { class: "flex-1" }, [control]),
-  ]);
+  return el("div", { class: "flex items-center justify-between gap-3" }, [el("span", { class: "text-[11px] text-[var(--text-muted)] shrink-0 w-[110px]" }, label), el("div", { class: "flex-1" }, [control])]);
 }
 
 function _labelledInput(label, type, value, extra) {
   return el("div", { class: "space-y-1 flex-1" }, [
     el("label", { class: "text-[10px] text-[var(--text-muted)] font-medium block ml-1" }, label),
-    el("input", Object.assign({ type, value, class: "w-full h-[30px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[6px] px-2 text-[11px] outline-none text-[var(--text-primary)]" }, extra)),
+    el("input", Object.assign({ type, value, class: "w-full h-[28px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[6px] px-2 text-[11px] outline-none text-[var(--text-primary)]" }, extra)),
   ]);
+}
+
+function _labelledStatic(label, contentEl) {
+  return el("div", { class: "space-y-1" }, [el("label", { class: "text-[10px] text-[var(--text-muted)] font-medium block ml-1 whitespace-nowrap" }, label), el("div", { class: "h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 flex items-center gap-1.5" }, [contentEl])]);
 }
 
 const getRoleVariations = (role, config) => {
@@ -271,18 +292,19 @@ const getRoleVariations = (role, config) => {
 const Components = {
   // --- COLOR COMPONENTS ---
   _ColorMainRow: (group, idx, config) =>
-    el("div", { class: "grid grid-cols-[20px_1fr_72px_40px] gap-2 items-end" }, [
+    el("div", { class: "grid gap-2 items-center", style: "grid-template-columns:20px 1fr 72px 108px 36px" }, [
       el("div", { class: "flex flex-col gap-0.5 self-center flex-shrink-0" }, [
-        el("button", { onclick: () => moveGroup(idx, -1), disabled: idx === 0, class: "w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-20" }, "▲"),
+        inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveGroup(idx, -1), disabled: idx === 0 }),
         el("span", { class: "drag-handle text-[var(--text-muted)] cursor-grab text-[14px] leading-none text-center" }, "⠿"),
-        el("button", { onclick: () => moveGroup(idx, 1), disabled: idx === config.colors.length - 1, class: "w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-20" }, "▼"),
+        inputsUI.btn("ghost", { size: "xs", square: true, icon: "▼", onclick: () => moveGroup(idx, 1), disabled: idx === config.colors.length - 1 }),
       ]),
       inputsUI.input({ id: `clr-${idx}-name`, value: group.name || "", oninput: (e) => updateGroup(idx, "name", e.target.value) }, "Color Name"),
-      inputsUI.input({ id: `clr-${idx}-short`, value: group.shorthand || "", oninput: (e) => updateGroup(idx, "shorthand", e.target.value) }, "Short"),
-      inputsUI.iconButton(Icons.Trash, () => removeGroup(idx)),
+      inputsUI.input({ id: `clr-${idx}-short`, value: group.shorthand || "", oninput: (e) => updateGroup(idx, "shorthand", e.target.value) }, "Shorthand"),
+      el("div", { class: "space-y-1" }, [el("label", { class: "text-[10px] text-[var(--text-muted)] font-medium block ml-1" }, "Value"), inputsUI.colorInput(group.value, (val, elRef) => updateGroup(idx, "value", val, elRef), `clr-${idx}`)]),
+      el("div", { class: "self-end" }, [inputsUI.iconButton(Icons.Trash, () => removeGroup(idx))]),
     ]),
 
-  _ColorStatsRow: (group, idx) => inputsUI.colorInput(group.value, (val, el) => updateGroup(idx, "value", val, el), `clr-${idx}`),
+  _ColorStatsRow: () => null,
 
   _ColorSolverRow: (group, idx, config) => {
     if (config.pluginMode !== "adaptiveEngine") return null;
@@ -306,203 +328,132 @@ const Components = {
   // --- ROLE COMPONENTS ---
   RoleGroupCard: (role, idx, config) => {
     const ui = _getRoleUI(role._id);
-    const vars = role.variationOverride ? (role.roleVariations || []) : (config.variations || []);
-    const bSel = role.baseSelection || config.baseSelection || "By Contrast";
-    const findBaseBy = bSel === "By Index" ? "index" : "contrast";
-    const mappingMode = role.mappingMode || "auto";
-    const spreadUnit = role.spreadUnit || config.spreadUnit || "steps";
     const useGlobal = !role.variationOverride;
-    const isAuto = mappingMode === "auto";
-    const isSteps = spreadUnit === "steps";
-    const scaleLen = config.scaleLength || 25;
-    const mid = Math.floor(scaleLen / 2);
-    const center = Math.floor(vars.length / 2);
-    const lightBase = role.baseIndex !== undefined ? role.baseIndex : mid;
-    const darkBase = role.darkBaseIndex !== undefined ? role.darkBaseIndex : lightBase;
-    const spread = parseFloat(role.spread) || 1;
-    const minC = parseFloat(role.minContrast) || 4.5;
-    const cGap = parseFloat(role.contrastGap) || 1.5;
-
-    function summary() {
-      const base = findBaseBy === "index" ? "By Index" : "By Contrast";
-      const spr = isSteps ? "Steps" : "Contrast";
-      const mode = isAuto ? "Auto" : "Manual";
-      const vStr = useGlobal ? "Global" : `Custom (${vars.length})`;
-      return `${base} · ${spr} · ${mode} · ${vStr}`;
-    }
+    const vars = useGlobal ? config.variations || [] : role.roleVariations || [];
 
     // ── TABLE ──
     function buildTable() {
-      const roCls = "w-full h-[24px] text-[11px] px-1 text-[var(--text-muted)] bg-transparent cursor-default tabular-nums outline-none";
-      const edCls = "w-full h-[24px] text-[11px] px-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[4px] outline-none text-[var(--text-primary)] tabular-nums";
-      const nameCls = "w-full h-[24px] text-[11px] px-1 rounded-[4px] outline-none"
-        + (useGlobal ? " bg-transparent text-[var(--text-muted)] cursor-default" : " bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)]");
-      const cols = isSteps
-        ? `16px 1fr 48px 54px 54px${!useGlobal ? " 20px" : ""}`
-        : `16px 1fr 48px 76px${!useGlobal ? " 20px" : ""}`;
-
-      const hdrLabels = isSteps ? ["#", "Alias", "Short", "Step ☀", "Step 🌙"] : ["#", "Alias", "Short", "Contrast"];
-      if (!useGlobal) hdrLabels.push("");
+      const roLabelCls = "text-[11px] px-1.5 text-[var(--text-muted)] truncate";
+      const edInpCls = "w-full h-[26px] text-[11px] px-1.5 rounded-[4px] outline-none bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)]";
+      const cols = useGlobal ? "16px 1fr 88px" : `16px 1fr 56px 88px 24px`;
+      const hdrCols = useGlobal ? ["#", "Variation", "Min Contrast"] : ["#", "Name", "Short", "Min Contrast", ""];
 
       const rows = vars.map((v, vi) => {
-        const offset = vi - center;
-        const lightStep = Math.max(0, Math.min(scaleLen - 1, Math.round(lightBase + offset * spread)));
-        const darkStep = Math.max(0, Math.min(scaleLen - 1, Math.round(darkBase + offset * spread)));
-        const cVal = Math.max(1.01, +(minC + offset * cGap).toFixed(2));
+        const tgtVal = (role.variationTargets || [])[vi] !== undefined ? role.variationTargets[vi] : 4.5;
 
-        const nameInp = el("input", {
-          type: "text", value: v.name || "", readOnly: useGlobal || null,
-          class: nameCls,
-          oninput: useGlobal ? null : (e) => {
-            if (role.variationOverride) updateRoleVariation(idx, vi, "name", e.target.value);
-            else updateSharedVariation(vi, "name", e.target.value);
-          },
+        const nameCell = useGlobal
+          ? el("span", { class: roLabelCls }, `${v.name || "—"}${v.shorthand ? ` (${v.shorthand})` : ""}`)
+          : el("input", {
+              type: "text",
+              value: v.name || "",
+              class: edInpCls,
+              oninput: (e) => (role.variationOverride ? updateRoleVariation(idx, vi, "name", e.target.value) : updateSharedVariation(vi, "name", e.target.value)),
+            });
+
+        const shortCell = useGlobal
+          ? null
+          : el("input", {
+              type: "text",
+              value: v.shorthand || "",
+              class: edInpCls,
+              oninput: (e) => (role.variationOverride ? updateRoleVariation(idx, vi, "shorthand", e.target.value) : updateSharedVariation(vi, "shorthand", e.target.value)),
+            });
+
+        const contrastInp = el("input", {
+          type: "number",
+          step: "0.1",
+          min: "1",
+          max: "21",
+          value: String(tgtVal),
+          class: edInpCls,
+          onchange: (e) => updateRoleVariationTarget(idx, vi, e.target.value),
         });
-        const shortInp = el("input", {
-          type: "text", value: v.shorthand || "", readOnly: useGlobal || null,
-          class: "w-full h-[24px] text-[11px] px-1 rounded-[4px] outline-none"
-            + (useGlobal ? " bg-transparent text-[var(--text-muted)] cursor-default" : " bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)]"),
-          oninput: useGlobal ? null : (e) => {
-            if (role.variationOverride) updateRoleVariation(idx, vi, "shorthand", e.target.value);
-            else updateSharedVariation(vi, "shorthand", e.target.value);
+
+        const rmBtn = !useGlobal
+          ? inputsUI.btn("ghost", {
+              size: "xs",
+              square: true,
+              icon: "−",
+              disabled: vars.length <= 1,
+              class: "hover:text-[var(--danger)] hover:bg-[var(--danger)]/10",
+              onclick: () => (role.variationOverride ? removeRoleVariation(idx, vi) : removeSharedVariation(vi)),
+            })
+          : null;
+
+        return el(
+          "div",
+          {
+            class: `grid px-2 py-1 items-center gap-1.5 ${vi < vars.length - 1 ? "border-b border-[var(--border)]/40" : ""} ${vi % 2 ? "bg-[var(--bg-input)]/20" : ""}`,
+            style: `grid-template-columns:${cols}`,
           },
-        });
-
-        let valueCells;
-        if (isSteps) {
-          const ltVal = isAuto ? lightStep : ((role.variationTargetsLight || [])[vi] !== undefined ? role.variationTargetsLight[vi] : lightStep);
-          const dkVal = isAuto ? darkStep  : ((role.variationTargetsDark  || [])[vi] !== undefined ? role.variationTargetsDark[vi]  : darkStep);
-          const ltInp = el("input", { type: "number", value: ltVal, readOnly: isAuto || null, class: isAuto ? roCls : edCls,
-            onchange: isAuto ? null : (e) => updateRole(idx, "variationTargetL:" + vi, e.target.value) });
-          const dkInp = el("input", { type: "number", value: dkVal, readOnly: isAuto || null, class: isAuto ? roCls : edCls,
-            onchange: isAuto ? null : (e) => updateRole(idx, "variationTargetD:" + vi, e.target.value) });
-          valueCells = [ltInp, dkInp];
-        } else {
-          const tgtVal = isAuto ? cVal : ((role.variationTargets || [])[vi] !== undefined ? role.variationTargets[vi] : cVal);
-          const cInp = el("input", { type: "number", step: "0.1", value: tgtVal, readOnly: isAuto || null, class: isAuto ? roCls : edCls,
-            onchange: isAuto ? null : (e) => updateRoleVariationTarget(idx, vi, e.target.value) });
-          valueCells = [cInp];
-        }
-
-        const rmBtn = !useGlobal ? el("button", {
-          class: "w-[18px] h-[18px] flex items-center justify-center rounded-[3px] text-[11px] text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-all",
-          disabled: vars.length <= 1,
-          onclick: () => role.variationOverride ? removeRoleVariation(idx, vi) : removeSharedVariation(vi),
-        }, "−") : null;
-
-        return el("div", {
-          class: `grid px-2 py-1 items-center gap-1 ${vi < vars.length - 1 ? "border-b border-[var(--border)]/40" : ""} ${vi % 2 ? "bg-[var(--bg-input)]/20" : ""}`,
-          style: `grid-template-columns:${cols}`,
-        }, [
-          el("span", { class: "text-[10px] text-[var(--text-muted)]" }, String(vi + 1)),
-          nameInp,
-          shortInp,
-          ...valueCells,
-          rmBtn,
-        ].filter(Boolean));
+          [el("span", { class: "text-[10px] text-[var(--text-muted)] tabular-nums" }, String(vi + 1)), nameCell, shortCell, contrastInp, rmBtn].filter(Boolean),
+        );
       });
 
-      const addRow = !useGlobal ? el("div", { class: "flex px-2 py-1.5 border-t border-[var(--border)]/40" }, [
-        el("button", {
-          class: "text-[10px] text-[var(--accent)] hover:underline",
-          onclick: () => role.variationOverride ? addRoleVariation(idx) : addSharedVariation(),
-        }, "+ Add variation"),
-      ]) : null;
+      const addRow = !useGlobal
+        ? el("div", { class: "flex px-2 py-1.5 border-t border-[var(--border)]/40" }, [
+            inputsUI.btn("ghost", {
+              size: "sm",
+              label: "+ Add variation",
+              class: "text-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10",
+              onclick: () => (role.variationOverride ? addRoleVariation(idx) : addSharedVariation()),
+            }),
+          ])
+        : null;
 
-      return el("div", { class: "rounded-[8px] border border-[var(--border)] overflow-hidden" }, [
-        el("div", {
-          class: "grid px-2 py-1 bg-[var(--bg-base)] border-b border-[var(--border)]",
-          style: `grid-template-columns:${cols}`,
-        }, hdrLabels.map(h => el("span", { class: "text-[10px] font-bold text-[var(--text-muted)]" }, h))),
-        ...rows,
-        addRow,
-      ].filter(Boolean));
-    }
-
-    // ── VALUE INPUTS (auto mode only) ──
-    function buildValueInputs() {
-      if (!isAuto) return null;
-      const children = [];
-      if (findBaseBy === "index") {
-        children.push(_labelledInput("Light Base Step", "number", String(lightBase + 1), { min: "1", max: String(scaleLen), onchange: (e) => updateRole(idx, "baseIndex", parseInt(e.target.value) - 1) }));
-        children.push(_labelledInput("Dark Base Step",  "number", String(darkBase + 1),  { min: "1", max: String(scaleLen), onchange: (e) => updateRole(idx, "darkBaseIndex", parseInt(e.target.value) - 1) }));
-      } else {
-        children.push(_labelledInput("Min Contrast", "number", String(minC), { step: "0.1", min: "1", max: "21", onchange: (e) => updateRole(idx, "minContrast", e.target.value) }));
-      }
-      const sLabel = isSteps ? "Spread (steps)" : "Spread (contrast Δ)";
-      const sVal   = isSteps ? String(spread) : String(cGap);
-      const sField = isSteps ? "spread" : "contrastGap";
-      children.push(_labelledInput(sLabel, "number", sVal, { step: isSteps ? "1" : "0.1", min: "0", onchange: (e) => updateRole(idx, sField, e.target.value) }));
-      return el("div", { class: "flex gap-2" }, children);
-    }
-
-    // ── SETTINGS PANEL (gear view) ──
-    function buildSettings() {
-      const rows = [
-        _settingsRow("Find base by", _pills(
-          [{ value: "contrast", label: "Min Contrast" }, { value: "index", label: "By Index" }],
-          findBaseBy, v => updateRole(idx, "baseSelection", v === "index" ? "By Index" : "By Contrast")
-        )),
-        _settingsRow("Spread unit", _pills(
-          [{ value: "steps", label: "Steps" }, { value: "contrast", label: "Contrast" }],
-          spreadUnit, v => updateRole(idx, "spreadUnit", v)
-        )),
-        _settingsRow("Mapping mode", _pills(
-          [{ value: "auto", label: "Auto" }, { value: "manual", label: "Manual" }],
-          mappingMode, v => updateRole(idx, "mappingMode", v)
-        )),
-        el("div", { class: "border-t border-[var(--border)]/60" }),
-        _settingsRow("Variations", _pills(
-          [{ value: "global", label: "Use global" }, { value: "custom", label: "Custom" }],
-          useGlobal ? "global" : "custom",
-          v => {
-            if (v === "custom" && !role.variationOverride) toggleRoleVariationOverride(idx);
-            else if (v === "global" && role.variationOverride) toggleRoleVariationOverride(idx);
-          }
-        )),
-        !useGlobal ? el("div", { class: "flex justify-end" }, [
-          el("button", {
-            class: "text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline",
-            onclick: () => resetRoleVariationsToShared(idx),
-          }, "Reset to defaults"),
-        ]) : null,
-      ].filter(Boolean);
-      return el("div", { class: "space-y-2.5 p-3" }, rows);
+      return el(
+        "div",
+        { class: "overflow-hidden" },
+        [
+          el(
+            "div",
+            { class: `grid px-2 py-1 bg-[var(--bg-base)] border-b border-[var(--border)] gap-1.5`, style: `grid-template-columns:${cols}` },
+            hdrCols.map((h) => el("span", { class: "text-[10px] font-bold text-[var(--text-muted)]" }, h)),
+          ),
+          ...rows,
+          addRow,
+        ].filter(Boolean),
+      );
     }
 
     // ── CARD ASSEMBLY ──
-    const nameRow = el("div", { class: "grid gap-2 items-end", style: "grid-template-columns:20px 1fr 72px 40px" }, [
+    const nameRow = el("div", { class: "grid gap-2 items-end", style: "grid-template-columns:20px 1fr 96px 32px" }, [
       el("div", { class: "flex flex-col gap-0.5 self-center shrink-0" }, [
-        el("button", { onclick: () => moveRole(idx, -1), disabled: idx === 0, class: "w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-20" }, "▲"),
+        inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveRole(idx, -1), disabled: idx === 0 }),
         el("span", { class: "drag-handle text-[var(--text-muted)] cursor-grab text-[14px] leading-none text-center" }, "⠿"),
-        el("button", { onclick: () => moveRole(idx, 1), disabled: idx === config.roles.length - 1, class: "w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] disabled:opacity-20" }, "▼"),
+        inputsUI.btn("ghost", { size: "xs", square: true, icon: "▼", onclick: () => moveRole(idx, 1), disabled: idx === config.roles.length - 1 }),
       ]),
       inputsUI.input({ id: `role-${idx}-name`, value: role.name || "", oninput: (e) => updateRole(idx, "name", e.target.value) }, "Role Name"),
-      inputsUI.input({ id: `role-${idx}-short`, value: role.shorthand || "", oninput: (e) => updateRole(idx, "shorthand", e.target.value) }, "Short"),
+      inputsUI.input({ id: `role-${idx}-short`, value: role.shorthand || "", oninput: (e) => updateRole(idx, "shorthand", e.target.value) }, "Shorthand"),
       inputsUI.iconButton(Icons.Trash, () => removeRole(idx)),
     ]);
 
-    const gearActive = ui.gear;
-    const header = el("div", { class: "flex items-center gap-2 px-3 py-2 bg-[var(--bg-input)] cursor-pointer select-none", onclick: () => { ui.open = !ui.open; if (!ui.open) ui.gear = false; renderRoles(); } }, [
-      el("span", { class: "text-[11px] text-[var(--text-muted)] w-3 shrink-0" }, ui.open ? "▾" : "▸"),
-      el("span", { class: "text-[12px] font-medium text-[var(--text-primary)] flex-1" }, `Variations & Mapping (${vars.length})`),
-      el("span", { class: "text-[10px] text-[var(--text-muted)] truncate max-w-[180px]" }, summary()),
-      el("button", {
-        class: `w-[22px] h-[22px] shrink-0 flex items-center justify-center rounded-[5px] text-[12px] transition-all ${gearActive ? "bg-[var(--accent)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"}`,
-        title: "Mapping settings",
-        onclick: (e) => { e.stopPropagation(); ui.gear = !ui.gear; if (!ui.open) ui.open = true; renderRoles(); },
-      }, "⚙"),
-    ]);
+    const scopeBadge = el(
+      "span",
+      {
+        class: `text-[10px] px-1.5 py-0.5 rounded-full font-medium cursor-pointer select-none ${useGlobal ? "bg-[var(--bg-hover)] text-[var(--text-muted)]" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`,
+        title: useGlobal ? "Click to use role-specific variations" : "Click to use global variations",
+        onclick: (e) => { e.stopPropagation(); toggleRoleVariationOverride(idx); },
+      },
+      useGlobal ? "Global" : "Role",
+    );
 
-    const body = ui.open ? el("div", { class: "p-2.5 space-y-2" }, [
-      ui.gear ? buildSettings() : null,
-      !ui.gear ? buildValueInputs() : null,
-      !ui.gear ? buildTable() : null,
-      !ui.gear && !isAuto ? el("div", { class: "flex items-center justify-between pt-0.5" }, [
-        el("span", { class: "text-[10px] text-[var(--text-muted)]" }, "All values entered manually"),
-        el("button", { class: "text-[10px] text-[var(--accent)] hover:underline", onclick: () => updateRole(idx, "mappingMode", "auto") }, "Reset to Auto"),
-      ]) : null,
-    ].filter(Boolean)) : null;
+    const header = el(
+      "div",
+      {
+        class: "flex items-center gap-2 px-3 py-2 bg-[var(--bg-input)] cursor-pointer select-none",
+        onclick: () => { ui.open = !ui.open; renderRoles(); },
+      },
+      [
+        el("span", { class: "flex items-center justify-center w-3 shrink-0", style: { transform: ui.open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease" } }, Icons.ChevronDown),
+        el("span", { class: "text-[12px] font-medium text-[var(--text-primary)] flex-1" }, `Variations (${vars.length})`),
+        scopeBadge,
+      ],
+    );
+
+    const body = ui.open
+      ? el("div", { class: "py-2" }, [buildTable()])
+      : null;
 
     const section = el("div", { class: "border border-[var(--border)] rounded-[10px] overflow-hidden" }, [header, body].filter(Boolean));
 

@@ -236,12 +236,11 @@ function tonalScaleMaker(hexIn, scaleLength, scaleAlgo) {
 function variableMaker(config) {
   const { colors, themes, scaleLength } = config;
   const errors = { critical: [], warnings: [], notices: [] };
-  const lightBg = normalizeHex(themes[0].bg) || "#FFFFFF";
-  const darkBg = normalizeHex(themes[1].bg) || "#000000";
 
-  const tonalScales = config.pluginMode !== "adaptiveEngine" ? _generateTonalScales(colors, scaleLength, config.scaleAlgorithm, config.scaleStepNames, lightBg, darkBg) : Object.create(null);
+  const tonalScales = config.pluginMode !== "adaptiveEngine" ? _generateTonalScales(colors, scaleLength, config.scaleAlgorithm, config.scaleStepNames, themes) : Object.create(null);
 
-  const tokensCollection = { light: {}, dark: {} };
+  const tokensCollection = {};
+  for (const mode of themes) tokensCollection[mode.name.toLowerCase()] = {};
   for (const mode of themes) {
     const modeName = mode.name.toLowerCase();
     const themeTokens = tokensCollection[modeName];
@@ -261,9 +260,10 @@ function variableMaker(config) {
  * Build tonal scales for all colors. Each step stores value, naming, and contrast ratios against both light and dark backgrounds.
  * @returns {object} { [colorName]: { [stepName]: { value, stepName, shorthand, description, contrast } } }
  */
-function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, lightBg, darkBg) {
+function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, themes) {
   const collection = Object.create(null);
   const names = stepNames || seriesMaker(scaleLength);
+  const themeBgs = themes.map((t) => ({ key: t.name.toLowerCase(), bg: normalizeHex(t.bg) || "#FFFFFF" }));
   for (const color of colors) {
     const rampData = tonalScaleMaker(color.value, scaleLength, scaleAlgo);
     const ramp = Object.create(null);
@@ -271,15 +271,16 @@ function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, lightBg
     for (let i = 0; i < scaleLength; i++) {
       const value = normalizeHex(rampData[i]);
       const weight = names[i];
+      const contrast = {};
+      for (const { key, bg } of themeBgs) {
+        contrast[key] = { ratio: contrastRatio(value, bg), rating: contrastRating(value, bg) };
+      }
       ramp[weight] = {
         value,
         stepName: `${color.name}-${weight}`,
         shorthand: `${color.shorthand}-${weight}`,
         description: color.description || "",
-        contrast: {
-          light: { ratio: contrastRatio(value, lightBg), rating: contrastRating(value, lightBg) },
-          dark: { ratio: contrastRatio(value, darkBg), rating: contrastRating(value, darkBg) },
-        },
+        contrast,
       };
     }
   }
@@ -340,6 +341,7 @@ function _solveDirectMode(color, mode, config, groupOutput, errors) {
  */
 function _processTonalMode(color, mode, config, tonalScales, groupOutput, errors) {
   const modeName = mode.name.toLowerCase();
+  const isDark = relLum(normalizeHex(mode.bg) || "#FFFFFF") < 0.4;
   const tonalScale = tonalScales[color.name];
   const stepNames = config.scaleStepNames || seriesMaker(config.scaleLength);
 
@@ -351,9 +353,9 @@ function _processTonalMode(color, mode, config, tonalScales, groupOutput, errors
     if (config.baseSelectionMode === "Manual") {
       _mapManualSteps(color, role, variations, tonalScale, stepNames, modeName, roleOutput);
     } else if (config.spreadUnit === "contrast") {
-      _mapByContrastTarget(color, role, variations, tonalScale, stepNames, modeName, roleOutput, errors);
+      _mapByContrastTarget(color, role, variations, tonalScale, stepNames, modeName, isDark, roleOutput, errors);
     } else {
-      _mapByStepOffset(color, role, variations, tonalScale, stepNames, modeName, roleOutput, config.roleMapping, errors);
+      _mapByStepOffset(color, role, variations, tonalScale, stepNames, modeName, isDark, roleOutput, config.roleMapping, errors);
     }
   }
 }
@@ -372,8 +374,7 @@ function _mapManualSteps(color, role, variations, ramp, stepNames, modeName, out
  * Contrast-target: find the ramp step whose contrast ratio is closest to
  * baseContrast ± (contrastGap × variation offset).
  */
-function _mapByContrastTarget(color, role, variations, ramp, stepNames, modeName, output, errors) {
-  const isDark = modeName === "dark";
+function _mapByContrastTarget(color, role, variations, ramp, stepNames, modeName, isDark, output, errors) {
   const baseC = _findBaseContrast(role, ramp, stepNames, modeName, isDark);
   const baseVarIdx = Math.floor(variations.length / 2);
   variations.forEach((_, vi) => {
@@ -409,8 +410,7 @@ function _mapByContrastTarget(color, role, variations, ramp, stepNames, modeName
  * growthDir (+1 or -1) accounts for ramps that increase contrast toward either end.
  * baseIdx is clamped so no variation falls off the ramp.
  */
-function _mapByStepOffset(color, role, variations, ramp, stepNames, modeName, output, mappingType, errors) {
-  const isDark = modeName === "dark";
+function _mapByStepOffset(color, role, variations, ramp, stepNames, modeName, isDark, output, mappingType, errors) {
   let baseIdx = mappingType === "By Contrast" ? _findBaseIndexByContrast(role, ramp, stepNames, modeName, isDark, color.name, role.name, errors) : _findBaseIndexExplicit(role, stepNames, isDark);
 
   const baseVarIdx = Math.floor(variations.length / 2);

@@ -17,13 +17,18 @@ function toggleSection(id, event) {
 }
 
 function showSheet(id) {
-  document.getElementById(id).classList.add("open");
+  const sheet = document.getElementById(id);
+  sheet.removeAttribute("inert");
+  sheet.classList.add("open");
   document.getElementById("overlay").classList.add("active");
   document.body.style.overflow = "hidden";
 }
 
 function hideSheets() {
-  document.querySelectorAll(".bottom-sheet").forEach((s) => s.classList.remove("open"));
+  document.querySelectorAll(".bottom-sheet").forEach((s) => {
+    s.classList.remove("open");
+    s.setAttribute("inert", "");
+  });
   document.getElementById("overlay").classList.remove("active");
   document.body.style.overflow = "";
 }
@@ -82,6 +87,8 @@ function closeSettings(cancel) {
   }
   _settingsSnapshot = null;
   document.getElementById("settings-screen").classList.add("hidden");
+  if (typeof renderPreviewTabs === "function") renderPreviewTabs();
+  schedulePreview();
 }
 
 function switchSettingsTab(tab) {
@@ -126,9 +133,103 @@ function moveGroup(idx, dir) {
   renderColorGroups();
 }
 
-function addGroup() {
+const _PRESET_COLORS = [
+  { name: "Crimson",    shorthand: "cr", value: "DC143C" },
+  { name: "Coral",      shorthand: "co", value: "FF6B6B" },
+  { name: "Tomato",     shorthand: "to", value: "FF4500" },
+  { name: "Orange",     shorthand: "or", value: "FF7F00" },
+  { name: "Amber",      shorthand: "am", value: "F59E0B" },
+  { name: "Gold",       shorthand: "gd", value: "FFD700" },
+  { name: "Lime",       shorthand: "li", value: "84CC16" },
+  { name: "Emerald",    shorthand: "em", value: "10B981" },
+  { name: "Teal",       shorthand: "te", value: "14B8A6" },
+  { name: "Cyan",       shorthand: "cy", value: "06B6D4" },
+  { name: "Sky",        shorthand: "sk", value: "0EA5E9" },
+  { name: "Blue",       shorthand: "bl", value: "3B82F6" },
+  { name: "Cobalt",     shorthand: "cb", value: "0047AB" },
+  { name: "Indigo",     shorthand: "in", value: "6366F1" },
+  { name: "Violet",     shorthand: "vi", value: "7C3AED" },
+  { name: "Purple",     shorthand: "pu", value: "A855F7" },
+  { name: "Fuchsia",    shorthand: "fu", value: "D946EF" },
+  { name: "Pink",       shorthand: "pk", value: "EC4899" },
+  { name: "Rose",       shorthand: "ro", value: "F43F5E" },
+  { name: "Brown",      shorthand: "br", value: "92400E" },
+  { name: "Sienna",     shorthand: "si", value: "A0522D" },
+  { name: "Sand",       shorthand: "sa", value: "C2B280" },
+  { name: "Slate",      shorthand: "sl", value: "64748B" },
+  { name: "Stone",      shorthand: "st", value: "78716C" },
+  { name: "Zinc",       shorthand: "zn", value: "71717A" },
+  { name: "Gray",       shorthand: "gr", value: "6B7280" },
+  { name: "Neutral",    shorthand: "nt", value: "737373" },
+  { name: "Charcoal",   shorthand: "ch", value: "374151" },
+  { name: "Navy",       shorthand: "nv", value: "1E3A5F" },
+  { name: "Forest",     shorthand: "fo", value: "166534" },
+  { name: "Olive",      shorthand: "ol", value: "6B7C2C" },
+  { name: "Mint",       shorthand: "mn", value: "A7F3D0" },
+  { name: "Lavender",   shorthand: "lv", value: "C4B5FD" },
+  { name: "Peach",      shorthand: "pe", value: "FBBF9C" },
+  { name: "Blush",      shorthand: "bs", value: "FCA5A5" },
+  { name: "Cream",      shorthand: "cm", value: "FFFBEB" },
+  { name: "Ivory",      shorthand: "iv", value: "FFFFF0" },
+  { name: "Snow",       shorthand: "sn", value: "FFFAFA" },
+  { name: "White",      shorthand: "wh", value: "FFFFFF" },
+  { name: "Black",      shorthand: "bk", value: "000000" },
+  { name: "Midnight",   shorthand: "md", value: "121212" },
+  { name: "Obsidian",   shorthand: "ob", value: "1A1A2E" },
+  { name: "Magenta",    shorthand: "mg", value: "FF00FF" },
+  { name: "Turquoise",  shorthand: "tu", value: "40E0D0" },
+  { name: "Aqua",       shorthand: "aq", value: "00FFFF" },
+  { name: "Chartreuse", shorthand: "cz", value: "7FFF00" },
+  { name: "Maroon",     shorthand: "mr", value: "800000" },
+  { name: "Burgundy",   shorthand: "bg", value: "800020" },
+  { name: "Scarlet",    shorthand: "sc", value: "FF2400" },
+  { name: "Tangerine",  shorthand: "tg", value: "F28500" },
+];
+
+function _nextPresetColor() {
+  const usedNames = new Set(appState.colors.map((c) => c.name.toLowerCase()));
+  const usedShorthands = new Set(appState.colors.map((c) => (c.shorthand || "").toLowerCase()));
+  const available = _PRESET_COLORS.filter((p) => !usedNames.has(p.name.toLowerCase()) && !usedShorthands.has(p.shorthand.toLowerCase()));
+  if (available.length > 0) return available[Math.floor(Math.random() * available.length)];
   const n = appState.colors.length + 1;
-  appState.colors.unshift({ _id: generateId(), name: `color${n}`, shorthand: `C${n}`, value: "888888" });
+  return { name: `Color ${n}`, shorthand: `c${n}`, value: "888888" };
+}
+
+const _PRESET_ROLES = [
+  { name: "Text",        shorthand: "tx" },
+  { name: "Fill",        shorthand: "fi" },
+  { name: "Background",  shorthand: "bg" },
+  { name: "Border",      shorthand: "bd" },
+  { name: "Icon",        shorthand: "ic" },
+  { name: "Surface",     shorthand: "su" },
+  { name: "Overlay",     shorthand: "ov" },
+  { name: "Shadow",      shorthand: "sh" },
+  { name: "Accent",      shorthand: "ac" },
+  { name: "Muted",       shorthand: "mu" },
+  { name: "Subtle",      shorthand: "sb" },
+  { name: "Emphasis",    shorthand: "em" },
+  { name: "Link",        shorthand: "lk" },
+  { name: "Placeholder", shorthand: "ph" },
+  { name: "Disabled",    shorthand: "ds" },
+  { name: "Success",     shorthand: "ok" },
+  { name: "Warning",     shorthand: "wn" },
+  { name: "Error",       shorthand: "er" },
+  { name: "Info",        shorthand: "nf" },
+  { name: "Inverse",     shorthand: "iv" },
+];
+
+function _nextPresetRole() {
+  const usedNames = new Set(appState.roles.map((r) => r.name.toLowerCase()));
+  const usedShorthands = new Set(appState.roles.map((r) => (r.shorthand || "").toLowerCase()));
+  const available = _PRESET_ROLES.filter((p) => !usedNames.has(p.name.toLowerCase()) && !usedShorthands.has(p.shorthand.toLowerCase()));
+  if (available.length > 0) return available[Math.floor(Math.random() * available.length)];
+  const n = appState.roles.length + 1;
+  return { name: `Role ${n}`, shorthand: `r${n}` };
+}
+
+function addGroup() {
+  const preset = _nextPresetColor();
+  appState.colors.unshift({ _id: generateId(), name: preset.name, shorthand: preset.shorthand, value: preset.value });
   renderColorGroups();
   schedulePreview();
 }
@@ -159,12 +260,12 @@ function moveRole(idx, dir) {
 }
 
 function addRole() {
-  const n = appState.roles.length + 1;
+  const preset = _nextPresetRole();
   const mid = Math.floor(appState.scaleLength / 2);
   appState.roles.unshift({
     _id: generateId(),
-    name: "Role " + n,
-    shorthand: `r-${n}`,
+    name: preset.name,
+    shorthand: preset.shorthand,
     spread: 2,
     minContrast: 4.5,
     baseIndex: mid,
@@ -432,6 +533,77 @@ function syncOutputToggles() {
   _syncNameFormatPreview();
 }
 
+// ── SETTINGS: THEMES LIST ──
+
+function renderSettingsThemes() {
+  const container = document.getElementById("settings-themes-list");
+  if (!container) return;
+  const themes = appState.themes || [];
+  const canDelete = themes.length > 1;
+
+  container.innerHTML = "";
+  themes.forEach((theme, idx) => {
+    const hexVal = theme.bg || "FFFFFF";
+    const row = el("div", { class: "flex items-center gap-1.5" }, [
+      el("input", {
+        type: "text",
+        value: theme.name || "",
+        placeholder: "Mode name",
+        oninput: (e) => { updateTheme(idx, "name", e.target.value); renderPreviewTabs(); },
+        class: "flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
+      }),
+      el("div", { class: "relative flex items-center" }, [
+        el("input", {
+          type: "color",
+          value: "#" + hexVal,
+          id: `theme-picker-${idx}`,
+          oninput: (e) => {
+            const clean = e.target.value.replace("#", "").toUpperCase();
+            const textEl = document.getElementById(`theme-hex-${idx}`);
+            const swatch = document.getElementById(`theme-swatch-${idx}`);
+            if (textEl) textEl.value = clean;
+            if (swatch) swatch.style.background = "#" + clean;
+            updateTheme(idx, "bg", clean);
+            schedulePreview();
+          },
+          class: "absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10",
+        }),
+        el("div", {
+          class: "size-[32px] rounded-[8px] border border-[var(--border)] cursor-pointer shrink-0",
+          style: `background:#${hexVal}`,
+          id: `theme-swatch-${idx}`,
+        }),
+      ]),
+      el("input", {
+        type: "text",
+        value: hexVal,
+        placeholder: "RRGGBB",
+        id: `theme-hex-${idx}`,
+        maxlength: 6,
+        oninput: (e) => {
+          const clean = sanitizeHex(e.target.value);
+          updateTheme(idx, "bg", clean);
+          const swatch = document.getElementById(`theme-swatch-${idx}`);
+          const picker = document.getElementById(`theme-picker-${idx}`);
+          if (swatch) swatch.style.background = "#" + clean;
+          if (picker && clean.length === 6) picker.value = "#" + clean;
+          schedulePreview();
+        },
+        class: "w-[80px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] uppercase outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)] font-mono",
+      }),
+      inputsUI.btn("danger", { size: "md", square: true, icon: Icons.Close, disabled: !canDelete, onclick: () => { removeTheme(idx); renderSettingsThemes(); renderPreviewTabs(); schedulePreview(); } }),
+    ]);
+    container.appendChild(row);
+  });
+}
+
+function addThemeRow() {
+  addTheme();
+  renderSettingsThemes();
+  renderPreviewTabs();
+  schedulePreview();
+}
+
 // ── SETTINGS: VARIATIONS LIST ──
 
 function renderSettingsVariations() {
@@ -445,8 +617,8 @@ function renderSettingsVariations() {
     container.appendChild(
       el("div", { class: "flex items-center gap-1.5" }, [
         el("div", { class: "flex flex-col gap-0.5 shrink-0" }, [
-          el("button", { onclick: () => moveSharedVariation(idx, -1), disabled: idx === 0, class: "w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]" }, "▲"),
-          el("button", { onclick: () => moveSharedVariation(idx, 1), disabled: idx === vars.length - 1, class: "w-4 h-4 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-20 text-[9px]" }, "▼"),
+          inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveSharedVariation(idx, -1), disabled: idx === 0 }),
+          inputsUI.btn("ghost", { size: "xs", square: true, icon: "▼", onclick: () => moveSharedVariation(idx, 1), disabled: idx === vars.length - 1 }),
         ]),
         el("input", {
           type: "text",
@@ -462,7 +634,7 @@ function renderSettingsVariations() {
           oninput: (e) => updateSharedVariation(idx, "shorthand", e.target.value),
           class: "w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
         }),
-        el("button", { onclick: () => removeSharedVariation(idx), disabled: !canDelete, class: "w-[28px] h-[32px] shrink-0 flex items-center justify-center rounded-[8px] bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20 disabled:opacity-30 disabled:cursor-not-allowed text-[13px]" }, "✕"),
+        inputsUI.btn("danger", { size: "md", square: true, icon: Icons.Close, onclick: () => removeSharedVariation(idx), disabled: !canDelete }),
       ]),
     );
   });
@@ -474,21 +646,6 @@ function updateSettingsFromInputs() {
   appState.name = document.getElementById("setting-name").value;
   appState.tonalScaleCollectionName = document.getElementById("setting-tonalScaleCollectionName").value.trim() || "_scale";
   appState.tokenCollectionName = document.getElementById("setting-tokenCollectionName").value.trim() || "contextual";
-
-  const readHexInput = (id) => {
-    const inputEl = document.getElementById(id);
-    const clean = sanitizeHex(inputEl.value);
-    if (inputEl.value !== clean) inputEl.value = clean;
-    return clean;
-  };
-
-  if (!appState.themes)
-    appState.themes = [
-      { name: "light", bg: "FFFFFF" },
-      { name: "dark", bg: "000000" },
-    ];
-  appState.themes[0].bg = readHexInput("setting-light-bg");
-  appState.themes[1].bg = readHexInput("setting-dark-bg");
 
   const wCount = parseInt(document.getElementById("setting-scaleLength").value);
   appState.scaleLength = isNaN(wCount) ? 25 : Math.max(1, Math.min(100, wCount));
@@ -518,9 +675,7 @@ function syncInputsFromState() {
   document.getElementById("setting-tonalScaleCollectionName").value = appState.tonalScaleCollectionName || "_scale";
   document.getElementById("setting-tokenCollectionName").value = appState.tokenCollectionName || "contextual";
   syncOutputToggles();
-  const themes = appState.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
-  document.getElementById("setting-light-bg").value = themes[0].bg;
-  document.getElementById("setting-dark-bg").value = themes[1].bg;
+  renderSettingsThemes();
 
   document.getElementById("setting-scaleLength").value = appState.scaleLength;
   document.getElementById("setting-scaleAlgorithm").value = appState.scaleAlgorithm || "Natural";

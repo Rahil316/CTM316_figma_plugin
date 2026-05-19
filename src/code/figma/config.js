@@ -29,10 +29,7 @@ function translateConfig(appState) {
     variations: variations.map(function (v) {
       return Object.assign({}, v);
     }),
-    themes: [
-      { name: "light", bg: themes[0].bg || "FFFFFF" },
-      { name: "dark", bg: themes[1].bg || "000000" },
-    ],
+    themes: _deduplicateThemeNames(themes),
     embedDirectly: appState.embedDirectly || false,
     variableStructure: appState.variableStructure || "color",
     useShorthandColors: appState.useShorthandColors || false,
@@ -57,6 +54,16 @@ function _parseStepNames(appState, count) {
   const names = userNames.slice();
   while (names.length < count) names.push(String(names.length + 1));
   return names.slice(0, count);
+}
+
+function _deduplicateThemeNames(themes) {
+  const seen = {};
+  return (themes || [{ name: "Light", bg: "FFFFFF" }, { name: "Dark", bg: "000000" }]).map((t) => {
+    const base = (t.name || "Theme").trim();
+    if (!seen[base]) { seen[base] = 1; return { name: base, bg: t.bg || "FFFFFF" }; }
+    seen[base]++;
+    return { name: `${base} ${seen[base]}`, bg: t.bg || "FFFFFF" };
+  });
 }
 
 function _parseVariations(appState) {
