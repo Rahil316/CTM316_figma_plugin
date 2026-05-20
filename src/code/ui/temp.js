@@ -26,7 +26,8 @@ const LAB_ENABLED = true;
       const closeBtn = document.getElementById("close-more");
       if (closeBtn) closeBtn.click();
       // TODO: open lab overlay if needed in the future
-      alert("Design Lab placeholder — wire up overlay here.");
+      // TODO (#design-lab): replace alert with actual overlay when Design Lab is implemented
+      alert("Design Lab — not yet implemented.");
     };
 
     if (anchor && anchor.parentNode) {

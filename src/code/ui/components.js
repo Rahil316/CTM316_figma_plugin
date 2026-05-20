@@ -106,7 +106,10 @@ const el = (tag, attrs = {}, children = []) => {
     if (!child) return;
     if (typeof child === "string" || typeof child === "number") {
       const str = String(child);
-      if (str.trim().startsWith("<")) {
+      const trimmed = str.trim();
+      // Only parse as markup for SVG strings (Icons.*). All other strings — including
+      // user-supplied names — are always inserted as safe text nodes.
+      if (trimmed.startsWith("<svg") || trimmed.startsWith("<path")) {
         const temp = document.createElement("div");
         temp.innerHTML = str;
         while (temp.firstChild) element.appendChild(temp.firstChild);
@@ -301,8 +304,6 @@ const Components = {
       el("div", { class: "self-end" }, [inputsUI.iconButton(Icons.Trash, () => removeGroup(idx), "danger", { "aria-label": "Delete color" })]),
     ]),
 
-  _ColorStatsRow: () => null,
-
   _ColorSolverRow: (group, idx, config) => {
     if (config.pluginMode !== "adaptiveEngine") return null;
     if (config.useGlobalAlgo !== false) return null;
@@ -342,7 +343,7 @@ const Components = {
 
   _ColorDescriptionRow: (group, idx, config) => (config.includeDescriptions ? inputsUI.input({ value: group.description || "", placeholder: "Optional...", oninput: (e) => updateGroup(idx, "description", e.target.value) }, "Description") : null),
 
-  ColorGroupCard: (group, idx, config) => [Components._ColorMainRow(group, idx, config), Components._ColorStatsRow(group, idx, config), Components._ColorSolverRow(group, idx, config), Components._ColorAlgoRow(group, idx, config), Components._ColorDescriptionRow(group, idx, config)].filter(Boolean),
+  ColorGroupCard: (group, idx, config) => [Components._ColorMainRow(group, idx, config), Components._ColorSolverRow(group, idx, config), Components._ColorAlgoRow(group, idx, config), Components._ColorDescriptionRow(group, idx, config)].filter(Boolean),
 
   _RoleAlgoRow: (role, idx, config) => {
     // Show only in adaptive engine mode, global algo off, scope = "role"

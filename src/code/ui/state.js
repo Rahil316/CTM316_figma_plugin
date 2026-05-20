@@ -85,7 +85,6 @@ const demoConfig = {
 };
 
 ensureIds(demoConfig);
-const _demoConfigStr = JSON.stringify(demoConfig);
 
 // ── APP STATE ──
 let appState = JSON.parse(JSON.stringify(demoConfig));
@@ -248,18 +247,6 @@ function setRole(idx, key, value) {
     let v = parseFloat(value);
     if (isNaN(v) || v < 1) v = 1;
     appState.roles[idx].variationTargets[vi] = Math.min(21, v);
-    return;
-  }
-  if (key.startsWith("variationTargetL:")) {
-    const vi = parseInt(key.slice("variationTargetL:".length));
-    if (!appState.roles[idx].variationTargetsLight) appState.roles[idx].variationTargetsLight = [];
-    appState.roles[idx].variationTargetsLight[vi] = Math.max(0, Math.min(appState.scaleLength - 1, parseInt(value) || 0));
-    return;
-  }
-  if (key.startsWith("variationTargetD:")) {
-    const vi = parseInt(key.slice("variationTargetD:".length));
-    if (!appState.roles[idx].variationTargetsDark) appState.roles[idx].variationTargetsDark = [];
-    appState.roles[idx].variationTargetsDark[vi] = Math.max(0, Math.min(appState.scaleLength - 1, parseInt(value) || 0));
     return;
   }
   if (key === "minContrast") {

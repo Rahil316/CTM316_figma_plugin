@@ -5,7 +5,7 @@
 const _FALLBACK_VARS = [1.5, 3.0, 4.5, 7.0, 12.0];
 const _getVariationTargets = () => typeof DEFAULT_VARIATION_TARGETS !== "undefined" ? DEFAULT_VARIATION_TARGETS : _FALLBACK_VARS; // eslint-disable-line no-undef
 
-// 3. CONFIG TRANSLATOR: Converts appState (UI format) into the format expected by variableMaker.
+// CONFIG TRANSLATOR: Converts appState (UI format) into the format expected by variableMaker.
 function translateConfig(appState) {
   const count = Math.max(1, parseInt(appState.scaleLength) || 23);
   const stepNames = _parseStepNames(appState, count);
@@ -26,8 +26,7 @@ function translateConfig(appState) {
     roles: _mapRoles(appState, variations, count),
     scaleLength: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",
-    useGlobalAlgo: appState.useGlobalAlgo !== false,
-    perColorAlgoScope: appState.perColorAlgoScope || "color",
+    // useGlobalAlgo / perColorAlgoScope: UI state persisted but not yet consumed by clrEngine — reserved for future per-color algorithm scoping
     pluginMode: appState.pluginMode || "tonalScalesBased",
     perRoleControls: !!appState.perRoleControls,
     spreadUnit: appState.spreadUnit || "steps",

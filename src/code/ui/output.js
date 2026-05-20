@@ -624,9 +624,21 @@ function renderPreviewPanel(result) {
     const tokens = result.colorTokens[themeKey] || {};
     renderThemePanel(panel, tokens, bgHex, result);
   });
-  // remove extras
+  // remove extras — if the active panel is one being removed, fall back to first visible tab
   panelArea.querySelectorAll(".preview-theme-panel").forEach((p) => {
-    if (parseInt(p.dataset.themeIdx) >= themes.length) p.remove();
+    if (parseInt(p.dataset.themeIdx) >= themes.length) {
+      if (p.classList.contains("active")) {
+        const firstTab = document.querySelector("#preview-screen .preview-tab-btn:not(.hidden)");
+        document.querySelectorAll("#preview-screen .preview-tab-btn").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll("#preview-content .preview-panel, #preview-theme-panels > div").forEach((q) => q.classList.remove("active"));
+        if (firstTab) {
+          firstTab.classList.add("active");
+          const fallback = document.getElementById(firstTab.dataset.target);
+          if (fallback) fallback.classList.add("active");
+        }
+      }
+      p.remove();
+    }
   });
 }
 
@@ -765,7 +777,7 @@ function handleSubmit(scope = "all") {
 function proceedWithSync() {
   showOverlay("loading-overlay");
   setTimeout(() => {
-    parent.postMessage({ pluginMessage: { type: "run-creater", state: appState, scope: pendingScope, savedState: getSavedState() } }, "*");
+    parent.postMessage({ pluginMessage: { type: "run-creator", state: appState, scope: pendingScope, savedState: getSavedState() } }, "*");
   }, 50);
 }
 
@@ -974,7 +986,7 @@ function showSystemBanners(errors, result = null) {
 
   const accessFails = [];
   if (result && result.colorTokens) {
-    for (const mode of ["light", "dark"]) {
+    for (const mode of Object.keys(result.colorTokens)) {
       const modeTokens = result.colorTokens[mode];
       if (!modeTokens) continue;
       for (const clrName in modeTokens) {

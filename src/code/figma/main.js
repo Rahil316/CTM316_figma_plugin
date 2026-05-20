@@ -90,7 +90,7 @@
 figma.ui.onmessage = async (msg) => {
   try {
     switch (msg.type) {
-      case "run-creater": {
+      case "run-creator": {
         const config = translateConfig(msg.state);
         const result = variableMaker(config);
         await VariableManager.sync(result, config, msg.scope || "all", msg.state, msg.savedState || null);

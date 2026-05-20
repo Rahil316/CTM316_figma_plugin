@@ -437,13 +437,15 @@ document.querySelectorAll(".sidebar-tab-btn").forEach((btn) => {
       renderPreviewTabs();
       const result = variableMaker(translateConfig(appState));
       renderPreviewPanel(result);
-      // activate first visible tab and its panel
+      // activate first visible tab and its matching panel
       const firstTab = document.querySelector("#preview-screen .preview-tab-btn:not(.hidden)");
-      const firstPanel = document.querySelector("#preview-screen .preview-panel");
       document.querySelectorAll("#preview-screen .preview-tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll("#preview-screen .preview-panel, #preview-theme-panels > div").forEach((p) => p.classList.remove("active"));
-      if (firstTab) firstTab.classList.add("active");
-      if (firstPanel) firstPanel.classList.add("active");
+      document.querySelectorAll("#preview-content .preview-panel, #preview-theme-panels > div").forEach((p) => p.classList.remove("active"));
+      if (firstTab) {
+        firstTab.classList.add("active");
+        const firstPanel = document.getElementById(firstTab.dataset.target);
+        if (firstPanel) firstPanel.classList.add("active");
+      }
       document.getElementById("main-nav-area").classList.add("hidden");
       const ps = document.getElementById("preview-screen");
       ps.classList.remove("hidden");

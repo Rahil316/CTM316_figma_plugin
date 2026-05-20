@@ -2,9 +2,8 @@
 name: Feature registry
 description: Full inventory of plugin features — implemented, needs work, and not yet started
 type: project
-originSessionId: 8d8bcbc1-572d-4c9f-b8bd-4a9ae7f56916
 ---
-Last updated: 2026-05-17
+Last updated: 2026-05-20
 
 ---
 
@@ -16,7 +15,9 @@ Last updated: 2026-05-17
 - WCAG contrast calculation (APCA-adjacent, hex↔RGB↔HSL↔OKLCH↔HCT)
 - Multi-theme output — light and dark modes with configurable background colors
 - Semantic role mapping — Text, Fill, Background, Border etc. mapped to tonal steps by contrast or index
-- Variation levels — shared variation system (Lighter/Light/Base/Dark/Darker) with alias + shorthand
+- Variation levels — shared variation system with alias + shorthand
+- `scaleStepNames` CSV — wired end-to-end: config.js parses, clrEngine.js uses for variable naming ✅ verified
+- `alphaValues` CSV — wired end-to-end: config.js parses, figmaVars.js reads for alpha tint generation ✅ verified
 
 ### Figma variable output
 - Palette collection (`_scale`) — full tonal ramp per color as Figma variables
@@ -37,12 +38,13 @@ Last updated: 2026-05-17
 
 ### UI
 - `el()` DOM factory — all UI built without innerHTML
-- `inputsUI` primitives: `input`, `colorInput`, `toggle`, `row`, `sectionLabel`, `iconButton`, `actionButton`, `caption`, `btn()` (new — all variants)
+- `inputsUI` primitives: `input`, `colorInput`, `toggle`, `row`, `sectionLabel`, `iconButton`, `actionButton`, `caption`, `btn()` (all variants)
 - `Components` card system: `ColorGroupCard`, `RoleGroupCard`
 - Drag-to-reorder on color and role cards
 - `debounce` + `withPreservedFocus` — no focus loss on re-render
 - In-place color sync on hex/picker input — no re-render on color value change
-- BannerManager — toast + expandable detail banners
+- BannerManager — toast + expandable detail banners (defined in `output.js`)
+- ToastManager — lightweight stacking toast system (defined in `output.js`)
 - Preview panel — live token preview before syncing to Figma
 - Run dialog — shows existing collections, rename summary before sync
 - Full-screen settings panel with 5 tabs (Project, Palettes, Roles, Figma, Plugin)
@@ -54,12 +56,14 @@ Last updated: 2026-05-17
 
 ### Role card controls
 - Role name + shorthand (always visible)
-- Find base by: Min Contrast or By Index (separate light/dark inputs for index mode)
+- Find base by: Min Contrast or By Index
 - Spread unit: Steps or Contrast delta
 - Mapping mode: Auto (computed read-only table) or Manual (fully editable table)
 - Per-role variation override — each role can define its own variation set independently
 - Per-role controls toggle — global default or per-card base/spread controls
 - Collapsed header summary — shows active settings at a glance
+- `solverMode` per color — "natural" | "saturated" | "luminance" | "hue-locked" | "chroma-maximized"
+- `darkBaseIndex` per role — separate base index for dark mode (By Index mode only)
 
 ### Build
 - `npm run build` — concatenates JS, strips comments, inlines CSS, produces `dist/scripts.js` + `dist/ui.html`
@@ -70,35 +74,41 @@ Last updated: 2026-05-17
 
 ## 🔧 Implemented but needs verification / polish
 
-- **Alpha tints in preview** — `includeAlphaTints` flag exists and variables are written; preview panel does not visually distinguish alpha tokens
-- **Role variation override end-to-end** — per-role custom variations exist in state and render in UI; full manual test across both plugin modes (tonal + adaptive) not completed
-- **Rename detection for per-role variations** — `buildVariableRenameMap` handles shared variations; per-role variation renames are skipped (may create duplicates)
-- **`output.js` preview rendering** — uses some innerHTML for preview panel rows; inconsistent with rest of el()-based codebase
-- **manifest.json network cleanup** — `cdn.tailwindcss.com` still in `allowedDomains` even though Tailwind is now inlined at build
-- **Input validation feedback** — errors show in full error overlay; no inline feedback near the offending field
+- **Alpha tints in preview** — `includeAlphaTints` flag works in engine; preview panel does not show alpha tokens visually
+- **Role variation override end-to-end** — per-role custom variations exist in state and UI; full manual test across both plugin modes not completed
+- **Rename detection for per-role variations** — `buildVariableRenameMap` handles shared variations only; per-role variation renames are silently skipped (may create duplicates on re-run)
+- **`output.js` preview rendering** — some innerHTML string concatenation remains; inconsistent with el()-based codebase
+- **Input validation feedback** — errors shown in full overlay; no inline feedback per field
+
+---
+
+## ⚠️ UI state with no engine effect (wired in state + UI but not passed to engine)
+
+These toggles appear in settings and are persisted in appState, but `translateConfig()` in `config.js` does **not** pass them to the engine. They currently do nothing to the Figma output.
+
+- **`addSeedValues`** — toggle in Figma tab (`toggle-addSeedValues`), persisted in `appState`, in settings snapshot. Not in `translateConfig`. Purpose: unknown/unimplemented.
+- **`includeTonalCollection`** — toggle in Figma tab (`toggle-includeTonalCollection`), persisted in `appState`. Not in `translateConfig`. Intended purpose: gate whether the `_scale` ramp collection is written at all.
+- **`useGlobalAlgo` / `perColorAlgoScope`** — in `appState` and settings snapshot; `config.js` used to forward them but now only leaves a comment. `clrEngine.js` does not read either. Reserved for future per-color algorithm scoping.
 
 ---
 
 ## 🚧 Designed but not yet implemented (seen in Settings PDF mockup)
 
-- **Project Name field** — `appState.name` exists in state but no UI connection currently (field is in settings HTML but `updateSettingsFromInputs` reads it — verify it actually saves)
-- **Saved States** — versioned snapshots with timestamp, View / Restore / Delete actions. Placeholder in Project tab, non-functional
-- **Step Labels CSV** — `scaleStepNames` exists in state and is wired; UI field exists in Palettes tab. Verify engine uses it correctly for variable naming
-- **Role Labels CSV** — bulk-rename variations globally via comma-separated string (separate from per-variation inline editing in Roles tab)
-- **Global Variables collection name** — `globalColorsCollectionName` in state; field exists in Figma tab settings
-- **Alpha Variations CSV** — `alphaValues` in state; field in Figma tab. Verify the engine reads it correctly for alpha tint generation
+- **Project Name field** — `appState.name` exists; verify it drives export filenames and success messages
+- **Saved States** — versioned snapshots with timestamp, View / Restore / Delete. Placeholder in Project tab, non-functional
+- **Role Labels CSV** — bulk-rename variations globally via comma-separated string
 - **Language selector** — UI placeholder only, no i18n infrastructure
-- **Beta Features section** — enrollment toggle + 3 placeholder feature flags
+- **Beta Features section** — enrollment toggle + placeholder feature flags
 - **About CTM section** — feedback link + learn more link
 
 ---
 
 ## ❌ Not started — future roadmap
 
-- **Pro mode** — feature gating concept exists (`ProModeBeta` branch); exact feature set not defined. No implementation
-- **Saved States backend** — requires new `figma.root.setPluginData` key for snapshot array + UI to list/restore/delete
+- **Pro mode** — concept exists (`ProModeBeta` branch); feature set undefined, no implementation
+- **Saved States backend** — requires new `figma.root.setPluginData` key + UI
 - **Undo/redo** — noted gap, no plans
-- **Offline font support** — Google Fonts loaded at runtime; could be inlined
-- **Inline validation feedback** — per-field error display (duplicate name, invalid hex) instead of full overlay
+- **Inline validation feedback** — per-field error display instead of full overlay
 - **Token preview for alpha tints** — preview panel alpha section
-- **Dark mode color solving improvements** — adaptive engine may need separate contrast targets per theme
+- **Design Lab** — button exists in more-sheet via `temp.js`, shows alert placeholder only
+- **`includeTonalCollection` wiring** — gate that suppresses `_scale` ramp collection write; requires `translateConfig` → `figmaVars.js` plumbing
