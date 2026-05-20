@@ -9,6 +9,7 @@ const _getVariationTargets = () => typeof DEFAULT_VARIATION_TARGETS !== "undefin
 function translateConfig(appState) {
   const count = Math.max(1, parseInt(appState.scaleLength) || 23);
   const stepNames = _parseStepNames(appState, count);
+  const stepShorthands = _parseStepShorthands(appState, stepNames);
   const variations = _parseVariations(appState);
   const roleStepNames = variations.map((v) => (appState.useShorthandVariations && v.shorthand ? v.shorthand : v.name));
   const themes = appState.themes || [{ bg: "FFFFFF" }, { bg: "000000" }];
@@ -44,6 +45,8 @@ function translateConfig(appState) {
     useShorthandColors: appState.useShorthandColors || false,
     useShorthandRoles: appState.useShorthandRoles || false,
     useShorthandVariations: appState.useShorthandVariations || false,
+    useShorthandSteps: appState.useShorthandSteps || false,
+    scaleStepShorthands: stepShorthands,
     includeGlobalColors: appState.includeGlobalColors || false,
     globalColorsCollectionName: appState.globalColorsCollectionName || "_constants",
     includeAlphaTints: appState.includeAlphaTints || false,
@@ -52,17 +55,34 @@ function translateConfig(appState) {
       .map((v) => Math.max(0, Math.min(100, parseInt(v.trim()))))
       .filter((v) => !isNaN(v)),
     includeDescriptions: appState.includeDescriptions !== false,
+    includeTonalCollection: appState.includeTonalCollection !== false,
   };
 }
 
 function _parseStepNames(appState, count) {
-  const raw = Array.isArray(appState.scaleStepNames) ? appState.scaleStepNames.join(",") : appState.scaleStepNames || "";
-  const userNames = raw.trim() ? raw.split(",").map((n) => n.trim()) : null;
+  const items = Array.isArray(appState.scaleStepNames) ? appState.scaleStepNames : [];
+  // backward-compat: plain string items (old CSV migration may have left strings)
+  const userNames = items.length > 0 ? items.map((s) => (typeof s === "string" ? s : s.name || "")) : null;
   if (!userNames || userNames.length === 0) return null;
 
   const names = userNames.slice();
   while (names.length < count) names.push(String(names.length + 1));
   return names.slice(0, count);
+}
+
+// Returns a map of {stepName → shorthand} for use in token naming.
+// Only entries that actually have a distinct shorthand are included.
+function _parseStepShorthands(appState, resolvedNames) {
+  if (!resolvedNames) return {};
+  const items = Array.isArray(appState.scaleStepNames) ? appState.scaleStepNames : [];
+  const map = {};
+  items.forEach((item, i) => {
+    if (typeof item === "object" && item.shorthand && item.shorthand !== item.name) {
+      const key = resolvedNames[i];
+      if (key) map[key] = item.shorthand;
+    }
+  });
+  return map;
 }
 
 function _deduplicateThemeNames(themes) {
@@ -145,7 +165,7 @@ function _mapIdToLabel(oldItems, newItems, oldShort, newShort) {
   const getMap = (items, useShort) => {
     const m = {};
     (items || []).forEach((item) => {
-      if (item._id) m[item._id] = useShort && item.shorthand ? item.shorthand : item.name;
+      if (item._id) m[item._id] = { label: useShort && item.shorthand ? item.shorthand : item.name, item };
     });
     return m;
   };
@@ -153,8 +173,8 @@ function _mapIdToLabel(oldItems, newItems, oldShort, newShort) {
   const newMap = getMap(newItems, newShort);
   const pairs = Object.entries(newMap)
     .filter(([id]) => oldMap[id] !== undefined)
-    .map(([id, ncl]) => ({ oldLabel: oldMap[id], newLabel: ncl }));
-  return { oldMap, newMap, pairs };
+    .map(([id, { label: ncl, item: newItem }]) => ({ oldLabel: oldMap[id].label, newLabel: ncl, oldItem: oldMap[id].item, newItem }));
+  return { pairs };
 }
 
 function _getRampRenames(colorPairs, oldSteps, newSteps, count) {
@@ -172,26 +192,27 @@ function _getRampRenames(colorPairs, oldSteps, newSteps, count) {
 
 function _getContextualRenames(colorPairs, rolePairs, oldCfg, newCfg) {
   const renames = {};
-  const varCount = Math.min((oldCfg.variations || []).length, (newCfg.variations || []).length);
-  const oldRoleSteps = (oldCfg.variations || []).map(function (v, i) {
-    return oldCfg.useShorthandVariations && v && v.shorthand ? v.shorthand : (v && v.name) || String(i);
-  });
-  const newRoleSteps = (newCfg.variations || []).map(function (v, i) {
-    return newCfg.useShorthandVariations && v && v.shorthand ? v.shorthand : (v && v.name) || String(i);
-  });
   const oldOrder = oldCfg.tokenNameOrder || (oldCfg.variableStructure === "role" ? ["role", "color", "variation"] : ["color", "role", "variation"]);
   const newOrder = newCfg.tokenNameOrder || (newCfg.variableStructure === "role" ? ["role", "color", "variation"] : ["color", "role", "variation"]);
-
   const buildName = (order, color, role, variation) =>
     order.map((s) => ({ color, role, variation })[s] || s).join("/");
 
+  const getRoleStepNames = (cfg, roleItem) => {
+    const vars =
+      roleItem && roleItem.variationOverride && roleItem.roleVariations && roleItem.roleVariations.length > 0
+        ? roleItem.roleVariations
+        : cfg.variations || [];
+    return vars.map((v, i) => (cfg.useShorthandVariations && v && v.shorthand ? v.shorthand : (v && v.name) || String(i)));
+  };
+
   for (const cp of colorPairs) {
     for (const rp of rolePairs) {
+      const oldSteps = getRoleStepNames(oldCfg, rp.oldItem);
+      const newSteps = getRoleStepNames(newCfg, rp.newItem);
+      const varCount = Math.min(oldSteps.length, newSteps.length);
       for (let vi = 0; vi < varCount; vi++) {
-        const oldStep = oldRoleSteps[vi];
-        const newStep = newRoleSteps[vi];
-        const oldName = buildName(oldOrder, cp.oldLabel, rp.oldLabel, oldStep);
-        const newName = buildName(newOrder, cp.newLabel, rp.newLabel, newStep);
+        const oldName = buildName(oldOrder, cp.oldLabel, rp.oldLabel, oldSteps[vi]);
+        const newName = buildName(newOrder, cp.newLabel, rp.newLabel, newSteps[vi]);
         if (oldName !== newName) renames[oldName] = newName;
       }
     }

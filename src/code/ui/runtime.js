@@ -512,9 +512,6 @@ document.getElementById("preview-screen").addEventListener("click", (e) => {
   if (panelEl) panelEl.classList.add("active");
 });
 
-// UI scale and theme selects — mutates uiPrefs
-document.getElementById("setting-ui-scale").onchange = (e) => updateUiPref("scale", parseFloat(e.target.value) || 1.0);
-document.getElementById("setting-ui-theme").onchange = (e) => updateUiPref("theme", e.target.value);
 
 // Resize handle — mutates isResizing and resize origin/start vars
 document.getElementById("resize-handle").onmousedown = (e) => {

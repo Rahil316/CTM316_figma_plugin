@@ -43,12 +43,14 @@ const VariableManager = {
 
     const rampCollectionName = (appState && appState.tonalScaleCollectionName) || "_scale";
     const contextualName = (appState && appState.tokenCollectionName) || "contextual";
-    const skipRamps = config.embedDirectly || config.pluginMode === "adaptiveEngine";
+    const skipRamps = config.embedDirectly || config.pluginMode === "adaptiveEngine" || config.includeTonalCollection === false;
     const tokenNameOrder = config.tokenNameOrder || (config.variableStructure === "role" ? ["role", "color", "variation"] : ["color", "role", "variation"]);
     const useShortColor = config.useShorthandColors || false;
     const useShortRole = config.useShorthandRoles || false;
+    const useShortStep = config.useShorthandSteps || false;
+    const stepShorthands = config.scaleStepShorthands || {};
 
-    // Helper: resolve display label for color/role names
+    // Helper: resolve display label for color/role/step names
     const colorLabel = (name) => {
       if (!useShortColor) return name;
       const col = config.colors.find((c) => c.name === name);
@@ -59,11 +61,12 @@ const VariableManager = {
       const role = config.roles[roleIdx];
       return (role && role.shorthand) || name;
     };
+    const stepLabel = (name) => (useShortStep && stepShorthands[name]) ? stepShorthands[name] : name;
 
     // Build tknRef → Figma variable name map using the same naming as stage 1
     for (const [colorName, ramp] of Object.entries(result.tonalScales)) {
       for (const [weightName, entry] of Object.entries(ramp)) {
-        this.rampVarNameMap[entry.stepName] = `${colorLabel(colorName)}/${weightName}`;
+        this.rampVarNameMap[entry.stepName] = `${colorLabel(colorName)}/${stepLabel(weightName)}`;
       }
     }
 

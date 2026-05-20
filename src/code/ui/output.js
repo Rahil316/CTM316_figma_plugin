@@ -603,6 +603,41 @@ function renderPreviewPanel(result) {
     }
   }
 
+  // Alpha tints section — only shown when both Global Colors and Alpha Tints are enabled
+  if (appState.includeAlphaTints && appState.includeGlobalColors) {
+    const alphaInts = (appState.alphaValues || "10, 25, 50, 75, 90")
+      .split(",")
+      .map((v) => parseInt(v.trim()))
+      .filter((v) => !isNaN(v));
+    if (alphaInts.length > 0) {
+      const alphaSection = el("div", { class: "mb-4 mt-1" }, [
+        el("div", { class: "text-[11px] font-bold tracking-[0.1em] uppercase text-[var(--text-muted)] mb-2 px-1" }, "Alpha Tints"),
+      ]);
+      for (const color of appState.colors) {
+        const hex = "#" + color.value.replace(/^#/, "").toUpperCase().padEnd(6, "0");
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        const swatches = alphaInts.map((opacity) => {
+          const a = (opacity / 100).toFixed(2);
+          const rgbaStr = `rgba(${r},${g},${b},${a})`;
+          return el("div", {
+            class: "flex-1 h-6 rounded cursor-pointer",
+            style: `background:${rgbaStr};box-shadow:inset 0 0 0 1px rgba(128,128,128,.2)`,
+            title: `${color.name} ${opacity}%\n${rgbaStr}`,
+            onclick: () => { copyToClipboard(rgbaStr); ToastManager.success(`Copied ${rgbaStr}`); },
+          });
+        });
+        const strip = el("div", { class: "flex gap-0.5 items-center mb-1.5" }, [
+          el("div", { class: "w-16 text-[11px] text-[var(--text-muted)] truncate shrink-0", title: color.name }, color.name),
+          ...swatches,
+        ]);
+        alphaSection.appendChild(strip);
+      }
+      colorEl.appendChild(alphaSection);
+    }
+  }
+
   // render one panel per theme
   const panelArea = document.getElementById("preview-theme-panels");
   if (!panelArea) return;

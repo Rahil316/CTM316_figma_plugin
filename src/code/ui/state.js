@@ -56,7 +56,7 @@ const demoConfig = {
   useShorthandVariations: false,
   scaleLength: 25,
   scaleAlgorithm: "Natural",
-  scaleStepNames: "",
+  scaleStepNames: [],
   pluginMode: "tonalScalesBased", // "tonalScalesBased" or "adaptiveEngine"
   baseSelection: "By Contrast",
   spreadUnit: "steps",
@@ -64,7 +64,6 @@ const demoConfig = {
   useGlobalAlgo: true,
   perColorAlgoScope: "color", // "color" | "role" — only used when adaptive engine + useGlobalAlgo=false
   includeTonalCollection: true,
-  addSeedValues: false,
   variations: null,
   colors: [
     { name: "Primary", shorthand: "pr", value: "0067DD", description: "" },
@@ -157,6 +156,13 @@ function loadState(incoming) {
   if (incoming.perColorAlgo !== undefined && incoming.useGlobalAlgo === undefined) {
     incoming.useGlobalAlgo = !incoming.perColorAlgo;
     delete incoming.perColorAlgo;
+  }
+  // migrate legacy scaleStepNames CSV string → [{name, shorthand}] array
+  if (typeof incoming.scaleStepNames === "string") {
+    const csv = incoming.scaleStepNames.trim();
+    incoming.scaleStepNames = csv
+      ? csv.split(",").map((n) => { const s = n.trim(); return { _id: generateId(), name: s, shorthand: s }; })
+      : [];
   }
   Object.assign(appState, incoming);
   ensureIds(appState);
@@ -296,21 +302,3 @@ function setVariation(idx, field, value) {
   appState.variations[idx][field] = value;
 }
 
-// ── MUTATIONS: THEMES ──
-
-function addTheme() {
-  if (!appState.themes) appState.themes = [];
-  const n = appState.themes.length + 1;
-  appState.themes.push({ _id: generateId(), name: "Theme " + n, bg: "888888" });
-}
-
-function removeTheme(idx) {
-  if (!appState.themes || appState.themes.length <= 1) return;
-  appState.themes.splice(idx, 1);
-}
-
-function updateTheme(idx, field, value) {
-  if (!appState.themes || !appState.themes[idx]) return;
-  if (field === "bg") value = sanitizeHex(value);
-  appState.themes[idx][field] = value;
-}

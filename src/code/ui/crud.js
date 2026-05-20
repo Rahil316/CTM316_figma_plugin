@@ -254,6 +254,40 @@ function updateSharedVariation(idx, field, value) {
   schedulePreview();
 }
 
+// ── STEP LABELS ──────────────────────────────────────────────────────────────
+
+function addStepLabel() {
+  if (!Array.isArray(appState.scaleStepNames)) appState.scaleStepNames = [];
+  const n = appState.scaleStepNames.length + 1;
+  const label = String(n * 100);
+  appState.scaleStepNames.push({ _id: generateId(), name: label, shorthand: label });
+  renderSettingsStepLabels();
+  schedulePreview();
+}
+
+function removeStepLabel(idx) {
+  if (!Array.isArray(appState.scaleStepNames)) return;
+  appState.scaleStepNames.splice(idx, 1);
+  renderSettingsStepLabels();
+  schedulePreview();
+}
+
+function moveStepLabel(idx, dir) {
+  const arr = appState.scaleStepNames;
+  if (!Array.isArray(arr)) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  renderSettingsStepLabels();
+  schedulePreview();
+}
+
+function updateStepLabel(idx, field, value) {
+  if (!Array.isArray(appState.scaleStepNames) || !appState.scaleStepNames[idx]) return;
+  appState.scaleStepNames[idx][field] = value;
+  schedulePreview();
+}
+
 // ── ROLE VARIATION OVERRIDES ─────────────────────────────────────────────────
 //
 //  Reads:   appState.roles[idx].roleVariations, appState.variations
@@ -329,16 +363,28 @@ function updateRoleVariationTarget(roleIdx, varIdx, value) {
 }
 
 // ── THEMES ───────────────────────────────────────────────────────────────────
-//
-//  Reads:   appState.themes
-//  Mutates: addTheme() / removeTheme() / updateTheme() from state.js
-//  Renders: renderSettingsThemes(), renderPreviewTabs(), schedulePreview()
 
-function addThemeRow() {
-  addTheme();
+function addTheme() {
+  if (!appState.themes) appState.themes = [];
+  const n = appState.themes.length + 1;
+  appState.themes.push({ _id: generateId(), name: "Theme " + n, bg: "888888" });
   renderSettingsThemes();
   renderPreviewTabs();
   schedulePreview();
+}
+
+function removeTheme(idx) {
+  if (!appState.themes || appState.themes.length <= 1) return;
+  appState.themes.splice(idx, 1);
+  renderSettingsThemes();
+  renderPreviewTabs();
+  schedulePreview();
+}
+
+function updateTheme(idx, field, value) {
+  if (!appState.themes || !appState.themes[idx]) return;
+  if (field === "bg") value = sanitizeHex(value);
+  appState.themes[idx][field] = value;
 }
 
 function updateProjectName(value) {

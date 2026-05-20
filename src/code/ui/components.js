@@ -300,7 +300,7 @@ const Components = {
       ]),
       inputsUI.input({ id: `clr-${idx}-name`, value: group.name || "", oninput: (e) => updateGroup(idx, "name", e.target.value) }, "Color Name"),
       inputsUI.input({ id: `clr-${idx}-short`, value: group.shorthand || "", oninput: (e) => updateGroup(idx, "shorthand", e.target.value) }, "Shorthand"),
-      el("div", { class: "space-y-1" }, [el("label", { class: "text-[10px] text-[var(--text-muted)] font-medium block ml-1" }, "Value"), inputsUI.colorInput(group.value, (val, elRef) => updateGroup(idx, "value", val, elRef), `clr-${idx}`)]),
+      el("div", { class: "space-y-1" }, [el("label", { class: "text-[var(--text-muted)] text-[12px] font-medium block ml-1" }, "Value"), inputsUI.colorInput(group.value, (val, elRef) => updateGroup(idx, "value", val, elRef), `clr-${idx}`)]),
       el("div", { class: "self-end" }, [inputsUI.iconButton(Icons.Trash, () => removeGroup(idx), "danger", { "aria-label": "Delete color" })]),
     ]),
 
@@ -322,9 +322,9 @@ const Components = {
   },
 
   _ColorAlgoRow: (group, idx, config) => {
-    // Show when global algo is off AND scope is "color" (or non-adaptive mode)
-    const showOnColor = !config.useGlobalAlgo && (config.pluginMode !== "adaptiveEngine" || config.perColorAlgoScope !== "role");
-    if (!showOnColor) return null;
+    // Show only in tonal scale mode, with global algo off and scope = "color"
+    if (config.pluginMode === "adaptiveEngine") return null;
+    if (config.useGlobalAlgo) return null;
     const algo = group.scaleAlgorithm || config.scaleAlgorithm || "Natural";
     const opts = ["Natural", "Uniform", "Expressive", "Symmetric", "OKLCH", "Material", "Linear"];
     return el("div", { class: "space-y-1" }, [
