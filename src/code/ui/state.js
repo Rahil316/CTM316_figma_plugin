@@ -49,7 +49,8 @@ const demoConfig = {
   globalColorsCollectionName: "global",
   includeAlphaTints: false,
   alphaValues: "5, 10, 20, 25, 50, 75, 80, 90, 95",
-  variableStructure: "color",
+  variableStructure: "color", // kept for backwards compat
+  tokenNameOrder: ["color", "role", "variation"],
   useShorthandColors: false,
   useShorthandRoles: false,
   useShorthandVariations: false,
@@ -59,7 +60,11 @@ const demoConfig = {
   pluginMode: "tonalScalesBased", // "tonalScalesBased" or "adaptiveEngine"
   baseSelection: "By Contrast",
   spreadUnit: "steps",
-  perRoleControls: false, // when true: each role card shows its own base/spread toggles
+  perRoleControls: false,
+  useGlobalAlgo: true,
+  perColorAlgoScope: "color", // "color" | "role" — only used when adaptive engine + useGlobalAlgo=false
+  includeTonalCollection: true,
+  addSeedValues: false,
   variations: null,
   colors: [
     { name: "Primary", shorthand: "pr", value: "0067DD", description: "" },
@@ -103,11 +108,14 @@ let _roleDragSrcIdx = null;
 // Ensures appState.variations exists and all roles have matching variationTargets arrays.
 function ensureVariations() {
   if (!appState.variations || appState.variations.length === 0) {
-    appState.variations = [1, 2, 3, 4, 5].map((n) => ({
-      _id: generateId(),
-      name: String(n),
-      shorthand: String(n),
-    }));
+    const defaults = [
+      { name: "Subtle",   shorthand: "1" },
+      { name: "Soft",     shorthand: "2" },
+      { name: "Default",  shorthand: "3" },
+      { name: "Strong",   shorthand: "4" },
+      { name: "Bold",     shorthand: "5" },
+    ];
+    appState.variations = defaults.map((d) => ({ _id: generateId(), name: d.name, shorthand: d.shorthand }));
   }
   for (const role of appState.roles) {
     const roleVars = role.variationOverride && role.roleVariations && role.roleVariations.length > 0 ? role.roleVariations : appState.variations;
@@ -146,6 +154,11 @@ function getSavedState() {
  * @param {object} incoming - Partial or full appState-shaped object
  */
 function loadState(incoming) {
+  // migrate legacy perColorAlgo flag
+  if (incoming.perColorAlgo !== undefined && incoming.useGlobalAlgo === undefined) {
+    incoming.useGlobalAlgo = !incoming.perColorAlgo;
+    delete incoming.perColorAlgo;
+  }
   Object.assign(appState, incoming);
   ensureIds(appState);
   ensureVariations();

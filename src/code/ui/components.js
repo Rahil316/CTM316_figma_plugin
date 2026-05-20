@@ -51,7 +51,7 @@ async function copyToClipboard(text) {
     textArea.select();
     try {
       document.execCommand("copy");
-    } catch (e) {}
+    } catch (e) { /* fallback copy — ignore errors */ }
     document.body.removeChild(textArea);
     return true;
   }
@@ -124,7 +124,7 @@ const el = (tag, attrs = {}, children = []) => {
 
 const inputsUI = {
   // Dashed "add" call-to-action button.
-  actionButton: (label, onClick, icon = null) => inputsUI.btn("dashed", { label, icon, onclick: onClick, size: "xl", class: "w-full mb-2" }),
+  actionButton: (label, onClick, extra = {}) => inputsUI.btn("dashed", { label, onclick: onClick, size: "xl", class: "w-full mb-3", ...extra }),
 
   // Text/number input with optional label above.
   input: (attrs = {}, label = null) => {
@@ -209,12 +209,9 @@ const inputsUI = {
   },
 
   // Square icon-only knob button (md = 32px). variant: "danger" | "ghost"
-  iconButton: (icon, onClick, variant = "danger") =>
+  iconButton: (icon, onClick, variant = "danger", extra = {}) =>
     inputsUI.btn(variant === "danger" ? "danger" : "ghost", {
-      icon,
-      onclick: onClick,
-      size: "lg",
-      square: true,
+      icon, onclick: onClick, size: "lg", square: true, ...extra,
     }),
 
   // Toggle pill button. Controlled: pass isOn state, onChange fires with no args (caller flips state).
@@ -292,7 +289,7 @@ const getRoleVariations = (role, config) => {
 const Components = {
   // --- COLOR COMPONENTS ---
   _ColorMainRow: (group, idx, config) =>
-    el("div", { class: "grid gap-2 items-center", style: "grid-template-columns:20px 1fr 72px 108px 36px" }, [
+    el("div", { class: "grid gap-2 items-center grid grid-cols-[20px_1fr_72px_108px_36px]" }, [
       el("div", { class: "flex flex-col gap-0.5 self-center flex-shrink-0" }, [
         inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveGroup(idx, -1), disabled: idx === 0 }),
         el("span", { class: "drag-handle text-[var(--text-muted)] cursor-grab text-[14px] leading-none text-center" }, "⠿"),
@@ -301,13 +298,15 @@ const Components = {
       inputsUI.input({ id: `clr-${idx}-name`, value: group.name || "", oninput: (e) => updateGroup(idx, "name", e.target.value) }, "Color Name"),
       inputsUI.input({ id: `clr-${idx}-short`, value: group.shorthand || "", oninput: (e) => updateGroup(idx, "shorthand", e.target.value) }, "Shorthand"),
       el("div", { class: "space-y-1" }, [el("label", { class: "text-[10px] text-[var(--text-muted)] font-medium block ml-1" }, "Value"), inputsUI.colorInput(group.value, (val, elRef) => updateGroup(idx, "value", val, elRef), `clr-${idx}`)]),
-      el("div", { class: "self-end" }, [inputsUI.iconButton(Icons.Trash, () => removeGroup(idx))]),
+      el("div", { class: "self-end" }, [inputsUI.iconButton(Icons.Trash, () => removeGroup(idx), "danger", { "aria-label": "Delete color" })]),
     ]),
 
   _ColorStatsRow: () => null,
 
   _ColorSolverRow: (group, idx, config) => {
     if (config.pluginMode !== "adaptiveEngine") return null;
+    if (config.useGlobalAlgo !== false) return null;
+    if (config.perColorAlgoScope === "role") return null;
     const mode = group.solverMode || "natural";
     return el("div", { class: "space-y-1" }, [
       el("label", { class: "text-[var(--text-muted)] text-[12px] font-medium" }, "Color Solver"),
@@ -321,9 +320,48 @@ const Components = {
     ]);
   },
 
+  _ColorAlgoRow: (group, idx, config) => {
+    // Show when global algo is off AND scope is "color" (or non-adaptive mode)
+    const showOnColor = !config.useGlobalAlgo && (config.pluginMode !== "adaptiveEngine" || config.perColorAlgoScope !== "role");
+    if (!showOnColor) return null;
+    const algo = group.scaleAlgorithm || config.scaleAlgorithm || "Natural";
+    const opts = ["Natural", "Uniform", "Expressive", "Symmetric", "OKLCH", "Material", "Linear"];
+    return el("div", { class: "space-y-1" }, [
+      el("label", { class: "text-[var(--text-muted)] text-[12px] font-medium" }, "Scale Algorithm"),
+      el(
+        "select",
+        {
+          "data-testid": "color-algo-select",
+          onchange: (e) => updateGroup(idx, "scaleAlgorithm", e.target.value),
+          class: "w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none appearance-none cursor-pointer text-[var(--text-primary)]",
+        },
+        opts.map((o) => el("option", { value: o, selected: algo === o ? "selected" : null }, o)),
+      ),
+    ]);
+  },
+
   _ColorDescriptionRow: (group, idx, config) => (config.includeDescriptions ? inputsUI.input({ value: group.description || "", placeholder: "Optional...", oninput: (e) => updateGroup(idx, "description", e.target.value) }, "Description") : null),
 
-  ColorGroupCard: (group, idx, config) => [Components._ColorMainRow(group, idx, config), Components._ColorStatsRow(group, idx, config), Components._ColorSolverRow(group, idx, config), Components._ColorDescriptionRow(group, idx, config)].filter(Boolean),
+  ColorGroupCard: (group, idx, config) => [Components._ColorMainRow(group, idx, config), Components._ColorStatsRow(group, idx, config), Components._ColorSolverRow(group, idx, config), Components._ColorAlgoRow(group, idx, config), Components._ColorDescriptionRow(group, idx, config)].filter(Boolean),
+
+  _RoleAlgoRow: (role, idx, config) => {
+    // Show only in adaptive engine mode, global algo off, scope = "role"
+    if (config.useGlobalAlgo || config.pluginMode !== "adaptiveEngine" || config.perColorAlgoScope !== "role") return null;
+    const algo = role.scaleAlgorithm || config.scaleAlgorithm || "Natural";
+    const opts = ["Natural", "Uniform", "Expressive", "Symmetric", "OKLCH", "Material", "Linear"];
+    return el("div", { class: "space-y-1 mt-2 pt-2 border-t border-[var(--border)]" }, [
+      el("label", { class: "text-[var(--text-muted)] text-[12px] font-medium" }, "Solver Algorithm"),
+      el(
+        "select",
+        {
+          "data-testid": "role-algo-select",
+          onchange: (e) => setRole(idx, "scaleAlgorithm", e.target.value),
+          class: "w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none appearance-none cursor-pointer text-[var(--text-primary)]",
+        },
+        opts.map((o) => el("option", { value: o, selected: algo === o ? "selected" : null }, o)),
+      ),
+    ]);
+  },
 
   // --- ROLE COMPONENTS ---
   RoleGroupCard: (role, idx, config) => {
@@ -417,7 +455,7 @@ const Components = {
     }
 
     // ── CARD ASSEMBLY ──
-    const nameRow = el("div", { class: "grid gap-2 items-end", style: "grid-template-columns:20px 1fr 96px 32px" }, [
+    const nameRow = el("div", { class: "grid gap-2 items-end grid grid-cols-[20px_1fr_96px_36px]" }, [
       el("div", { class: "flex flex-col gap-0.5 self-center shrink-0" }, [
         inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveRole(idx, -1), disabled: idx === 0 }),
         el("span", { class: "drag-handle text-[var(--text-muted)] cursor-grab text-[14px] leading-none text-center" }, "⠿"),
@@ -425,15 +463,19 @@ const Components = {
       ]),
       inputsUI.input({ id: `role-${idx}-name`, value: role.name || "", oninput: (e) => updateRole(idx, "name", e.target.value) }, "Role Name"),
       inputsUI.input({ id: `role-${idx}-short`, value: role.shorthand || "", oninput: (e) => updateRole(idx, "shorthand", e.target.value) }, "Shorthand"),
-      inputsUI.iconButton(Icons.Trash, () => removeRole(idx)),
+      inputsUI.iconButton(Icons.Trash, () => removeRole(idx), "danger", { "aria-label": "Delete role" }),
     ]);
 
+    const canOverride = !!config.allowRoleVariations;
     const scopeBadge = el(
       "span",
       {
-        class: `text-[10px] px-1.5 py-0.5 rounded-full font-medium cursor-pointer select-none ${useGlobal ? "bg-[var(--bg-hover)] text-[var(--text-muted)]" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`,
-        title: useGlobal ? "Click to use role-specific variations" : "Click to use global variations",
-        onclick: (e) => { e.stopPropagation(); toggleRoleVariationOverride(idx); },
+        class: `text-[10px] px-1.5 py-0.5 rounded-full font-medium select-none ${!canOverride ? "opacity-40 cursor-not-allowed" : "cursor-pointer"} ${useGlobal ? "bg-[var(--bg-hover)] text-[var(--text-muted)]" : "bg-[var(--accent)]/15 text-[var(--accent)]"}`,
+        title: !canOverride ? "Enable Role-specific Variations in Settings → Roles to override per role" : useGlobal ? "Click to use role-specific variations" : "Click to use global variations",
+        onclick: (e) => {
+          e.stopPropagation();
+          if (canOverride) toggleRoleVariationOverride(idx);
+        },
       },
       useGlobal ? "Global" : "Role",
     );
@@ -442,7 +484,10 @@ const Components = {
       "div",
       {
         class: "flex items-center gap-2 px-3 py-2 bg-[var(--bg-input)] cursor-pointer select-none",
-        onclick: () => { ui.open = !ui.open; renderRoles(); },
+        onclick: () => {
+          ui.open = !ui.open;
+          renderRoles();
+        },
       },
       [
         el("span", { class: "flex items-center justify-center w-3 shrink-0", style: { transform: ui.open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease" } }, Icons.ChevronDown),
@@ -451,12 +496,11 @@ const Components = {
       ],
     );
 
-    const body = ui.open
-      ? el("div", { class: "py-2" }, [buildTable()])
-      : null;
+    const body = ui.open ? el("div", { class: "py-2" }, [buildTable()]) : null;
 
     const section = el("div", { class: "border border-[var(--border)] rounded-[10px] overflow-hidden" }, [header, body].filter(Boolean));
 
-    return [el("div", { class: "space-y-2" }, [nameRow, section])];
+    const algoRow = Components._RoleAlgoRow(role, idx, config);
+    return [el("div", { class: "space-y-2" }, [nameRow, section, algoRow].filter(Boolean))];
   },
 };

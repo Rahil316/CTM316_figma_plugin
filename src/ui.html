@@ -246,7 +246,9 @@
         border-radius: 9999px;
         border: none;
         cursor: pointer;
-        transition: background 0.15s, color 0.15s;
+        transition:
+          background 0.15s,
+          color 0.15s;
         color: var(--text-muted);
         background: var(--bg-input);
       }
@@ -268,7 +270,9 @@
         border-radius: 9999px;
         border: none;
         cursor: pointer;
-        transition: background 0.15s, color 0.15s;
+        transition:
+          background 0.15s,
+          color 0.15s;
         color: var(--text-muted);
         background: var(--bg-input);
         white-space: nowrap;
@@ -341,7 +345,7 @@
       <!-- Header -->
       <header class="px-4 pt-4 pb-2 flex items-center justify-between sticky top-0 z-10 bg-[var(--bg-app)]">
         <h1 class="text-[22px] font-bold text-[var(--text-primary)]">ctm316</h1>
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-1 items-center">
           <button id="btn-more" title="More Options" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] w-10 h-10 flex items-center justify-center rounded-full transition-colors text-[var(--text-primary)]"></button>
           <button id="btn-import" title="Import JSON" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] w-10 h-10 flex items-center justify-center rounded-full transition-colors text-[var(--text-primary)]"></button>
           <button id="btn-settings" title="Settings" class="bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] w-10 h-10 flex items-center justify-center rounded-full transition-colors text-[var(--text-primary)]"></button>
@@ -354,12 +358,13 @@
       <!-- Main navigation area — hidden when preview is open -->
       <div id="main-nav-area" class="flex flex-col flex-1 min-h-0">
         <div class="sidebar-tabs">
+          <button class="sidebar-tab-btn" data-tab="project">Project</button>
           <button class="sidebar-tab-btn active" data-tab="color-groups">Palette</button>
-          <button class="sidebar-tab-btn" data-tab="roles-config">Color Roles</button>
+          <button class="sidebar-tab-btn" data-tab="roles-config">Roles</button>
           <button class="sidebar-tab-btn" data-tab="preview">Preview</button>
         </div>
-        <main class="flex-1 overflow-y-auto p-2 space-y-2">
-          <div id="sidebar-content-container"></div>
+        <main class="flex-1 overflow-y-auto p-4 space-y-2">
+          <div id="sidebar-content-container" class="gap-2"></div>
         </main>
       </div>
 
@@ -397,64 +402,30 @@
 
         <!-- Tab bar -->
         <div class="shrink-0 flex gap-1 px-2 py-2 border-b border-[var(--border)] overflow-x-auto">
-          <button class="settings-tab active" data-tab="project">Project</button>
-          <button class="settings-tab" data-tab="palettes">Palettes</button>
-          <button class="settings-tab" data-tab="roles">Roles</button>
-          <button class="settings-tab" data-tab="figma">Figma</button>
+          <button class="settings-tab active" data-tab="tokens">Token Settings</button>
           <button class="settings-tab" data-tab="plugin">Plugin</button>
         </div>
 
         <!-- Scrollable content -->
         <div class="flex-1 overflow-y-auto">
-          <!-- ── PROJECT ── -->
-          <div class="settings-panel" data-panel="project">
-            <div class="settings-card">
-              <p class="settings-section-label">Basic Settings</p>
-              <div class="space-y-3">
-                <div class="space-y-1">
-                  <label for="setting-name" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Project Name</label>
-                  <input type="text" id="setting-name" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
-                </div>
-                <div class="space-y-1">
-                  <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Themes (modes)</label>
-                  <div id="settings-themes-list" class="space-y-1.5"></div>
-                  <button id="btn-add-theme" onclick="addThemeRow()" class="mt-1 h-[28px] px-2 rounded-[6px] text-[11px] font-medium text-[var(--accent)] hover:bg-[var(--bg-hover)] border border-dashed border-[var(--border)] w-full transition-colors">+ Add theme</button>
-                </div>
-              </div>
-            </div>
-            <div class="settings-card">
-              <p class="settings-section-label">Saved States</p>
-              <p class="text-[12px] text-[var(--text-muted)]">Version history — coming soon.</p>
-            </div>
-          </div>
-
-          <!-- ── PALETTES ── -->
-          <div class="settings-panel hidden" data-panel="palettes">
+          <!-- ── TOKEN SETTINGS ── -->
+          <div class="settings-panel" data-panel="tokens">
+            <!-- Token Mode -->
             <div class="settings-card">
               <p class="settings-section-label">Token Creation Mode</p>
               <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-                <button id="mode-btn-ramp" onclick="setPluginMode(0)" class="seg-btn active flex-1" data-tooltip="Uses a pre-defined tonal scale for maximum system consistency.">Tonal Scale Based</button>
-                <button id="mode-btn-direct" onclick="setPluginMode(1)" class="seg-btn flex-1" data-tooltip="Uses an adaptive engine to generate mathematically perfect colors for every role.">Adaptive Engine</button>
+                <button id="mode-btn-ramp" onclick="setPluginMode(0)" class="seg-btn active flex-1">Tonal Scale Based</button>
+                <button id="mode-btn-direct" onclick="setPluginMode(1)" class="seg-btn flex-1">Adaptive Engine</button>
               </div>
             </div>
+
+            <!-- Palette (tonal-only settings — hidden in Adaptive Engine mode) -->
             <div id="settings-ramp-section" class="settings-card">
-              <p class="settings-section-label">Palette Generation</p>
+              <p class="settings-section-label">Palette</p>
               <div class="grid grid-cols-2 gap-3 mb-3">
                 <div class="space-y-1">
-                  <label for="setting-scaleLength" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Palette steps</label>
+                  <label for="setting-scaleLength" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Steps</label>
                   <input type="number" id="setting-scaleLength" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
-                </div>
-                <div class="space-y-1">
-                  <label for="setting-scaleAlgorithm" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Scale Algorithm</label>
-                  <select id="setting-scaleAlgorithm" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
-                    <option value="Natural">Natural</option>
-                    <option value="Uniform">Uniform</option>
-                    <option value="Expressive">Expressive</option>
-                    <option value="Symmetric">Symmetric</option>
-                    <option value="OKLCH">OKLCH</option>
-                    <option value="Material">Material</option>
-                    <option value="Linear">Linear</option>
-                  </select>
                 </div>
               </div>
               <div class="space-y-1">
@@ -462,76 +433,129 @@
                 <input type="text" id="setting-scaleStepNames" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
               </div>
             </div>
-          </div>
 
-          <!-- ── ROLES ── -->
-          <div class="settings-panel hidden" data-panel="roles">
+            <!-- Algorithm — always visible, content adapts to mode -->
             <div class="settings-card space-y-3">
-              <p class="settings-section-label">Role Mapping</p>
+              <p class="settings-section-label">Algorithm</p>
+
+              <!-- Global algo toggle -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <p id="setting-global-algo-title" class="text-[13px] font-medium text-[var(--text-primary)]">Global Algorithm</p>
+                  <p id="setting-global-algo-desc" class="text-[11px] text-[var(--text-muted)] mt-0.5">Use a single algorithm for all colors</p>
+                </div>
+                <button id="toggle-useGlobalAlgo" class="toggle-pill" onclick="toggleBoolSetting('useGlobalAlgo')"></button>
+              </div>
+
+              <!-- Global algo selector — hidden when useGlobalAlgo is off -->
+              <div id="setting-global-algo-row" class="space-y-1">
+                <label for="setting-scaleAlgorithm" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Algorithm</label>
+                <select id="setting-scaleAlgorithm" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer">
+                  <option value="Natural">Natural</option>
+                  <option value="Uniform">Uniform</option>
+                  <option value="Expressive">Expressive</option>
+                  <option value="Symmetric">Symmetric</option>
+                  <option value="OKLCH">OKLCH</option>
+                  <option value="Material">Material</option>
+                  <option value="Linear">Linear</option>
+                </select>
+              </div>
+
+              <!-- Adaptive-only: scope toggle — hidden unless adaptive + global off -->
+              <div id="setting-algo-scope-row" class="hidden">
+                <p class="text-[var(--text-muted)] text-[12px] font-medium mb-2">Solver scope</p>
+                <div class="flex gap-2">
+                  <button id="algo-scope-btn-color" class="seg-btn flex-1" onclick="setAlgoScope('color')">By Color</button>
+                  <button id="algo-scope-btn-role" class="seg-btn flex-1" onclick="setAlgoScope('role')">By Role</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Roles -->
+            <div class="settings-card space-y-3">
+              <p class="settings-section-label">Roles</p>
               <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
                 <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Role Specific Variations</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Allow each role to define its own variation labels</p>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Role-specific Variations</p>
+                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Allow individual roles to override the global variation list</p>
                 </div>
                 <button id="toggle-allowRoleVariations" class="toggle-pill" onclick="toggleBoolSetting('allowRoleVariations')"></button>
               </div>
-              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-                <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Per-role Controls</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Each role sets its own base selection and spread unit</p>
-                </div>
-                <button id="toggle-perRoleControls" class="toggle-pill" onclick="toggleBoolSetting('perRoleControls')"></button>
-              </div>
-              <div class="space-y-1">
-                <label id="label-baseSelection" for="setting-baseSelection" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Base Selection</label>
-                <select
-                  id="setting-baseSelection"
-                  onchange="setBaseSelection(this.selectedIndex)"
-                  class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer"
-                >
-                  <option value="By Contrast">By Contrast</option>
-                  <option value="By Index" id="base-selection-opt-byindex">By Index</option>
-                  <option value="Manual">Manual</option>
-                </select>
-              </div>
-              <div id="settings-spread-unit-row" class="space-y-1">
-                <label id="label-spreadUnit" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Spread Unit</label>
-                <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-                  <button id="su-btn-steps" onclick="setSpreadUnit(0)" class="seg-btn active flex-1">Steps</button>
-                  <button id="su-btn-contrast" onclick="setSpreadUnit(1)" class="seg-btn flex-1">Contrast</button>
-                </div>
-                <p class="text-[11px] text-[var(--text-muted)] px-1">How variation distance is measured from the base.</p>
-              </div>
             </div>
             <div class="settings-card">
-              <div class="flex items-center justify-between mb-2">
-                <p class="settings-section-label mb-0">Variation Levels</p>
-                <button onclick="addSharedVariation()" class="h-[28px] px-2 text-[11px] font-medium rounded-[6px] bg-transparent border border-transparent text-[var(--accent)] hover:bg-[var(--accent)]/10 cursor-pointer transition-all">+ Add</button>
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <p class="settings-section-label mb-0">Global Variations</p>
+                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Shared across all roles unless overridden</p>
+                </div>
+                <button data-action="add-variation" onclick="addSharedVariation()" class="h-[28px] px-2 text-[11px] font-medium rounded-[6px] bg-transparent border border-transparent text-[var(--accent)] hover:bg-[var(--accent)]/10 cursor-pointer transition-all">+ Add</button>
+              </div>
+              <div class="flex items-center gap-1.5 px-0.5 mb-1">
+                <span class="w-[18px] shrink-0"></span>
+                <span class="flex-1 text-[10px] font-bold text-[var(--text-muted)] px-1">Name</span>
+                <span class="w-[76px] text-[10px] font-bold text-[var(--text-muted)] px-1">Shorthand</span>
+                <span class="w-[32px] shrink-0"></span>
               </div>
               <div id="settings-variations-list" class="space-y-1.5"></div>
             </div>
-          </div>
 
-          <!-- ── FIGMA ── -->
-          <div class="settings-panel hidden" data-panel="figma">
+            <!-- Output / Naming -->
             <div class="settings-card space-y-3">
-              <p class="settings-section-label">Variable Collections</p>
-              <div id="settings-tonal-collection-row" class="space-y-1">
-                <label for="setting-tonalScaleCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Tonal Scale Collection</label>
-                <input type="text" id="setting-tonalScaleCollectionName" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="_scale" />
+              <p class="settings-section-label">Token Naming</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[12px] text-[var(--text-muted)] font-medium">Shorthand for Colors</p>
+                <button id="toggle-useShorthandColors" class="toggle-pill" onclick="toggleBoolSetting('useShorthandColors')"></button>
               </div>
-              <div class="space-y-1">
-                <label for="setting-tokenCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Color Roles Collection</label>
-                <input type="text" id="setting-tokenCollectionName" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="Color Roles Tokens" />
+              <div class="flex items-center justify-between">
+                <p class="text-[12px] text-[var(--text-muted)] font-medium">Shorthand for Roles</p>
+                <button id="toggle-useShorthandRoles" class="toggle-pill" onclick="toggleBoolSetting('useShorthandRoles')"></button>
               </div>
-              <div id="settings-embed-directly-row" class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-                <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Embed Colors Directly</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Write hex values into tokens instead of referencing the Tonal Scale collection</p>
+              <div class="flex items-center justify-between">
+                <p class="text-[12px] text-[var(--text-muted)] font-medium">Shorthand for Variations</p>
+                <button id="toggle-useShorthandVariations" class="toggle-pill" onclick="toggleBoolSetting('useShorthandVariations')"></button>
+              </div>
+              <div class="pt-1 border-t border-[var(--border)] space-y-2">
+                <p class="text-[12px] text-[var(--text-muted)] font-medium">Token Name Format</p>
+                <div id="token-order-pills" class="flex items-center gap-2 px-1 min-h-[32px]"></div>
+                <div class="px-1"><span class="text-[11px] text-[var(--text-muted)]">Preview — </span><span id="name-format-preview" class="text-[11px] font-mono"></span></div>
+              </div>
+              <div class="flex items-center justify-between pt-1 border-t border-[var(--border)]">
+                <p class="text-[12px] text-[var(--text-muted)] font-medium">Variable Descriptions</p>
+                <button id="toggle-includeDescriptions" class="toggle-pill" onclick="toggleBoolSetting('includeDescriptions')"></button>
+              </div>
+            </div>
+
+            <!-- Figma Collections -->
+            <div class="settings-card space-y-3">
+              <p class="settings-section-label">Collections</p>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Palettes collection</p>
+                  <button id="toggle-includeTonalCollection" class="toggle-pill" onclick="toggleBoolSetting('includeTonalCollection')"></button>
                 </div>
-                <button id="toggle-embedDirectly" class="toggle-pill" onclick="toggleBoolSetting('embedDirectly')"></button>
+                <div id="settings-tonal-collection-row">
+                  <input type="text" id="setting-tonalScaleCollectionName" class="w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="_Palettes" />
+                </div>
               </div>
-              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
+              <div class="space-y-2">
+                <p class="text-[13px] font-medium text-[var(--text-primary)]">Color role collection</p>
+                <input type="text" id="setting-tokenCollectionName" class="w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" placeholder="Color Tokens" />
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Map roles with Palettes</p>
+                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Role tokens reference the Palettes collection</p>
+                </div>
+                <button id="toggle-mapRolesWithPalettes" class="toggle-pill" onclick="toggleMapRolesWithPalettes()"></button>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Add Seed Values</p>
+                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Include original source color as a variable</p>
+                </div>
+                <button id="toggle-addSeedValues" class="toggle-pill" onclick="toggleBoolSetting('addSeedValues')"></button>
+              </div>
+              <div class="flex items-center justify-between">
                 <div>
                   <p class="text-[13px] font-medium text-[var(--text-primary)]">Global Colors</p>
                   <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Store raw brand hex values — no themes, no processing</p>
@@ -541,7 +565,7 @@
               <div id="constants-options" class="hidden space-y-2 pl-2 border-l-2 border-[var(--border)]">
                 <div class="space-y-1">
                   <label for="setting-globalColorsCollectionName" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Collection Name</label>
-                  <input type="text" id="setting-globalColorsCollectionName" placeholder="_constants" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+                  <input type="text" id="setting-globalColorsCollectionName" placeholder="_constants" class="w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
                 </div>
                 <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
                   <div>
@@ -552,53 +576,8 @@
                 </div>
                 <div id="opacity-values-row" class="hidden space-y-1">
                   <label for="setting-alphaValues" class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Alpha Values (CSV, 0–100)</label>
-                  <input type="text" id="setting-alphaValues" placeholder="10, 25, 50, 75, 90" class="w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
+                  <input type="text" id="setting-alphaValues" placeholder="10, 25, 50, 75, 90" class="w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]" />
                 </div>
-              </div>
-            </div>
-            <div class="settings-card space-y-3">
-              <p class="settings-section-label">Token Naming</p>
-              <div class="space-y-1">
-                <label class="text-[var(--text-muted)] text-[12px] font-medium ml-1">Variable Structure</label>
-                <div class="flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5">
-                  <button id="seg-group-color" class="seg-btn flex-1" onclick="setTokenGrouping(0)">Color-first&nbsp;&nbsp;color/role/step</button>
-                  <button id="seg-group-role" class="seg-btn flex-1" onclick="setTokenGrouping(1)">Role-first&nbsp;&nbsp;role/color/step</button>
-                </div>
-              </div>
-              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-                <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Colors</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5" id="preview-color-name-format">e.g. primary → pr</p>
-                </div>
-                <button id="toggle-useShorthandColors" class="toggle-pill" onclick="toggleBoolSetting('useShorthandColors')"></button>
-              </div>
-              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-                <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Roles</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5" id="preview-role-name-format">e.g. Text → tx</p>
-                </div>
-                <button id="toggle-useShorthandRoles" class="toggle-pill" onclick="toggleBoolSetting('useShorthandRoles')"></button>
-              </div>
-              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-                <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Use shorthand for Variations</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5" id="preview-variation-name-format">e.g. Darker → dk</p>
-                </div>
-                <button id="toggle-useShorthandVariations" class="toggle-pill" onclick="toggleBoolSetting('useShorthandVariations')"></button>
-              </div>
-              <div class="bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 py-2">
-                <p class="text-[11px] text-[var(--text-muted)]">Preview:</p>
-                <p id="name-format-preview" class="text-[12px] font-mono text-[var(--accent)] mt-0.5"></p>
-              </div>
-            </div>
-            <div class="settings-card">
-              <p class="settings-section-label">Descriptions</p>
-              <div class="flex items-center justify-between p-3 bg-[var(--bg-card)] rounded-[8px] border border-[var(--border)]">
-                <div>
-                  <p class="text-[13px] font-medium text-[var(--text-primary)]">Variable Descriptions</p>
-                  <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Include custom notes and contrast metadata in Figma</p>
-                </div>
-                <button id="toggle-includeDescriptions" class="toggle-pill" onclick="toggleBoolSetting('includeDescriptions')"></button>
               </div>
             </div>
           </div>
@@ -901,7 +880,9 @@
         </div>
         <div class="w-full space-y-3">
           <button id="btn-sync-confirm" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--accent)] border border-[var(--accent)] text-white hover:opacity-90 cursor-pointer transition-all">Yes, Update Them</button>
-          <button onclick="hideOverlay('confirm-sync-overlay')" class="w-full h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-transparent border border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-all">Cancel</button>
+          <button onclick="hideOverlay('confirm-sync-overlay')" class="w-full h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-transparent border border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-all">
+            Cancel
+          </button>
         </div>
       </div>
 
@@ -920,7 +901,9 @@
         <div class="w-full space-y-3">
           <button id="btn-import-save" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--accent)] border border-[var(--accent)] text-white hover:opacity-90 cursor-pointer transition-all">Save Current & Import</button>
           <button id="btn-import-now" class="w-full h-[40px] px-4 text-[13px] font-semibold rounded-[8px] bg-[var(--bg-input)] border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-all">Import & Replace</button>
-          <button onclick="hideOverlay('confirm-import-overlay')" class="w-full h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-transparent border border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-all">Cancel</button>
+          <button onclick="hideOverlay('confirm-import-overlay')" class="w-full h-[36px] px-3 text-[12px] font-medium rounded-[8px] bg-transparent border border-transparent text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] cursor-pointer transition-all">
+            Cancel
+          </button>
         </div>
       </div>
     </div>

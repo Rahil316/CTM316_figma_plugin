@@ -48,8 +48,6 @@ let _settingsSnapshot = null;
 
 function openSettings() {
   _settingsSnapshot = JSON.parse(JSON.stringify({
-    name: appState.name,
-    themes: appState.themes,
     scaleLength: appState.scaleLength,
     scaleAlgorithm: appState.scaleAlgorithm,
     scaleStepNames: appState.scaleStepNames,
@@ -70,9 +68,13 @@ function openSettings() {
     includeDescriptions: appState.includeDescriptions,
     allowRoleVariations: appState.allowRoleVariations,
     perRoleControls: appState.perRoleControls,
+    includeTonalCollection: appState.includeTonalCollection,
+    addSeedValues: appState.addSeedValues,
+    useGlobalAlgo: appState.useGlobalAlgo,
+    perColorAlgoScope: appState.perColorAlgoScope,
   }));
   syncInputsFromState();
-  switchSettingsTab("project");
+  switchSettingsTab("tokens");
   document.getElementById("settings-screen").classList.remove("hidden");
 }
 
@@ -80,6 +82,7 @@ function closeSettings(cancel) {
   if (cancel && _settingsSnapshot) {
     Object.assign(appState, _settingsSnapshot);
     syncOutputToggles();
+    syncAlgoSection();
     renderColorGroups();
     renderRoles();
   } else {
@@ -396,10 +399,11 @@ function updateRoleVariationTarget(roleIdx, varIdx, value) {
 function toggleBoolSetting(key) {
   appState[key] = !appState[key];
   syncOutputToggles();
-  if (key === "allowRoleVariations" || key === "includeDescriptions" || key === "perRoleControls") {
+  if (key === "allowRoleVariations" || key === "includeDescriptions" || key === "perRoleControls" || key === "useGlobalAlgo") {
     renderColorGroups();
     renderRoles();
   }
+  if (key === "useGlobalAlgo") syncAlgoSection();
   schedulePreview();
 }
 
@@ -414,6 +418,7 @@ function setPluginMode(idx) {
   if (!mode) return;
   appState.pluginMode = mode;
   syncOutputToggles();
+  syncAlgoSection();
   renderColorGroups();
   renderRoles();
   schedulePreview();
@@ -437,98 +442,165 @@ function setBaseSelection(idx) {
 // ── SETTINGS: SYNC HELPERS ──
 
 function _syncTogglePills() {
-  ["embedDirectly", "useShorthandColors", "useShorthandRoles", "useShorthandVariations", "includeGlobalColors", "includeAlphaTints", "allowRoleVariations", "includeDescriptions", "perRoleControls"].forEach((key) => {
+  ["embedDirectly", "useShorthandColors", "useShorthandRoles", "useShorthandVariations", "includeGlobalColors", "includeAlphaTints", "allowRoleVariations", "includeDescriptions", "perRoleControls", "useGlobalAlgo", "includeTonalCollection", "addSeedValues"].forEach((key) => {
     ["toggle-" + key, "rd-toggle-" + key].forEach((id) => {
       const btn = document.getElementById(id);
       if (btn) btn.classList.toggle("on", !!appState[key]);
     });
   });
+  // "Map roles with Palettes" is the inverse of embedDirectly
+  const mapBtn = document.getElementById("toggle-mapRolesWithPalettes");
+  if (mapBtn) mapBtn.classList.toggle("on", !appState.embedDirectly);
   const constOpts = document.getElementById("constants-options");
   if (constOpts) constOpts.classList.toggle("hidden", !appState.includeGlobalColors);
   const opacRow = document.getElementById("opacity-values-row");
   if (opacRow) opacRow.classList.toggle("hidden", !appState.includeAlphaTints);
+  // Tonal collection name input visibility
+  const tonalNameRow = document.getElementById("settings-tonal-collection-row");
+  if (tonalNameRow) tonalNameRow.classList.toggle("hidden", !appState.includeTonalCollection);
+  syncAlgoSection();
+}
+
+function syncAlgoSection() {
+  const isAdaptive = appState.pluginMode === "adaptiveEngine";
+  const useGlobal = appState.useGlobalAlgo !== false;
+
+  // Update toggle label to reflect mode terminology
+  const algoToggleTitle = document.getElementById("setting-global-algo-title");
+  const algoToggleDesc = document.getElementById("setting-global-algo-desc");
+  if (algoToggleTitle) algoToggleTitle.textContent = isAdaptive ? "Global Solver" : "Global Algorithm";
+  if (algoToggleDesc) algoToggleDesc.textContent = isAdaptive
+    ? "Use a single solver for all colors and roles"
+    : "Use a single algorithm for all colors";
+
+  // Global algo select: visible when useGlobalAlgo is true
+  const globalAlgoRow = document.getElementById("setting-global-algo-row");
+  if (globalAlgoRow) globalAlgoRow.classList.toggle("hidden", !useGlobal);
+
+  // Per-color scope row: visible in adaptive mode when useGlobalAlgo is false
+  const scopeRow = document.getElementById("setting-algo-scope-row");
+  if (scopeRow) scopeRow.classList.toggle("hidden", !(isAdaptive && !useGlobal));
+
+  // Sync scope seg buttons
+  const scope = appState.perColorAlgoScope || "color";
+  const btnColor = document.getElementById("algo-scope-btn-color");
+  const btnRole = document.getElementById("algo-scope-btn-role");
+  if (btnColor) btnColor.classList.toggle("active", scope === "color");
+  if (btnRole) btnRole.classList.toggle("active", scope === "role");
 }
 
 function _syncGroupingButtons() {
-  const tg = appState.variableStructure || "color";
-  [
-    ["seg-group-color", "rd-seg-group-color"],
-    ["seg-group-role", "rd-seg-group-role"],
-  ].forEach(([settingsId, rdId]) => {
-    const isActive = settingsId.includes("color") ? tg === "color" : tg === "role";
-    const s = document.getElementById(settingsId);
-    const r = document.getElementById(rdId);
-    if (s) s.classList.toggle("active", isActive);
-    if (r) r.classList.toggle("active", isActive);
+  renderTokenOrderPills();
+}
+
+// 8 distinct colors — one per unique segment name (stable across reorder)
+const PILL_COLORS = ["#7c3aed","#0891b2","#ea580c","#15803d","#be123c","#d97706","#1d4ed8","#a21caf"];
+const _pillColorCache = {};
+function _pillColor(segment) {
+  if (!_pillColorCache[segment]) {
+    const taken = Object.keys(_pillColorCache).length;
+    _pillColorCache[segment] = PILL_COLORS[taken % PILL_COLORS.length];
+  }
+  return _pillColorCache[segment];
+}
+const PILL_LABELS = { color: "Color", role: "Role", variation: "Variation" };
+let _pillDragSrc = null;
+
+function renderTokenOrderPills() {
+  const container = document.getElementById("token-order-pills");
+  if (!container) return;
+  const order = appState.tokenNameOrder || ["color", "role", "variation"];
+  container.innerHTML = "";
+
+  order.forEach((segment, idx) => {
+    const c = _pillColor(segment);
+    const pill = document.createElement("span");
+    pill.textContent = PILL_LABELS[segment] || segment;
+    pill.draggable = true;
+    pill.dataset.segment = segment;
+    pill.style.cssText = `background:${c};color:#fff;padding:4px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:grab;user-select:none;transition:opacity .15s,box-shadow .15s;outline:none;box-shadow:0 2px 8px ${c}55`;
+
+    pill.addEventListener("dragstart", () => { _pillDragSrc = idx; pill.style.opacity = "0.4"; });
+    pill.addEventListener("dragend",   () => { _pillDragSrc = null; pill.style.opacity = "1"; });
+    pill.addEventListener("dragover",  (e) => { e.preventDefault(); if (_pillDragSrc !== null && _pillDragSrc !== idx) pill.style.boxShadow = `0 0 0 2px #fff8`; });
+    pill.addEventListener("dragleave", () => { pill.style.boxShadow = `0 2px 8px ${c}55`; });
+    pill.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (_pillDragSrc === null || _pillDragSrc === idx) return;
+      const newOrder = [...order];
+      const [moved] = newOrder.splice(_pillDragSrc, 1);
+      newOrder.splice(idx, 0, moved);
+      setTokenNameOrder(newOrder);
+    });
+
+    container.appendChild(pill);
+    if (idx < order.length - 1) {
+      const sep = document.createElement("span");
+      sep.className = "pill-sep";
+      sep.textContent = "/";
+      sep.style.cssText = "color:var(--text-muted);font-size:13px;font-weight:700;opacity:0.35;user-select:none;pointer-events:none";
+      container.appendChild(sep);
+    }
   });
+}
+
+function setTokenNameOrder(order) {
+  appState.tokenNameOrder = order;
+  appState.variableStructure = order[0] === "role" ? "role" : "color";
+  renderTokenOrderPills();
+  _syncNameFormatPreview();
+  schedulePreview();
 }
 
 function _syncModeControls() {
   const isDirect = appState.pluginMode === "adaptiveEngine";
-
   const mbRamp = document.getElementById("mode-btn-ramp");
   const mbDirect = document.getElementById("mode-btn-direct");
   if (mbRamp) mbRamp.classList.toggle("active", !isDirect);
   if (mbDirect) mbDirect.classList.toggle("active", isDirect);
-
   const rampSection = document.getElementById("settings-ramp-section");
   if (rampSection) rampSection.classList.toggle("hidden", isDirect);
-  const tonalCollRow = document.getElementById("settings-tonal-collection-row");
-  if (tonalCollRow) tonalCollRow.classList.toggle("hidden", isDirect);
-  const embedDirectlyRow = document.getElementById("settings-embed-directly-row");
-  if (embedDirectlyRow) embedDirectlyRow.classList.toggle("hidden", isDirect);
-
-  if (isDirect && appState.baseSelection === "By Index") {
-    appState.baseSelection = "By Contrast";
-    const bsEl = document.getElementById("setting-baseSelection");
-    if (bsEl) bsEl.value = "By Contrast";
-  }
-  const byIndexOpt = document.getElementById("base-selection-opt-byindex");
-  if (byIndexOpt) byIndexOpt.hidden = isDirect;
-
   const previewTabColors = document.getElementById("preview-tab-colors");
   if (previewTabColors) previewTabColors.textContent = isDirect ? "Solved Colors" : "Tonal Scale";
 }
 
-function _syncSpreadUnit() {
-  const isDirect = appState.pluginMode === "adaptiveEngine";
-  const spreadUnitRow = document.getElementById("settings-spread-unit-row");
-  if (spreadUnitRow) spreadUnitRow.classList.toggle("hidden", isDirect || appState.baseSelection === "Manual");
+function setAlgoScope(scope) {
+  appState.perColorAlgoScope = scope;
+  syncAlgoSection();
+  renderColorGroups();
+  renderRoles();
+  schedulePreview();
+}
 
-  const suSteps = document.getElementById("su-btn-steps");
-  const suContrast = document.getElementById("su-btn-contrast");
-  if (suSteps) suSteps.classList.toggle("active", (appState.spreadUnit || "steps") === "steps");
-  if (suContrast) suContrast.classList.toggle("active", appState.spreadUnit === "contrast");
+function toggleMapRolesWithPalettes() {
+  appState.embedDirectly = !appState.embedDirectly;
+  syncOutputToggles();
+  schedulePreview();
 }
 
 function _syncNameFormatPreview() {
-  const tg = appState.variableStructure || "color";
+  const previewEl = document.getElementById("name-format-preview");
+  if (!previewEl) return;
   const sampleColor = appState.colors && appState.colors[0];
   const sampleRole = appState.roles && appState.roles[0];
-  if (!sampleColor || !sampleRole) return;
+  if (!sampleColor || !sampleRole) { previewEl.innerHTML = ""; return; }
+
   const cLabel = appState.useShorthandColors ? sampleColor.shorthand || sampleColor.name : sampleColor.name;
   const rLabel = appState.useShorthandRoles ? sampleRole.shorthand || sampleRole.name : sampleRole.name;
   const v3 = appState.variations && appState.variations[2];
-  const stepLabel = v3 ? (appState.useShorthandVariations && v3.shorthand ? v3.shorthand : v3.name) : "3";
-  const preview = tg === "role" ? `${rLabel}/${cLabel}/${stepLabel}` : `${cLabel}/${rLabel}/${stepLabel}`;
-  const previewEl = document.getElementById("name-format-preview");
-  if (previewEl) previewEl.textContent = preview;
-}
-
-function _syncPerRoleControls() {
-  const isPerRole = !!appState.perRoleControls;
-  const bsLabel = document.getElementById("label-baseSelection");
-  const suLabel = document.getElementById("label-spreadUnit");
-  if (bsLabel) bsLabel.textContent = isPerRole ? "Default Base Selection" : "Base Selection";
-  if (suLabel) suLabel.textContent = isPerRole ? "Default Spread Unit" : "Spread Unit";
+  const vLabel = v3 ? (appState.useShorthandVariations && v3.shorthand ? v3.shorthand : v3.name) : "3";
+  const segValues = { color: cLabel, role: rLabel, variation: vLabel };
+  const order = appState.tokenNameOrder || ["color", "role", "variation"];
+  const sep = `<span style="color:var(--text-muted);opacity:0.35">/</span>`;
+  previewEl.innerHTML = order
+    .map((s) => `<span style="color:${_pillColor(s)};font-weight:600">${segValues[s] || s}</span>`)
+    .join(sep);
 }
 
 function syncOutputToggles() {
   _syncTogglePills();
   _syncGroupingButtons();
   _syncModeControls();
-  _syncSpreadUnit();
-  _syncPerRoleControls();
   renderSettingsVariations();
   _syncNameFormatPreview();
 }
@@ -604,7 +676,64 @@ function addThemeRow() {
   schedulePreview();
 }
 
+function updateProjectName(value) {
+  appState.name = value;
+  schedulePreview();
+}
+
+function renderSidebarProject() {
+  const container = document.getElementById("sidebar-content-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const card = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 shadow-sm";
+
+  // Project name card
+  const nameCard = el("div", { class: card }, [
+    el("p", { class: "text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2" }, "Project Name"),
+    el("input", {
+      type: "text",
+      id: "sidebar-project-name",
+      value: appState.name || "",
+      placeholder: "Untitled project",
+      oninput: (e) => updateProjectName(e.target.value),
+      class: "w-full bg-transparent outline-none text-[16px] font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)]/40 border-b border-transparent focus:border-[var(--border)] pb-0.5 transition-colors",
+    }),
+  ]);
+
+  // Themes card
+  const themesList = el("div", { id: "settings-themes-list", class: "space-y-2" });
+  const themesCard = el("div", { class: card }, [
+    el("div", { class: "flex items-center justify-between mb-3" }, [
+      el("p", { class: "text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider" }, "Themes (modes)"),
+      el("button", {
+        onclick: () => addThemeRow(),
+        class: "text-[11px] font-medium text-[var(--accent)] hover:opacity-80 transition-opacity",
+      }, "+ Add"),
+    ]),
+    themesList,
+  ]);
+
+  // Theme Versions teaser card
+  const teaserCard = el("div", { class: `${card} opacity-50` }, [
+    el("div", { class: "flex items-center gap-2 mb-1.5" }, [
+      el("p", { class: "text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider" }, "Theme Versions"),
+      el("span", { class: "text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border)]" }, "Coming soon"),
+    ]),
+    el("p", { class: "text-[11px] text-[var(--text-muted)] leading-relaxed" }, "Save and restore named snapshots of your theme configuration — useful for A/B variants or versioned design system releases."),
+  ]);
+
+  const wrapper = el("div", { class: "flex flex-col gap-3" }, [nameCard, themesCard, teaserCard]);
+  container.appendChild(wrapper);
+
+  // populate themes list
+  renderSettingsThemes();
+}
+
 // ── SETTINGS: VARIATIONS LIST ──
+
+let _varDragSrcIdx = null;
 
 function renderSettingsVariations() {
   const container = document.getElementById("settings-variations-list");
@@ -614,36 +743,44 @@ function renderSettingsVariations() {
 
   container.innerHTML = "";
   vars.forEach((v, idx) => {
-    container.appendChild(
-      el("div", { class: "flex items-center gap-1.5" }, [
-        el("div", { class: "flex flex-col gap-0.5 shrink-0" }, [
-          inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveSharedVariation(idx, -1), disabled: idx === 0 }),
-          inputsUI.btn("ghost", { size: "xs", square: true, icon: "▼", onclick: () => moveSharedVariation(idx, 1), disabled: idx === vars.length - 1 }),
-        ]),
-        el("input", {
-          type: "text",
-          value: v.name || "",
-          placeholder: "Name",
-          oninput: (e) => updateSharedVariation(idx, "name", e.target.value),
-          class: "flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
-        el("input", {
-          type: "text",
-          value: v.shorthand || "",
-          placeholder: "Short",
-          oninput: (e) => updateSharedVariation(idx, "shorthand", e.target.value),
-          class: "w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
-        inputsUI.btn("danger", { size: "md", square: true, icon: Icons.Close, onclick: () => removeSharedVariation(idx), disabled: !canDelete }),
-      ]),
-    );
+    const row = el("div", { class: "variation-settings-row flex items-center gap-1.5" }, [
+      el("span", { class: "drag-handle shrink-0 text-[var(--text-muted)] cursor-grab text-[14px] leading-none px-0.5 hover:text-[var(--text-primary)]" }, "⠿"),
+      el("input", {
+        type: "text",
+        value: v.name || "",
+        placeholder: "Name",
+        oninput: (e) => updateSharedVariation(idx, "name", e.target.value),
+        class: "flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
+      }),
+      el("input", {
+        type: "text",
+        value: v.shorthand || "",
+        placeholder: "Shorthand",
+        oninput: (e) => updateSharedVariation(idx, "shorthand", e.target.value),
+        class: "w-[76px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
+      }),
+      inputsUI.btn("danger", { size: "md", square: true, icon: Icons.Close, onclick: () => removeSharedVariation(idx), disabled: !canDelete }),
+    ]);
+
+    bindDragDrop(row, idx, {
+      cardSelector: ".variation-settings-row",
+      getIdx: () => _varDragSrcIdx,
+      setIdx: (val) => { _varDragSrcIdx = val; },
+      onDrop: (src, dst) => {
+        const [moved] = appState.variations.splice(src, 1);
+        appState.variations.splice(dst, 0, moved);
+        renderSettingsVariations();
+        renderRoles();
+      },
+    });
+
+    container.appendChild(row);
   });
 }
 
 // ── SETTINGS: INPUT SYNC ──
 
 function updateSettingsFromInputs() {
-  appState.name = document.getElementById("setting-name").value;
   appState.tonalScaleCollectionName = document.getElementById("setting-tonalScaleCollectionName").value.trim() || "_scale";
   appState.tokenCollectionName = document.getElementById("setting-tokenCollectionName").value.trim() || "contextual";
 
@@ -651,9 +788,6 @@ function updateSettingsFromInputs() {
   appState.scaleLength = isNaN(wCount) ? 25 : Math.max(1, Math.min(100, wCount));
   appState.scaleAlgorithm = document.getElementById("setting-scaleAlgorithm").value;
   appState.scaleStepNames = document.getElementById("setting-scaleStepNames").value;
-
-  const bsSelect = document.getElementById("setting-baseSelection");
-  appState.baseSelection = UI_MODES.selection[bsSelect.selectedIndex] || "By Contrast";
 
   appState.globalColorsCollectionName = document.getElementById("setting-globalColorsCollectionName").value.trim() || "_constants";
   appState.alphaValues = document.getElementById("setting-alphaValues").value;
@@ -671,11 +805,9 @@ function syncUiSettingsInputs() {
 }
 
 function syncInputsFromState() {
-  document.getElementById("setting-name").value = appState.name || "";
   document.getElementById("setting-tonalScaleCollectionName").value = appState.tonalScaleCollectionName || "_scale";
   document.getElementById("setting-tokenCollectionName").value = appState.tokenCollectionName || "contextual";
   syncOutputToggles();
-  renderSettingsThemes();
 
   document.getElementById("setting-scaleLength").value = appState.scaleLength;
   document.getElementById("setting-scaleAlgorithm").value = appState.scaleAlgorithm || "Natural";
@@ -692,4 +824,5 @@ function syncInputsFromState() {
 
   renderSettingsVariations();
   syncUiSettingsInputs();
+  syncAlgoSection();
 }

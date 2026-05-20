@@ -61,7 +61,6 @@ let lastRenameData = null;
 // Reads: refreshRunDialog (ui-io.js).
 // Mutates: "collection-check-result" message handler (section 3).
 
-
 // Resize drag state — owned entirely by the resize handle logic (section 4).
 let isResizing = false;
 let resizeOriginX = 0,
@@ -119,11 +118,21 @@ const renderColorGroups = debounce(() => {
   withPreservedFocus(() => {
     const container = document.getElementById("sidebar-content-container");
     const fragment = document.createDocumentFragment();
-    fragment.appendChild(inputsUI.actionButton("+ Add Color", addGroup));
+    fragment.appendChild(inputsUI.actionButton("+ Add Color", addGroup, { "data-action": "add-color" }));
+
+    if (appState.colors.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "flex flex-col items-center justify-center py-12 px-4 text-center";
+      empty.innerHTML = `
+        <p class="text-[13px] font-medium text-[var(--text-muted)] mb-1">No colors yet</p>
+        <p class="text-[11px] text-[var(--text-muted)] opacity-70">Click <strong>+ Add Color</strong> above to add your first palette color. Each color generates a full tonal scale used across all roles.</p>
+      `;
+      fragment.appendChild(empty);
+    }
 
     appState.colors.forEach((group, idx) => {
       const card = document.createElement("div");
-      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2 color-group-card-plugin shadow-sm hover:shadow-md transition-all group relative overflow-hidden";
+      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-3 color-group-card-plugin shadow-sm hover:shadow-md transition-all group relative overflow-hidden";
 
       bindDragDrop(card, idx, {
         cardSelector: ".color-group-card-plugin",
@@ -154,11 +163,11 @@ const renderRoles = debounce(() => {
   withPreservedFocus(() => {
     const container = document.getElementById("sidebar-content-container");
     const fragment = document.createDocumentFragment();
-    fragment.appendChild(inputsUI.actionButton("+ Add Color Role", addRole));
+    fragment.appendChild(inputsUI.actionButton("+ Add Color Role", addRole, { "data-action": "add-role" }));
 
     appState.roles.forEach((role, idx) => {
       const card = document.createElement("div");
-      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-2 role-card-plugin";
+      card.className = "bg-[var(--bg-card)] rounded-[12px] border border-[var(--border)] p-3 space-y-2 mb-3 role-card-plugin";
 
       bindDragDrop(card, idx, {
         cardSelector: ".role-card-plugin",
@@ -210,6 +219,11 @@ window.onmessage = (event) => {
 
     if (appState.pluginMode === 0) appState.pluginMode = "tonalScalesBased";
     else if (appState.pluginMode === 1) appState.pluginMode = "adaptiveEngine";
+    // migrate legacy perColorAlgo → useGlobalAlgo
+    if (appState.perColorAlgo !== undefined && appState.useGlobalAlgo === undefined) {
+      appState.useGlobalAlgo = !appState.perColorAlgo;
+      delete appState.perColorAlgo;
+    }
 
     ensureIds(appState);
     ensureVariations();
@@ -398,6 +412,11 @@ function renderPreviewTabs() {
   if (!tabBar) return;
   // remove old theme tabs (keep back button and palette tab)
   tabBar.querySelectorAll(".preview-theme-tab").forEach((b) => b.remove());
+
+  const isAdaptive = appState.pluginMode === "adaptiveEngine";
+  const paletteTab = tabBar.querySelector("[data-target='preview-colors']");
+  if (paletteTab) paletteTab.classList.toggle("hidden", isAdaptive);
+
   const themes = appState.themes || [];
   themes.forEach((theme, i) => {
     const panelId = `preview-theme-panel-${i}`;
@@ -418,8 +437,8 @@ document.querySelectorAll(".sidebar-tab-btn").forEach((btn) => {
       renderPreviewTabs();
       const result = variableMaker(translateConfig(appState));
       renderPreviewPanel(result);
-      // activate first tab and its panel
-      const firstTab = document.querySelector("#preview-screen .preview-tab-btn");
+      // activate first visible tab and its panel
+      const firstTab = document.querySelector("#preview-screen .preview-tab-btn:not(.hidden)");
       const firstPanel = document.querySelector("#preview-screen .preview-panel");
       document.querySelectorAll("#preview-screen .preview-tab-btn").forEach((b) => b.classList.remove("active"));
       document.querySelectorAll("#preview-screen .preview-panel, #preview-theme-panels > div").forEach((p) => p.classList.remove("active"));
@@ -435,6 +454,7 @@ document.querySelectorAll(".sidebar-tab-btn").forEach((btn) => {
     document.querySelectorAll(".sidebar-tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === activeSidebarTab));
     if (activeSidebarTab === "color-groups") renderColorGroups();
     else if (activeSidebarTab === "roles-config") renderRoles();
+    else if (activeSidebarTab === "project") renderSidebarProject();
   };
 });
 
@@ -538,6 +558,7 @@ document.getElementById("drop-overlay").ondrop = (e) => {
 
 // ── 6b. KEYBOARD NAVIGATION ────────────────────────────────────────────────
 //
+// Alt+0 → Project tab
 // Alt+1 → Palette tab          Alt+3 → Preview: Palette
 // Alt+2 → Color Roles tab      Alt+4..N+3 → Preview: Theme 1..N
 // Escape → close preview
@@ -549,7 +570,7 @@ document.getElementById("drop-overlay").ondrop = (e) => {
   // where e.key produces special chars (¡ ™ £ ¢ ∞) instead of digits.
   // Digit3 = Palette, Digit4+ = theme panels (dynamic)
   function getPreviewPanelForCode(code) {
-    if (code === "Digit3") return "preview-colors";
+    if (code === "Digit3") return appState.pluginMode === "adaptiveEngine" ? null : "preview-colors";
     const digit = parseInt(code.replace("Digit", ""));
     if (!isNaN(digit) && digit >= 4) {
       const themeIdx = digit - 4;
@@ -581,18 +602,15 @@ document.getElementById("drop-overlay").ondrop = (e) => {
       ps.style.display = "flex";
       renderPreviewPanel(variableMaker(translateConfig(appState)));
     }
-    document.querySelectorAll("#preview-screen .preview-tab-btn").forEach((b) =>
-      b.classList.toggle("active", b.dataset.target === panelId));
-    document.querySelectorAll("#preview-content .preview-panel, #preview-theme-panels > div").forEach((p) =>
-      p.classList.toggle("active", p.id === panelId));
+    document.querySelectorAll("#preview-screen .preview-tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.target === panelId));
+    document.querySelectorAll("#preview-content .preview-panel, #preview-theme-panels > div").forEach((p) => p.classList.toggle("active", p.id === panelId));
   }
 
   function closePreview() {
     document.getElementById("preview-screen").classList.add("hidden");
     document.getElementById("preview-screen").style.display = "";
     document.getElementById("main-nav-area").classList.remove("hidden");
-    document.querySelectorAll(".sidebar-tab-btn").forEach((b) =>
-      b.classList.toggle("active", b.dataset.tab === activeSidebarTab));
+    document.querySelectorAll(".sidebar-tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === activeSidebarTab));
     const t = document.querySelector(".sidebar-tab-btn.active");
     if (t) t.focus();
   }
@@ -600,18 +618,31 @@ document.getElementById("drop-overlay").ondrop = (e) => {
   function switchMainTab(tab) {
     if (previewOpen()) closePreview();
     activeSidebarTab = tab;
-    document.querySelectorAll(".sidebar-tab-btn").forEach((b) =>
-      b.classList.toggle("active", b.dataset.tab === tab));
+    document.querySelectorAll(".sidebar-tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
     if (tab === "color-groups") renderColorGroups();
     else if (tab === "roles-config") renderRoles();
+    else if (tab === "project") renderSidebarProject();
   }
 
   document.addEventListener("keydown", (e) => {
     if (!e.altKey || e.shiftKey || e.ctrlKey || e.metaKey) return;
     if (inputFocused() || settingsOpen()) return;
-    if (e.code === "Digit1") { e.preventDefault(); switchMainTab("color-groups"); }
-    else if (e.code === "Digit2") { e.preventDefault(); switchMainTab("roles-config"); }
-    else { const p = getPreviewPanelForCode(e.code); if (p) { e.preventDefault(); openPreview(p); } }
+    if (e.code === "Digit0") {
+      e.preventDefault();
+      switchMainTab("project");
+    } else if (e.code === "Digit1") {
+      e.preventDefault();
+      switchMainTab("color-groups");
+    } else if (e.code === "Digit2") {
+      e.preventDefault();
+      switchMainTab("roles-config");
+    } else {
+      const p = getPreviewPanelForCode(e.code);
+      if (p) {
+        e.preventDefault();
+        openPreview(p);
+      }
+    }
   });
 
   document.addEventListener("keydown", (e) => {
@@ -624,11 +655,15 @@ document.getElementById("drop-overlay").ondrop = (e) => {
 // Initial render on startup. The "load-config" message (section 3) will
 // re-run these if saved state exists in the Figma document.
 
-renderColorGroups();
-renderRoles();
-syncInputsFromState();
-syncUiSettingsInputs();
-applyUiPrefs();
+try {
+  renderColorGroups();
+  renderRoles();
+  syncInputsFromState();
+  syncUiSettingsInputs();
+  applyUiPrefs();
+} catch (e) {
+  console.error("Boot render failed:", e);
+}
 
 // Re-apply theme whenever Figma toggles its dark/light class (fires on both
 // <html> and <body> depending on the Figma API version in use).

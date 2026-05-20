@@ -1,4 +1,10 @@
 
+// Defined in state.js when running in the UI context; redeclared here for the
+// Figma thread build (dist/scripts.js) where state.js is not included.
+// We use a safe accessor to avoid SyntaxError collisions when bundled with state.js
+const _FALLBACK_VARS = [1.5, 3.0, 4.5, 7.0, 12.0];
+const _getVariationTargets = () => typeof DEFAULT_VARIATION_TARGETS !== "undefined" ? DEFAULT_VARIATION_TARGETS : _FALLBACK_VARS; // eslint-disable-line no-undef
+
 // 3. CONFIG TRANSLATOR: Converts appState (UI format) into the format expected by variableMaker.
 function translateConfig(appState) {
   const count = Math.max(1, parseInt(appState.scaleLength) || 23);
@@ -14,11 +20,14 @@ function translateConfig(appState) {
       shorthand: g.shorthand,
       value: g.value,
       solverMode: g.solverMode || "natural",
+      scaleAlgorithm: g.scaleAlgorithm || null, // null = fall back to global
       description: g.description || "",
     })),
     roles: _mapRoles(appState, variations, count),
     scaleLength: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",
+    useGlobalAlgo: appState.useGlobalAlgo !== false,
+    perColorAlgoScope: appState.perColorAlgoScope || "color",
     pluginMode: appState.pluginMode || "tonalScalesBased",
     perRoleControls: !!appState.perRoleControls,
     spreadUnit: appState.spreadUnit || "steps",
@@ -32,6 +41,7 @@ function translateConfig(appState) {
     themes: _deduplicateThemeNames(themes),
     embedDirectly: appState.embedDirectly || false,
     variableStructure: appState.variableStructure || "color",
+    tokenNameOrder: appState.tokenNameOrder || ["color", "role", "variation"],
     useShorthandColors: appState.useShorthandColors || false,
     useShorthandRoles: appState.useShorthandRoles || false,
     useShorthandVariations: appState.useShorthandVariations || false,
@@ -83,7 +93,8 @@ function _mapRoles(appState, variations, count) {
     baseSelection: role.baseSelection || appState.baseSelection || "By Contrast",
     spreadUnit: role.spreadUnit || appState.spreadUnit || "steps",
     useContrastGap: !!role.useContrastGap,
-    variationTargets: role.variationTargets || (appState.pluginMode === "adaptiveEngine" ? variations.map((_, i) => DEFAULT_VARIATION_TARGETS[i] || 4.5) : variations.map((_, i) => Math.floor(count / 2 + (i - Math.floor(variations.length / 2))))),
+    variationTargets: role.variationTargets || (appState.pluginMode === "adaptiveEngine" ? variations.map((_, i) => _getVariationTargets()[i] || 4.5) : variations.map((_, i) => Math.floor(count / 2 + (i - Math.floor(variations.length / 2))))),
+    scaleAlgorithm: role.scaleAlgorithm || null, // null = fall back to global
     description: role.description || "",
     variationOverride: role.variationOverride || false,
     roleVariations:
@@ -169,16 +180,19 @@ function _getContextualRenames(colorPairs, rolePairs, oldCfg, newCfg) {
   const newRoleSteps = (newCfg.variations || []).map(function (v, i) {
     return newCfg.useShorthandVariations && v && v.shorthand ? v.shorthand : (v && v.name) || String(i);
   });
-  const oldTG = oldCfg.variableStructure || "color";
-  const newTG = newCfg.variableStructure || "color";
+  const oldOrder = oldCfg.tokenNameOrder || (oldCfg.variableStructure === "role" ? ["role", "color", "variation"] : ["color", "role", "variation"]);
+  const newOrder = newCfg.tokenNameOrder || (newCfg.variableStructure === "role" ? ["role", "color", "variation"] : ["color", "role", "variation"]);
+
+  const buildName = (order, color, role, variation) =>
+    order.map((s) => ({ color, role, variation })[s] || s).join("/");
 
   for (const cp of colorPairs) {
     for (const rp of rolePairs) {
       for (let vi = 0; vi < varCount; vi++) {
         const oldStep = oldRoleSteps[vi];
         const newStep = newRoleSteps[vi];
-        const oldName = oldTG === "role" ? `${rp.oldLabel}/${cp.oldLabel}/${oldStep}` : `${cp.oldLabel}/${rp.oldLabel}/${oldStep}`;
-        const newName = newTG === "role" ? `${rp.newLabel}/${cp.newLabel}/${newStep}` : `${cp.newLabel}/${rp.newLabel}/${newStep}`;
+        const oldName = buildName(oldOrder, cp.oldLabel, rp.oldLabel, oldStep);
+        const newName = buildName(newOrder, cp.newLabel, rp.newLabel, newStep);
         if (oldName !== newName) renames[oldName] = newName;
       }
     }
@@ -197,7 +211,9 @@ function _getSummaryChanges(colorPairs, rolePairs, oldCfg, newCfg, oldSteps, new
 
   const sample = (s) => s.slice(0, 3).join(",") + (s.length > 3 ? "…" : "");
   if (sample(oldSteps) !== sample(newSteps)) changes.push({ type: "stepNames", from: sample(oldSteps), to: sample(newSteps) });
-  if (oldCfg.variableStructure !== newCfg.variableStructure) changes.push({ type: "grouping", from: oldCfg.variableStructure, to: newCfg.variableStructure });
+  const oldOrder = (oldCfg.tokenNameOrder || []).join(",");
+  const newOrder = (newCfg.tokenNameOrder || []).join(",");
+  if (oldOrder !== newOrder) changes.push({ type: "grouping", from: oldOrder, to: newOrder });
 
   return changes;
 }

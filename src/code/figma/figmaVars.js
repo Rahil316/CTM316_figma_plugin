@@ -44,7 +44,7 @@ const VariableManager = {
     const rampCollectionName = (appState && appState.tonalScaleCollectionName) || "_scale";
     const contextualName = (appState && appState.tokenCollectionName) || "contextual";
     const skipRamps = config.embedDirectly || config.pluginMode === "adaptiveEngine";
-    const variableStructure = config.variableStructure || "color";
+    const tokenNameOrder = config.tokenNameOrder || (config.variableStructure === "role" ? ["role", "color", "variation"] : ["color", "role", "variation"]);
     const useShortColor = config.useShorthandColors || false;
     const useShortRole = config.useShorthandRoles || false;
 
@@ -123,7 +123,8 @@ const VariableManager = {
                 const token = variations[String(i)];
                 if (!token) return null;
                 const dispName = varDef.shorthand || varDef.name;
-                const figmaName = variableStructure === "role" ? `${rLabel}/${cLabel}/${dispName}` : `${cLabel}/${rLabel}/${dispName}`;
+                const segParts = { color: cLabel, role: rLabel, variation: dispName };
+                const figmaName = tokenNameOrder.map((s) => segParts[s] || s).join("/");
                 let value;
                 if (skipRamps) {
                   value = token.value;

@@ -23,10 +23,10 @@
 
 const ToastManager = (() => {
   const TYPES = {
-    success: { icon: "✓", bg: "rgba(34,197,94,.15)",  border: "rgba(34,197,94,.35)",  text: "rgb(134,239,172)" },
-    error:   { icon: "✕", bg: "rgba(239,68,68,.15)",  border: "rgba(239,68,68,.35)",  text: "rgb(252,165,165)" },
-    info:    { icon: "ℹ", bg: "rgba(59,130,246,.15)", border: "rgba(59,130,246,.35)", text: "rgb(147,197,253)" },
-    warn:    { icon: "⚠", bg: "rgba(234,179,8,.15)",  border: "rgba(234,179,8,.35)",  text: "rgb(253,224,71)"  },
+    success: { icon: "✓", bg: "rgba(34,197,94,.15)", border: "rgba(34,197,94,.35)", text: "rgb(134,239,172)" },
+    error: { icon: "✕", bg: "rgba(239,68,68,.15)", border: "rgba(239,68,68,.35)", text: "rgb(252,165,165)" },
+    info: { icon: "ℹ", bg: "rgba(59,130,246,.15)", border: "rgba(59,130,246,.35)", text: "rgb(147,197,253)" },
+    warn: { icon: "⚠", bg: "rgba(234,179,8,.15)", border: "rgba(234,179,8,.35)", text: "rgb(253,224,71)" },
     neutral: { icon: "·", bg: "rgba(255,255,255,.07)", border: "rgba(255,255,255,.14)", text: "rgba(255,255,255,.8)" },
   };
   const DEFAULT_TIMEOUT = 2000;
@@ -34,7 +34,9 @@ const ToastManager = (() => {
   const _timers = new Map();
   let _uid = 0;
 
-  function _hub() { return document.getElementById("toast-hub"); }
+  function _hub() {
+    return document.getElementById("toast-hub");
+  }
 
   function _remove(id) {
     clearTimeout(_timers.get(id));
@@ -78,20 +80,26 @@ const ToastManager = (() => {
     node.onclick = () => _remove(id);
 
     hub.appendChild(node);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      node.style.opacity = "1";
-      node.style.transform = "translateY(0) scale(1)";
-    }));
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        node.style.opacity = "1";
+        node.style.transform = "translateY(0) scale(1)";
+      }),
+    );
 
-    if (timeout > 0) _timers.set(id, setTimeout(() => _remove(id), timeout));
+    if (timeout > 0)
+      _timers.set(
+        id,
+        setTimeout(() => _remove(id), timeout),
+      );
     return id;
   }
 
   const success = (msg, opts) => show(msg, { type: "success", ...opts });
-  const error   = (msg, opts) => show(msg, { type: "error",   ...opts });
-  const info    = (msg, opts) => show(msg, { type: "info",    ...opts });
-  const warn    = (msg, opts) => show(msg, { type: "warn",    ...opts });
-  const dismiss = (id)        => _remove(id);
+  const error = (msg, opts) => show(msg, { type: "error", ...opts });
+  const info = (msg, opts) => show(msg, { type: "info", ...opts });
+  const warn = (msg, opts) => show(msg, { type: "warn", ...opts });
+  const dismiss = (id) => _remove(id);
 
   return { show, success, error, info, warn, dismiss };
 })();
@@ -289,7 +297,10 @@ const BannerManager = (() => {
         bar.style.width = "0%";
       });
     }
-    _timers.set(id, setTimeout(() => remove(id), ms));
+    _timers.set(
+      id,
+      setTimeout(() => remove(id), ms),
+    );
   }
 
   function show(cfg) {
@@ -482,9 +493,9 @@ const BannerManager = (() => {
     _destroyCarousel();
   }
 
-  const warn    = (msg, o = {}) => show({ type: "warning", message: msg, ...o });
-  const error   = (msg, o = {}) => show({ type: "error",   message: msg, ...o });
-  const info    = (msg, o = {}) => show({ type: "info",    message: msg, ...o });
+  const warn = (msg, o = {}) => show({ type: "warning", message: msg, ...o });
+  const error = (msg, o = {}) => show({ type: "error", message: msg, ...o });
+  const info = (msg, o = {}) => show({ type: "info", message: msg, ...o });
   const success = (msg, o = {}) => show({ type: "success", message: msg, ...o });
 
   return { show, remove, clear, has, queue, enqueue, carousel, carouselDismiss, warn, error, info, success };
@@ -536,7 +547,7 @@ function renderPreviewPanel(result) {
         title: "Click to edit color",
       });
       const swatchDiv = el("div", {
-        class: "size-6 rounded-md shrink-0",
+        class: "size-8 rounded-md shrink-0",
         style: `background:${srcHex}`,
         title: "Click to edit source color",
       });
@@ -548,24 +559,35 @@ function renderPreviewPanel(result) {
       });
 
       for (const [weight, data] of Object.entries(ramp)) {
-        const labelEl = el("div", {
-          class: "absolute inset-0 flex flex-col items-center justify-center gap-0.5 opacity-0 hover:opacity-100 transition-opacity pointer-events-none",
-          style: `color:${useWhiteLabel(data.value) ? "#fff" : "#000"}`,
-        }, [
-          el("span", { class: "text-[10px] font-bold leading-none" }, weight),
-          el("span", { class: "text-[9px] font-mono leading-none opacity-80" }, data.value),
-        ]);
-        const step = el("div", {
-          class: "preview-swatch relative flex-1 h-full hover:flex-[4] hover:z-10 hover:rounded-[8px] transition-all cursor-pointer",
-          style: `background:${data.value}`,
-          title: `${weight} · ${data.value} — click to copy`,
-          onclick: () => { copyToClipboard(data.value); ToastManager.success(`Copied ${data.value}`); },
-        }, [labelEl]);
+        const labelEl = el(
+          "div",
+          {
+            class: "absolute inset-0 flex flex-col items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none",
+            style: `color:${useWhiteLabel(data.value) ? "#fff" : "#000"}`,
+          },
+          [el("span", { class: "text-[12px] font-bold leading-none" }, weight), el("span", { class: "text-[14px] font-mono leading-none opacity-80" }, data.value)],
+        );
+        const step = el(
+          "div",
+          {
+            class: "preview-swatch group relative flex-1 h-full hover:flex-[4] hover:z-10 hover:rounded-[8px] transition-all cursor-pointer",
+            style: `background:${data.value}`,
+            title: `${weight} · ${data.value} — click to copy`,
+            onclick: () => {
+              copyToClipboard(data.value);
+              ToastManager.success(`Copied ${data.value}`);
+            },
+          },
+          [labelEl],
+        );
         step.onmouseenter = () => {
           hexDisplay.textContent = data.value;
           hexDisplay.style.color = data.value;
           numDisplay.textContent = weight;
-          const ratios = themeKeys.map((k) => data.contrast[k] ? `${k}: ${data.contrast[k].ratio}` : "").filter(Boolean).join(" · ");
+          const ratios = themeKeys
+            .map((k) => (data.contrast[k] ? `${k}: ${data.contrast[k].ratio}` : ""))
+            .filter(Boolean)
+            .join(" · ");
           infoDisplay.textContent = ratios;
         };
         spectrum.appendChild(step);
@@ -618,16 +640,16 @@ function renderThemePanel(panelOrId, themeTokens, bgHex, result) {
   // then derive muted/border/hover from that same ink at reduced opacity.
   const bgLum = relLum(bgHex || "#FFFFFF");
   const useWhiteInk = 1.05 / (bgLum + 0.05) >= (bgLum + 0.05) / 0.05;
-  const ink           = useWhiteInk ? "255,255,255" : "0,0,0";
-  const pvText        = `rgb(${ink})`;
-  const pvMuted       = `rgba(${ink},0.55)`;
-  const pvBorder      = `rgba(${ink},0.15)`;
-  const pvHover       = `rgba(${ink},0.07)`;
+  const ink = useWhiteInk ? "255,255,255" : "0,0,0";
+  const pvText = `rgb(${ink})`;
+  const pvMuted = `rgba(${ink},0.55)`;
+  const pvBorder = `rgba(${ink},0.15)`;
+  const pvHover = `rgba(${ink},0.07)`;
   const pvHoverBorder = `rgba(${ink},0.25)`;
-  panelEl.style.setProperty("--pv-text",         pvText);
-  panelEl.style.setProperty("--pv-muted",        pvMuted);
-  panelEl.style.setProperty("--pv-border",       pvBorder);
-  panelEl.style.setProperty("--pv-hover",        pvHover);
+  panelEl.style.setProperty("--pv-text", pvText);
+  panelEl.style.setProperty("--pv-muted", pvMuted);
+  panelEl.style.setProperty("--pv-border", pvBorder);
+  panelEl.style.setProperty("--pv-hover", pvHover);
   panelEl.style.setProperty("--pv-hover-border", pvHoverBorder);
 
   const varLabel = (varKey) => {
@@ -644,56 +666,70 @@ function renderThemePanel(panelOrId, themeTokens, bgHex, result) {
     const baseColor = ramp ? ramp[Object.keys(ramp)[Math.floor(Object.keys(ramp).length / 2)]].value : `#${srcColor.replace(/^#/, "")}`;
 
     const section = el("div", { class: "mb-4 px-2 pt-2" }, [
-      el("div", { class: "flex items-center gap-2 mb-2" }, [
-        el("div", { class: "size-5 rounded-md shrink-0", style: `background:${baseColor}` }),
-        el("div", { class: "text-[12px] font-bold", style: "color:var(--pv-text)" }, colorName),
-      ]),
+      el("div", { class: "flex items-center gap-2 mb-2" }, [el("div", { class: "size-5 rounded-md shrink-0", style: `background:${baseColor}` }), el("div", { class: "text-[12px] font-bold", style: "color:var(--pv-text)" }, colorName)]),
       el("div", { class: "space-y-3" }),
     ]);
     const content = section.querySelector(".space-y-3");
 
     for (const [roleIdx, variations] of Object.entries(roles)) {
       const rName = (appState.roles[roleIdx] && appState.roles[roleIdx].name) || `Role ${roleIdx}`;
+      const grid = el("div", { class: "grid grid-cols-swatches gap-2" });
       const roleGroup = el("div", { class: "mb-2" }, [
-        el("div", { class: "flex items-center gap-1 mb-1.5" }, [
-          el("div", { class: "text-[10px] font-extrabold tracking-[0.12em] uppercase", style: "color:var(--pv-muted)" }, rName),
-          el("div", { class: "flex-1 h-px", style: "background:var(--pv-border)" }),
-        ]),
-        el("div", { style: "display:grid;gap:4px;grid-template-columns:repeat(auto-fill,minmax(88px,1fr))" }),
+        el("div", { class: "flex items-center gap-1 mb-1.5" }, [el("div", { class: "text-[10px] font-extrabold tracking-[0.12em] uppercase", style: "color:var(--pv-muted)" }, rName), el("div", { class: "flex-1 h-px", style: "background:var(--pv-border)" })]),
+        grid,
       ]);
-      const grid = roleGroup.querySelector("div[style*='grid']");
 
       for (const [varKey, token] of Object.entries(variations)) {
         const cData = token.contrast || { ratio: 1, rating: "FAIL" };
-        const ratio = typeof cData.ratio === "number" ? cData.ratio.toFixed(2) : cData.ratio;
-        const ratingClr = cData.ratio >= 4.5 ? "#22c55e" : cData.ratio >= 3 ? "#f59e0b" : "#ef4444";
+        const ratio = typeof cData.ratio === "number" ? cData.ratio.toFixed(1) : String(cData.ratio);
+        const swatchInk = useWhiteLabel(token.value) ? "255,255,255" : "0,0,0";
+        const swatchText = `rgb(${swatchInk})`;
 
-        const card = el("div", {
-          class: "relative p-1.5 rounded-lg transition-all cursor-pointer",
-          style: "border:1px solid transparent",
-          onclick: (e) => {
-            const text = e.altKey && token.tknName ? token.tknName : token.value;
-            copyToClipboard(text);
-            ToastManager.success(`Copied ${text}`);
+        // contrast + hex overlay — both absolutely positioned so they swap cleanly
+        const contrastEl = el(
+          "div",
+          {
+            class: "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
           },
-          onmouseenter: (e) => {
-            e.currentTarget.style.borderColor = "var(--pv-hover-border)";
-            e.currentTarget.style.backgroundColor = "var(--pv-hover)";
+          [el("span", { class: "text-[14px] font-bold leading-none tabular-nums", style: `color:${swatchText}` }, ratio)],
+        );
+
+        const hexEl = el(
+          "div",
+          {
+            class: "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
+            style: "opacity:0",
           },
-          onmouseleave: (e) => {
-            e.currentTarget.style.borderColor = "transparent";
-            e.currentTarget.style.backgroundColor = "";
+          [el("span", { class: "text-[12px] font-mono leading-none", style: `color:${swatchText}` }, token.value)],
+        );
+
+        const nameEl = el("div", { class: "text-[12px] font-medium leading-none text-center", style: "color:var(--pv-muted)" }, varLabel(varKey));
+
+        const swatch = el(
+          "div",
+          {
+            class: "relative rounded-[6px] cursor-pointer transition-all duration-150",
+            style: `background:${token.value};height:52px;box-shadow:inset 0 0 0 1px rgba(128,128,128,.18)`,
+            onclick: (e) => {
+              const text = e.altKey && token.tknName ? token.tknName : token.value;
+              copyToClipboard(text);
+              ToastManager.success(`Copied ${text}`);
+            },
+            onmouseenter: (e) => {
+              contrastEl.style.opacity = "0";
+              hexEl.style.opacity = "1";
+              e.currentTarget.style.boxShadow = `inset 0 0 0 2px rgba(${swatchInk},0.4)`;
+            },
+            onmouseleave: (e) => {
+              contrastEl.style.opacity = "1";
+              hexEl.style.opacity = "0";
+              e.currentTarget.style.boxShadow = "inset 0 0 0 1px rgba(128,128,128,.18)";
+            },
           },
-        }, [
-          el("div", { class: "h-9 rounded-md mb-1.5", style: `background:${token.value};box-shadow:inset 0 0 0 1px rgba(128,128,128,.15)` }),
-          el("div", { class: "flex flex-col gap-0.5" }, [
-            el("div", { class: "text-[10px] font-semibold truncate", style: "color:var(--pv-text)" }, varLabel(varKey)),
-            el("div", { class: "flex items-center justify-between" }, [
-              el("span", { class: "text-[9px] font-mono", style: "color:var(--pv-muted)" }, token.value),
-              el("span", { class: "text-[9px] font-bold", style: `color:${ratingClr}` }, String(ratio)),
-            ]),
-          ]),
-        ]);
+          [contrastEl, hexEl],
+        );
+
+        const card = el("div", { class: "flex flex-col gap-1" }, [swatch, nameEl]);
         grid.appendChild(card);
       }
       content.appendChild(roleGroup);
@@ -983,8 +1019,22 @@ function showSystemBanners(errors, result = null) {
     return section;
   }
 
-  if (critCount > 0) detailNode.appendChild(_detailSection("Critical Issues:", "text-red-400", errors.critical.map((e) => `${e.color}/${e.role}: ${e.error}`)));
-  if (warnCount > 0) detailNode.appendChild(_detailSection("Warnings:", "text-amber-400", errors.warnings.map((w) => `${w.color}/${w.role}: ${w.warning}`)));
+  if (critCount > 0)
+    detailNode.appendChild(
+      _detailSection(
+        "Critical Issues:",
+        "text-red-400",
+        errors.critical.map((e) => `${e.color}/${e.role}: ${e.error}`),
+      ),
+    );
+  if (warnCount > 0)
+    detailNode.appendChild(
+      _detailSection(
+        "Warnings:",
+        "text-amber-400",
+        errors.warnings.map((w) => `${w.color}/${w.role}: ${w.warning}`),
+      ),
+    );
 
   if (auditCount > 0) {
     const section = document.createElement("div");
