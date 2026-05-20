@@ -237,7 +237,7 @@ function variableMaker(config) {
   const { colors, themes, scaleLength } = config;
   const errors = { critical: [], warnings: [], notices: [] };
 
-  const tonalScales = config.pluginMode !== "adaptiveEngine" ? _generateTonalScales(colors, scaleLength, config.scaleAlgorithm, config.scaleStepNames, themes) : Object.create(null);
+  const tonalScales = config.pluginMode !== "adaptiveEngine" ? _generateTonalScales(colors, scaleLength, config.scaleAlgorithm, config.scaleStepNames, themes, config.useGlobalAlgo) : Object.create(null);
 
   const tokensCollection = {};
   for (const mode of themes) tokensCollection[mode.name.toLowerCase()] = {};
@@ -260,12 +260,13 @@ function variableMaker(config) {
  * Build tonal scales for all colors. Each step stores value, naming, and contrast ratios against both light and dark backgrounds.
  * @returns {object} { [colorName]: { [stepName]: { value, stepName, shorthand, description, contrast } } }
  */
-function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, themes) {
+function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, themes, useGlobalAlgo) {
   const collection = Object.create(null);
   const names = stepNames || seriesMaker(scaleLength);
   const themeBgs = themes.map((t) => ({ key: t.name.toLowerCase(), bg: normalizeHex(t.bg) || "#FFFFFF" }));
   for (const color of colors) {
-    const rampData = tonalScaleMaker(color.value, scaleLength, scaleAlgo);
+    const colorAlgo = (!useGlobalAlgo && color.scaleAlgorithm) ? color.scaleAlgorithm : scaleAlgo;
+    const rampData = tonalScaleMaker(color.value, scaleLength, colorAlgo);
     const ramp = Object.create(null);
     collection[color.name] = ramp;
     for (let i = 0; i < scaleLength; i++) {
@@ -287,6 +288,12 @@ function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, themes)
   return collection;
 }
 
+function _getSolverMode(config, color, role) {
+  if (config.useGlobalAlgo !== false) return config.solverMode || "natural";
+  if (config.perColorAlgoScope === "role") return (role && role.solverMode) || config.solverMode || "natural";
+  return color.solverMode || config.solverMode || "natural";
+}
+
 /**
  * Direct mode: solve a hex color per role × variation using the contrast solver.
  * Contrast targets come from role.variationTargets (Manual) or baseContrast ± contrastGap (Auto).
@@ -294,11 +301,11 @@ function _generateTonalScales(colors, scaleLength, scaleAlgo, stepNames, themes)
 function _solveDirectMode(color, mode, config, groupOutput, errors) {
   const modeName = mode.name.toLowerCase();
   const bgHex = mode.bg;
-  const solverMode = color.solverMode || "natural";
 
   for (let ri = 0; ri < config.roles.length; ri++) {
     const role = config.roles[ri];
     const roleOutput = (groupOutput[ri] = {});
+    const solverMode = _getSolverMode(config, color, role);
     const variations = role.variationOverride && role.roleVariations && role.roleVariations.length ? role.roleVariations : config.variations;
 
     let targets;

@@ -30,8 +30,8 @@ const ExportFormatter = {
     lines.push("");
     lines.push("ROLE TOKENS");
     lines.push("Color,Role,Variation,Theme,Hex,Contrast,Rating,Adjusted");
-    for (const theme of ["light", "dark"]) {
-      if (!result.colorTokens || !result.colorTokens[theme]) continue;
+    for (const theme of Object.keys(result.colorTokens || {})) {
+      if (!result.colorTokens[theme]) continue;
       for (const [colorName, roles] of Object.entries(result.colorTokens[theme])) {
         for (const [roleId, variations] of Object.entries(roles)) {
           const roleName = (config.roles[roleId] && config.roles[roleId].name) || roleId;
@@ -65,9 +65,11 @@ const ExportFormatter = {
     css += `}\n`;
 
     // Semantic tokens per theme
-    for (const theme of ["light", "dark"]) {
-      if (!result.colorTokens || !result.colorTokens[theme]) continue;
-      const selector = theme === "light" ? `:root,\n[data-theme="light"]` : `[data-theme="dark"]`;
+    const themeKeys = Object.keys(result.colorTokens || {});
+    for (let ti = 0; ti < themeKeys.length; ti++) {
+      const theme = themeKeys[ti];
+      if (!result.colorTokens[theme]) continue;
+      const selector = ti === 0 ? `:root,\n[data-theme="${theme}"]` : `[data-theme="${theme}"]`;
       css += `\n/* ── ${theme.toUpperCase()} Semantic Tokens ── */\n${selector} {\n`;
       for (const [colorName, roles] of Object.entries(result.colorTokens[theme])) {
         css += `\n  /* ${colorName} */\n`;
@@ -85,9 +87,10 @@ const ExportFormatter = {
     }
 
     // OS-level dark mode fallback (only when no data-theme attribute is set)
-    if (result.colorTokens && result.colorTokens.dark) {
+    const darkThemeKey = themeKeys.find((k) => k.toLowerCase() === "dark");
+    if (darkThemeKey) {
       css += `\n/* ── OS Dark Mode Fallback ── */\n@media (prefers-color-scheme: dark) {\n  :root:not([data-theme]) {\n`;
-      for (const [colorName, roles] of Object.entries(result.colorTokens.dark)) {
+      for (const [colorName, roles] of Object.entries(result.colorTokens[darkThemeKey])) {
         for (const [roleId, variations] of Object.entries(roles)) {
           const roleName = (config.roles[roleId] && config.roles[roleId].name) || roleId;
           for (let i = 0; i < config.variations.length; i++) {
@@ -145,26 +148,31 @@ function generateScss(result, config) {
     scss += `);\n\n`;
   }
 
-  // ── 3. Token maps per theme (values reference the flat ramp variables)
-  for (const theme of ["light", "dark"]) {
-    if (!result.colorTokens || !result.colorTokens[theme]) continue;
+  // ── 3. Token maps per theme (values reference the flat ramp variables when available)
+  const scssThemeKeys = Object.keys(result.colorTokens || {});
+  for (const theme of scssThemeKeys) {
+    if (!result.colorTokens[theme]) continue;
     scss += hr(`${theme.toUpperCase()} THEME TOKENS`);
-    scss += `$tokens-${theme}: (\n`;
+    scss += `$tokens-${scssSlug(theme)}: (\n`;
     for (const [colorName, roles] of Object.entries(result.colorTokens[theme])) {
       scss += `  // ${colorName}\n`;
       for (const [roleId, variations] of Object.entries(roles)) {
         const roleName = (config && config.roles[roleId] && config.roles[roleId].name) || roleId;
         for (let i = 0; i < configVariations.length; i++) {
           const token = variations[String(i)];
-          if (!token || !token.tknRef) continue;
+          if (!token) continue;
           const dispName = configVariations[i].shorthand || configVariations[i].name;
           const tokenKey = `${scssSlug(colorName)}-${scssSlug(roleName)}-${scssSlug(dispName)}`;
-          // tknRef is "colorName-weight" (e.g. "Primary-18") — split on last dash
-          const lastDash = token.tknRef.lastIndexOf("-");
-          const refGroup = scssSlug(token.tknRef.substring(0, lastDash));
-          const refWeight = scssSlug(token.tknRef.substring(lastDash + 1));
+          let rampRef;
+          if (token.tknRef) {
+            // tknRef is "colorName-weight" (e.g. "Primary-18") — split on last dash
+            const lastDash = token.tknRef.lastIndexOf("-");
+            rampRef = `$${scssSlug(token.tknRef.substring(0, lastDash))}-${scssSlug(token.tknRef.substring(lastDash + 1))}`;
+          } else {
+            rampRef = token.value;
+          }
           const adjusted = token.isAdjusted ? " /* ⚠ adjusted */" : "";
-          scss += `  "${tokenKey}": $${refGroup}-${refWeight},${adjusted}\n`;
+          scss += `  "${tokenKey}": ${rampRef},${adjusted}\n`;
         }
       }
     }
@@ -184,14 +192,24 @@ function generateScss(result, config) {
   // ── 5. Theme output
   scss += hr("THEME OUTPUT");
   scss += `// Class-based theming\n`;
-  scss += `:root,\n[data-theme="light"] {\n  @include apply-theme($tokens-light);\n}\n\n`;
-  scss += `[data-theme="dark"] {\n  @include apply-theme($tokens-dark);\n}\n\n`;
-  scss += `// OS-level dark mode fallback\n`;
-  scss += `@media (prefers-color-scheme: dark) {\n`;
-  scss += `  :root:not([data-theme]) {\n`;
-  scss += `    @include apply-theme($tokens-dark);\n`;
-  scss += `  }\n`;
-  scss += `}\n`;
+  for (let ti = 0; ti < scssThemeKeys.length; ti++) {
+    const theme = scssThemeKeys[ti];
+    const varName = `$tokens-${scssSlug(theme)}`;
+    if (ti === 0) {
+      scss += `:root,\n[data-theme="${theme}"] {\n  @include apply-theme(${varName});\n}\n\n`;
+    } else {
+      scss += `[data-theme="${theme}"] {\n  @include apply-theme(${varName});\n}\n\n`;
+    }
+  }
+  const scssDarkKey = scssThemeKeys.find((k) => k.toLowerCase() === "dark");
+  if (scssDarkKey) {
+    scss += `// OS-level dark mode fallback\n`;
+    scss += `@media (prefers-color-scheme: dark) {\n`;
+    scss += `  :root:not([data-theme]) {\n`;
+    scss += `    @include apply-theme($tokens-${scssSlug(scssDarkKey)});\n`;
+    scss += `  }\n`;
+    scss += `}\n`;
+  }
 
   return scss;
 }

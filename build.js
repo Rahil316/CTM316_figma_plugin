@@ -17,7 +17,7 @@ try {
 }
 
 console.log("Building scripts.js...");
-const jsFiles = ["code/color/clrUtils.js", "code/color/clrEngine.js", "code/figma/docGen.js", "code/figma/config.js", "code/figma/figmaVars.js", "code/figma/main.js"];
+const jsFiles = ["color/clrUtils.js", "color/clrEngine.js", "shared/docGen.js", "shared/config.js", "figma/figmaVars.js", "figma/main.js"];
 const jsContent = jsFiles
   .map((f) => {
     const content = fs

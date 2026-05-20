@@ -93,7 +93,7 @@ const VariableManager = {
           const contrastNote = include ? `L:${entry.contrast.light.ratio}(${entry.contrast.light.rating}) D:${entry.contrast.dark.ratio}(${entry.contrast.dark.rating})` : "";
           const groupDesc = include ? entry.description : "";
           const fullDesc = groupDesc && contrastNote ? `${groupDesc} | ${contrastNote}` : groupDesc || contrastNote;
-          allRampVars.push([`${cLabel}/${weightName}`, "COLOR", entry.value, fullDesc]);
+          allRampVars.push([`${cLabel}/${stepLabel(weightName)}`, "COLOR", entry.value, fullDesc]);
         }
       }
       await this.upsertVariables(rampsCol, modeId, allRampVars);
@@ -109,7 +109,7 @@ const VariableManager = {
       }
 
       const skippedModes = [];
-      for (const theme of ["light", "dark"]) {
+      for (const theme of Object.keys(result.colorTokens || {})) {
         const modeId = this.ensureMode(contextualCol, theme);
         if (modeId === null) {
           skippedModes.push(theme);

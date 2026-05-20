@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-const LAB_ENABLED = true;
+const LAB_ENABLED = false;
 
 (function () {
   if (!LAB_ENABLED) return;

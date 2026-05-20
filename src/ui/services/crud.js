@@ -289,28 +289,13 @@ function updateStepLabel(idx, field, value) {
 }
 
 // ── ROLE VARIATION OVERRIDES ─────────────────────────────────────────────────
-//
-//  Reads:   appState.roles[idx].roleVariations, appState.variations
-//  Mutates: role.roleVariations splice/push, role.variationOverride,
-//           role.variationManual via setRoleVariation()
-//  Renders: renderRoles(), schedulePreview()
 
 function toggleRoleVariationOverride(roleIdx) {
   const role = appState.roles[roleIdx];
   role.variationOverride = !role.variationOverride;
-  if (role.variationOverride) {
-    if (!role.roleVariations || role.roleVariations.length === 0) {
-      role.roleVariations = appState.variations.map((v) => Object.assign({}, v, { _id: generateId() }));
-    }
-  } else {
-    role.variationManual = false;
+  if (role.variationOverride && (!role.roleVariations || role.roleVariations.length === 0)) {
+    role.roleVariations = appState.variations.map((v) => Object.assign({}, v, { _id: generateId() }));
   }
-  renderRoles();
-  schedulePreview();
-}
-
-function toggleRoleVariationManual(roleIdx) {
-  appState.roles[roleIdx].variationManual = !appState.roles[roleIdx].variationManual;
   renderRoles();
   schedulePreview();
 }

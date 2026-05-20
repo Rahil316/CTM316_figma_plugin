@@ -62,7 +62,8 @@ const demoConfig = {
   spreadUnit: "steps",
   perRoleControls: false,
   useGlobalAlgo: true,
-  perColorAlgoScope: "color", // "color" | "role" — only used when adaptive engine + useGlobalAlgo=false
+  perColorAlgoScope: "color",
+  solverMode: "natural",
   includeTonalCollection: true,
   variations: null,
   colors: [
@@ -187,6 +188,12 @@ function _computeHash() {
     baseSelection: s.baseSelection,
     spreadUnit: s.spreadUnit,
     scaleStepNames: s.scaleStepNames,
+    useShorthandColors: s.useShorthandColors,
+    useShorthandRoles: s.useShorthandRoles,
+    useShorthandVariations: s.useShorthandVariations,
+    useShorthandSteps: s.useShorthandSteps,
+    tokenNameOrder: s.tokenNameOrder,
+    embedDirectly: s.embedDirectly,
   });
 }
 

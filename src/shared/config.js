@@ -27,7 +27,6 @@ function translateConfig(appState) {
     roles: _mapRoles(appState, variations, count),
     scaleLength: count,
     scaleAlgorithm: appState.scaleAlgorithm || "Natural",
-    // useGlobalAlgo / perColorAlgoScope: UI state persisted but not yet consumed by clrEngine — reserved for future per-color algorithm scoping
     pluginMode: appState.pluginMode || "tonalScalesBased",
     perRoleControls: !!appState.perRoleControls,
     spreadUnit: appState.spreadUnit || "steps",
@@ -56,6 +55,9 @@ function translateConfig(appState) {
       .filter((v) => !isNaN(v)),
     includeDescriptions: appState.includeDescriptions !== false,
     includeTonalCollection: appState.includeTonalCollection !== false,
+    useGlobalAlgo: appState.useGlobalAlgo !== false,
+    perColorAlgoScope: appState.perColorAlgoScope || "color",
+    solverMode: appState.solverMode || "natural",
   };
 }
 
@@ -113,7 +115,8 @@ function _mapRoles(appState, variations, count) {
     spreadUnit: role.spreadUnit || appState.spreadUnit || "steps",
     useContrastGap: !!role.useContrastGap,
     variationTargets: role.variationTargets || (appState.pluginMode === "adaptiveEngine" ? variations.map((_, i) => _getVariationTargets()[i] || 4.5) : variations.map((_, i) => Math.floor(count / 2 + (i - Math.floor(variations.length / 2))))),
-    scaleAlgorithm: role.scaleAlgorithm || null, // null = fall back to global
+    scaleAlgorithm: role.scaleAlgorithm || null,
+    solverMode: role.solverMode || null, // null = fall back to config.solverMode
     description: role.description || "",
     variationOverride: role.variationOverride || false,
     roleVariations:
@@ -197,22 +200,30 @@ function _getContextualRenames(colorPairs, rolePairs, oldCfg, newCfg) {
   const buildName = (order, color, role, variation) =>
     order.map((s) => ({ color, role, variation })[s] || s).join("/");
 
-  const getRoleStepNames = (cfg, roleItem) => {
+  // Returns Map<_id, displayName> — falls back to String(index) for items without _id
+  const getVarMap = (cfg, roleItem) => {
     const vars =
       roleItem && roleItem.variationOverride && roleItem.roleVariations && roleItem.roleVariations.length > 0
         ? roleItem.roleVariations
         : cfg.variations || [];
-    return vars.map((v, i) => (cfg.useShorthandVariations && v && v.shorthand ? v.shorthand : (v && v.name) || String(i)));
+    const map = new Map();
+    vars.forEach((v, i) => {
+      const id = (v && v._id) ? v._id : String(i);
+      const name = (cfg.useShorthandVariations && v && v.shorthand) ? v.shorthand : ((v && v.name) || String(i));
+      map.set(id, name);
+    });
+    return map;
   };
 
   for (const cp of colorPairs) {
     for (const rp of rolePairs) {
-      const oldSteps = getRoleStepNames(oldCfg, rp.oldItem);
-      const newSteps = getRoleStepNames(newCfg, rp.newItem);
-      const varCount = Math.min(oldSteps.length, newSteps.length);
-      for (let vi = 0; vi < varCount; vi++) {
-        const oldName = buildName(oldOrder, cp.oldLabel, rp.oldLabel, oldSteps[vi]);
-        const newName = buildName(newOrder, cp.newLabel, rp.newLabel, newSteps[vi]);
+      const oldVarMap = getVarMap(oldCfg, rp.oldItem);
+      const newVarMap = getVarMap(newCfg, rp.newItem);
+      for (const [vid, oldVarName] of oldVarMap) {
+        if (!newVarMap.has(vid)) continue;
+        const newVarName = newVarMap.get(vid);
+        const oldName = buildName(oldOrder, cp.oldLabel, rp.oldLabel, oldVarName);
+        const newName = buildName(newOrder, cp.newLabel, rp.newLabel, newVarName);
         if (oldName !== newName) renames[oldName] = newName;
       }
     }

@@ -1,96 +1,11 @@
 /**
  * ============================================================================
- * CTM316 SETTINGS
- *
- * Everything that connects the settings UI to appState:
- *   - Primitive DOM builders (_card, _row, _togglePill, _textInput …)
- *   - Panel renderers        (renderSettingsTokensPanel, renderSettingsPluginPanel)
- *   - Dynamic list renderers (renderSettingsVariations, renderSettingsThemes,
- *                             renderSettingsStepLabels, renderTokenOrderPills)
- *   - Mode setters           (toggleBoolSetting, setPluginMode, setAlgoScope …)
- *   - State → DOM sync       (syncInputsFromState, syncOutputToggles …)
- *   - DOM → State            (updateSettingsFromInputs)
- *   - Sidebar project tab    (renderSidebarProject)
+ * CTM316 SCREEN: SETTINGS
+ * List renderers, mode setters, state↔DOM sync,
+ * and the settings open/cancel/done lifecycle.
+ * Layout primitives live in organisms.js (panelUI namespace).
  * ============================================================================
  */
-
-// ── PRIMITIVE BUILDERS ────────────────────────────────────────────────────────
-
-function _sLabel(text) {
-  return el("p", { class: "text-[11px] font-bold tracking-[0.6px] uppercase text-[var(--text-muted)] mb-2" }, [text]);
-}
-
-function _card(children) {
-  return el("div", { class: "settings-card space-y-3" }, children);
-}
-
-function _row(labelText, descText, control) {
-  return el("div", { class: "flex items-center justify-between gap-3" }, [
-    el("div", {}, [
-      el("p", { class: "text-[13px] font-medium text-[var(--text-primary)]" }, [labelText]),
-      descText ? el("p", { class: "text-[11px] text-[var(--text-muted)] mt-0.5" }, [descText]) : null,
-    ]),
-    control,
-  ]);
-}
-
-function _smallRow(labelText, control) {
-  return el("div", { class: "flex items-center justify-between" }, [
-    el("p", { class: "text-[12px] text-[var(--text-muted)] font-medium" }, [labelText]),
-    control,
-  ]);
-}
-
-function _togglePill(id, onclickFn) {
-  return el("button", { id, class: "toggle-pill", onclick: onclickFn });
-}
-
-function _textInput(id, placeholder, label, extraClass = "") {
-  const input = el("input", {
-    type: "text",
-    id,
-    placeholder,
-    class: `w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] ${extraClass}`.trim(),
-  });
-  if (!label) return input;
-  return el("div", { class: "space-y-1" }, [
-    el("label", { for: id, class: "text-[var(--text-muted)] text-[12px] font-medium ml-1" }, [label]),
-    input,
-  ]);
-}
-
-function _numberInput(id, label) {
-  const input = el("input", {
-    type: "number",
-    id,
-    class: "w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]",
-  });
-  if (!label) return input;
-  return el("div", { class: "space-y-1" }, [
-    el("label", { for: id, class: "text-[var(--text-muted)] text-[12px] font-medium ml-1" }, [label]),
-    input,
-  ]);
-}
-
-function _selectInput(id, options, label) {
-  const select = el("select", {
-    id,
-    class: "w-full h-[40px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-2 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] appearance-none cursor-pointer",
-  }, options.map(([val, txt]) => el("option", { value: val }, [txt])));
-  if (!label) return select;
-  return el("div", { class: "space-y-1 flex-1" }, [
-    el("label", { for: id, class: "text-[var(--text-muted)] text-[12px] font-medium ml-1" }, [label]),
-    select,
-  ]);
-}
-
-function _segmented(buttons) {
-  return el("div", { class: "flex gap-1 bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] p-0.5" },
-    buttons.map(({ id, label, onclick }) =>
-      el("button", { id, onclick, class: "seg-btn flex-1" }, [label])
-    )
-  );
-}
 
 // ── TOKEN SETTINGS PANEL ──────────────────────────────────────────────────────
 
@@ -100,33 +15,39 @@ function renderSettingsTokensPanel() {
   mount.innerHTML = "";
 
   // ── Token Creation Mode ──
-  const modeCard = _card([
-    _sLabel("Token Creation Mode"),
-    _segmented([
+  const modeCard = panelUI.card([
+    panelUI.sectionLabel("Token Creation Mode"),
+    panelUI.segmented([
       { id: "mode-btn-ramp",   label: "Tonal Scale Based", onclick: () => setPluginMode(0) },
       { id: "mode-btn-direct", label: "Adaptive Engine",   onclick: () => setPluginMode(1) },
     ]),
 
-    // Global algo toggle (label/desc text updated dynamically by syncAlgoSection)
+    // Global algo toggle
     el("div", { class: "flex items-center justify-between gap-3" }, [
       el("div", {}, [
-        el("p", { id: "setting-global-algo-title", class: "text-[13px] font-medium text-[var(--text-primary)]" },
-          ["Use Global Algorithm for Tonal Scale Generation"]),
-        el("p", { id: "setting-global-algo-desc", class: "text-[11px] text-[var(--text-muted)] mt-0.5" },
-          ["Use a single algorithm for all colors. If unchecked, each color will have its own algorithm."]),
+        el("p", { id: "setting-global-algo-title", class: "text-[13px] font-medium text-[var(--text-primary)]" }, ["Use Global Algorithm"]),
+        el("p", { id: "setting-global-algo-desc",  class: "text-[11px] text-[var(--text-muted)] mt-0.5" }, ["Use one algorithm for all colors"]),
       ]),
-      _togglePill("toggle-useGlobalAlgo", () => toggleBoolSetting("useGlobalAlgo")),
+      panelUI.togglePill("toggle-useGlobalAlgo", () => toggleBoolSetting("useGlobalAlgo")),
     ]),
 
-    // Global algo selector
+    // Global tonal algorithm selector (tonal mode + global)
     el("div", { id: "setting-global-algo-row", class: "space-y-1" }, [
-      _selectInput("setting-scaleAlgorithm", [
+      panelUI.selectInput("setting-scaleAlgorithm", [
         ["Natural","Natural"], ["Uniform","Uniform"], ["Expressive","Expressive"],
         ["Symmetric","Symmetric"], ["OKLCH","OKLCH"], ["Material","Material"], ["Linear","Linear"],
       ], "Algorithm"),
     ]),
 
-    // Adaptive scope (hidden unless adaptive + global off)
+    // Global solver mode selector (adaptive mode + global)
+    el("div", { id: "setting-global-solver-row", class: "hidden space-y-1" }, [
+      panelUI.selectInput("setting-solverMode", [
+        ["natural","Balanced"], ["saturated","Vivid"], ["luminance","Muted"],
+        ["hue-locked","Hue Locked"], ["chroma-maximized","Max Chroma"],
+      ], "Solver"),
+    ]),
+
+    // Scope row (adaptive + not global)
     el("div", { id: "setting-algo-scope-row", class: "hidden" }, [
       el("p", { class: "text-[var(--text-muted)] text-[12px] font-medium mb-2" }, ["Solver scope"]),
       el("div", { class: "flex gap-2" }, [
@@ -139,25 +60,23 @@ function renderSettingsTokensPanel() {
 
   // ── Palette (tonal-only, hidden in adaptive mode) ──
   const paletteCard = el("div", { id: "settings-scale-section", class: "settings-card space-y-3" }, [
-    _sLabel("Palette"),
+    panelUI.sectionLabel("Palette"),
     el("div", { class: "grid grid-cols-2 gap-3" }, [
-      _numberInput("setting-scaleLength", "Steps"),
+      panelUI.input({ id: "setting-scaleLength", type: "number", size: "lg", label: "Steps" }),
     ]),
   ]);
   mount.appendChild(paletteCard);
 
   // ── Role Variations ──
-  const rolesCard = _card([
-    _sLabel("Variations"),
+  const rolesCard = panelUI.card([
+    panelUI.sectionLabel("Variations"),
 
-    // Allow role-specific overrides (sits outside the card, matches old layout)
-    _row(
+    panelUI.row(
       "Role-specific Variations",
       "Allow individual roles to override the global variation list",
-      _togglePill("toggle-allowRoleVariations", () => toggleBoolSetting("allowRoleVariations"))
+      panelUI.togglePill("toggle-allowRoleVariations", () => toggleBoolSetting("allowRoleVariations"))
     ),
 
-    // Global variations list
     el("div", { class: "pt-2 border-t border-[var(--border)] space-y-2" }, [
       el("div", { class: "flex items-center justify-between" }, [
         el("div", {}, [
@@ -181,12 +100,12 @@ function renderSettingsTokensPanel() {
   mount.appendChild(rolesCard);
 
   // ── Token Naming ──
-  const namingCard = _card([
-    _sLabel("Token Naming"),
-    _smallRow("Shorthand for Colors",     _togglePill("toggle-useShorthandColors",     () => toggleBoolSetting("useShorthandColors"))),
-    _smallRow("Shorthand for Roles",      _togglePill("toggle-useShorthandRoles",      () => toggleBoolSetting("useShorthandRoles"))),
-    _smallRow("Shorthand for Variations", _togglePill("toggle-useShorthandVariations", () => toggleBoolSetting("useShorthandVariations"))),
-    _smallRow("Shorthand for Scale Steps", _togglePill("toggle-useShorthandSteps",     () => toggleBoolSetting("useShorthandSteps"))),
+  const namingCard = panelUI.card([
+    panelUI.sectionLabel("Token Naming"),
+    panelUI.smallRow("Shorthand for Colors",     panelUI.togglePill("toggle-useShorthandColors",     () => toggleBoolSetting("useShorthandColors"))),
+    panelUI.smallRow("Shorthand for Roles",      panelUI.togglePill("toggle-useShorthandRoles",      () => toggleBoolSetting("useShorthandRoles"))),
+    panelUI.smallRow("Shorthand for Variations", panelUI.togglePill("toggle-useShorthandVariations", () => toggleBoolSetting("useShorthandVariations"))),
+    panelUI.smallRow("Shorthand for Scale Steps", panelUI.togglePill("toggle-useShorthandSteps",     () => toggleBoolSetting("useShorthandSteps"))),
 
     el("div", { class: "pt-1 border-t border-[var(--border)] space-y-2" }, [
       el("p", { class: "text-[12px] text-[var(--text-muted)] font-medium" }, ["Token Name Format"]),
@@ -199,59 +118,55 @@ function renderSettingsTokensPanel() {
 
     el("div", { class: "flex items-center justify-between pt-1 border-t border-[var(--border)]" }, [
       el("p", { class: "text-[12px] text-[var(--text-muted)] font-medium" }, ["Variable Descriptions"]),
-      _togglePill("toggle-includeDescriptions", () => toggleBoolSetting("includeDescriptions")),
+      panelUI.togglePill("toggle-includeDescriptions", () => toggleBoolSetting("includeDescriptions")),
     ]),
   ]);
   mount.appendChild(namingCard);
 
   // ── Figma Collections ──
-  const collectionsCard = _card([
-    _sLabel("Collections"),
+  const collectionsCard = panelUI.card([
+    panelUI.sectionLabel("Collections"),
 
-    // Palettes collection — hidden in adaptive engine mode
     el("div", { id: "settings-palettes-collection-group", class: "space-y-2" }, [
-      _row(
+      panelUI.row(
         "Palettes collection",
         null,
-        _togglePill("toggle-includeTonalCollection", () => toggleBoolSetting("includeTonalCollection"))
+        panelUI.togglePill("toggle-includeTonalCollection", () => toggleBoolSetting("includeTonalCollection"))
       ),
       el("div", { id: "settings-tonal-collection-row" }, [
-        _textInput("setting-tonalScaleCollectionName", "_Palettes"),
+        panelUI.input({ id: "setting-tonalScaleCollectionName", placeholder: "_Palettes", size: "md" }),
       ]),
     ]),
 
-    // Color role collection
     el("div", { class: "space-y-2" }, [
       el("p", { class: "text-[13px] font-medium text-[var(--text-primary)]" }, ["Color role collection"]),
-      _textInput("setting-tokenCollectionName", "Color Tokens"),
+      panelUI.input({ id: "setting-tokenCollectionName", placeholder: "Color Tokens", size: "md" }),
     ]),
 
-    // Map roles with Palettes (inverse of embedDirectly) — hidden in adaptive engine mode
     el("div", { id: "settings-map-roles-row" }, [
-      _row(
+      panelUI.row(
         "Map roles with Palettes",
         "Role tokens reference the Palettes collection",
-        _togglePill("toggle-mapRolesWithPalettes", () => toggleMapRolesWithPalettes())
+        panelUI.togglePill("toggle-mapRolesWithPalettes", () => toggleMapRolesWithPalettes())
       ),
     ]),
 
-    // Global Colors + sub-options
-    _row(
+    panelUI.row(
       "Global Colors",
       "Store raw brand hex values — no themes, no processing",
-      _togglePill("toggle-includeGlobalColors", () => toggleBoolSetting("includeGlobalColors"))
+      panelUI.togglePill("toggle-includeGlobalColors", () => toggleBoolSetting("includeGlobalColors"))
     ),
     el("div", { id: "constants-options", class: "hidden space-y-2 pl-2 border-l-2 border-[var(--border)]" }, [
-      _textInput("setting-globalColorsCollectionName", "_constants", "Collection Name"),
+      panelUI.input({ id: "setting-globalColorsCollectionName", placeholder: "_constants", label: "Collection Name", size: "md" }),
 
-      _row(
+      panelUI.row(
         "Alpha Tints",
         "Add alpha tint variables under colorName/Opacities/",
-        _togglePill("toggle-includeAlphaTints", () => toggleBoolSetting("includeAlphaTints"))
+        panelUI.togglePill("toggle-includeAlphaTints", () => toggleBoolSetting("includeAlphaTints"))
       ),
 
       el("div", { id: "opacity-values-row", class: "hidden space-y-1" }, [
-        _textInput("setting-alphaValues", "10, 25, 50, 75, 90", "Alpha Values (CSV, 0–100)"),
+        panelUI.input({ id: "setting-alphaValues", placeholder: "10, 25, 50, 75, 90", label: "Alpha Values (CSV, 0–100)", size: "md" }),
       ]),
     ]),
   ]);
@@ -259,7 +174,7 @@ function renderSettingsTokensPanel() {
 
   // ── Step Labels (tonal-only, hidden in adaptive mode) ──
   const stepLabelsCard = el("div", { id: "settings-step-labels-section", class: "settings-card space-y-3" }, [
-    _sLabel("Scale Step Labels"),
+    panelUI.sectionLabel("Scale Step Labels"),
     el("p", { class: "text-[11px] text-[var(--text-muted)] -mt-1" }, ["Name each step in the tonal scale. Shorthand is used in token names when 'Shorthand for Scale Steps' is on."]),
     el("div", { class: "flex items-center justify-between" }, [
       el("div", { class: "flex items-center gap-1.5 px-0.5 flex-1" }, [
@@ -286,23 +201,22 @@ function renderSettingsPluginPanel() {
   if (!mount) return;
   mount.innerHTML = "";
 
-  const scaleSelect = _selectInput("setting-ui-scale", [
+  const scaleSelect = panelUI.selectInput("setting-ui-scale", [
     ["1.0", "100% (default)"],
     ["0.7", "70%"], ["0.8", "80%"], ["0.9", "90%"],
     ["1.1", "110%"], ["1.25", "125%"], ["1.5", "150%"],
   ], "UI Scale");
-  const themeSelect = _selectInput("setting-ui-theme", [
+  const themeSelect = panelUI.selectInput("setting-ui-theme", [
     ["figma", "Follow Figma"],
     ["dark",  "Dark"],
     ["light", "Light"],
   ], "UI Theme");
 
-  // attach handlers to the actual <select> inside the wrapper
   scaleSelect.querySelector("select").onchange = (e) => updateUiPref("scale", parseFloat(e.target.value) || 1.0);
   themeSelect.querySelector("select").onchange = (e) => updateUiPref("theme", e.target.value);
 
-  const uiCard = _card([
-    _sLabel("Interface"),
+  const uiCard = panelUI.card([
+    panelUI.sectionLabel("Interface"),
     el("div", { class: "flex gap-3" }, [scaleSelect, themeSelect]),
   ]);
   mount.appendChild(uiCard);
@@ -316,9 +230,6 @@ function renderSettingsPanels() {
 }
 
 // ── MODE SETTERS ─────────────────────────────────────────────────────────────
-//
-//  Each setter mutates one slice of appState and then triggers the minimum
-//  sync + render needed to reflect the change in the UI.
 
 function toggleBoolSetting(key) {
   appState[key] = !appState[key];
@@ -361,19 +272,21 @@ function setTokenGrouping(idx) {
   schedulePreview();
 }
 
-function setAlgoScope(scope) {
-  appState.perColorAlgoScope = scope;
-  const colorBtn = document.getElementById("algo-scope-btn-color");
-  const roleBtn = document.getElementById("algo-scope-btn-role");
-  if (colorBtn) colorBtn.classList.toggle("active", scope === "color");
-  if (roleBtn) roleBtn.classList.toggle("active", scope === "role");
-  schedulePreview();
-}
-
 function toggleMapRolesWithPalettes() {
   appState.embedDirectly = !appState.embedDirectly;
   const btn = document.getElementById("toggle-mapRolesWithPalettes");
   if (btn) btn.classList.toggle("on", !appState.embedDirectly);
+  schedulePreview();
+}
+
+function setAlgoScope(scope) {
+  appState.perColorAlgoScope = scope;
+  const colorBtn = document.getElementById("algo-scope-btn-color");
+  const roleBtn  = document.getElementById("algo-scope-btn-role");
+  if (colorBtn) colorBtn.classList.toggle("active", scope === "color");
+  if (roleBtn)  roleBtn.classList.toggle("active",  scope === "role");
+  renderColorGroups();
+  renderRoles();
   schedulePreview();
 }
 
@@ -495,16 +408,20 @@ function syncAlgoSection() {
   const isAdaptive = appState.pluginMode === "adaptiveEngine";
   const useGlobal  = appState.useGlobalAlgo !== false;
 
-  const algoToggleTitle = document.getElementById("setting-global-algo-title");
-  const algoToggleDesc  = document.getElementById("setting-global-algo-desc");
-  if (algoToggleTitle) algoToggleTitle.textContent = isAdaptive ? "Global Solver" : "Global Algorithm";
-  if (algoToggleDesc)  algoToggleDesc.textContent  = isAdaptive
-    ? "Use a single solver for all colors and roles"
-    : "Use a single algorithm for all colors";
+  const title = document.getElementById("setting-global-algo-title");
+  const desc  = document.getElementById("setting-global-algo-desc");
+  if (title) title.textContent = isAdaptive ? "Global Solver" : "Global Algorithm";
+  if (desc)  desc.textContent  = isAdaptive ? "Use one solver mode for all colors and roles" : "Use one algorithm for all colors";
 
-  const globalRow = document.getElementById("setting-global-algo-row");
-  if (globalRow) globalRow.classList.toggle("hidden", !useGlobal);
+  // Tonal algo selector: tonal mode + global
+  const algoRow = document.getElementById("setting-global-algo-row");
+  if (algoRow) algoRow.classList.toggle("hidden", isAdaptive || !useGlobal);
 
+  // Solver selector: adaptive mode + global
+  const solvRow = document.getElementById("setting-global-solver-row");
+  if (solvRow) solvRow.classList.toggle("hidden", !isAdaptive || !useGlobal);
+
+  // Scope row: adaptive + not global
   const scopeRow = document.getElementById("setting-algo-scope-row");
   if (scopeRow) scopeRow.classList.toggle("hidden", !(isAdaptive && !useGlobal));
 
@@ -541,6 +458,7 @@ function syncInputsFromState() {
   _set("setting-tokenCollectionName",       appState.tokenCollectionName || "contextual");
   _set("setting-scaleLength",               appState.scaleLength);
   _set("setting-scaleAlgorithm",            appState.scaleAlgorithm || "Natural");
+  _set("setting-solverMode",               appState.solverMode || "natural");
 
   const bsEl = document.getElementById("setting-baseSelection");
   if (bsEl) {
@@ -568,7 +486,8 @@ function updateSettingsFromInputs() {
   const wCount = parseInt(document.getElementById("setting-scaleLength").value);
   appState.scaleLength    = isNaN(wCount) ? 25 : Math.max(1, Math.min(100, wCount));
   appState.scaleAlgorithm = document.getElementById("setting-scaleAlgorithm").value;
-  // scaleStepNames is managed live via the step labels CRUD list — no batch read needed
+  const solverEl = document.getElementById("setting-solverMode");
+  if (solverEl) appState.solverMode = solverEl.value;
 
   appState.globalColorsCollectionName = document.getElementById("setting-globalColorsCollectionName").value.trim() || "_constants";
   appState.alphaValues                = document.getElementById("setting-alphaValues").value;
@@ -646,16 +565,8 @@ function renderSettingsStepLabels() {
           inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveStepLabel(idx, -1), disabled: idx === 0 }),
           inputsUI.btn("ghost", { size: "xs", square: true, icon: "▼", onclick: () => moveStepLabel(idx, 1),  disabled: idx === steps.length - 1 }),
         ]),
-        el("input", {
-          type: "text", value: s.name || "", placeholder: "Label",
-          oninput: (e) => updateStepLabel(idx, "name", e.target.value),
-          class: "flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
-        el("input", {
-          type: "text", value: s.shorthand || "", placeholder: "Short",
-          oninput: (e) => updateStepLabel(idx, "shorthand", e.target.value),
-          class: "w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
+        panelUI.input({ value: s.name || "", placeholder: "Label", size: "sm", width: "flex", oninput: (e) => updateStepLabel(idx, "name", e.target.value) }),
+        panelUI.input({ value: s.shorthand || "", placeholder: "Short", size: "sm", width: null, class: "w-[52px]", oninput: (e) => updateStepLabel(idx, "shorthand", e.target.value) }),
         inputsUI.btn("danger", { size: "md", square: true, icon: Icons.Close, onclick: () => removeStepLabel(idx) }),
       ]),
     );
@@ -675,24 +586,16 @@ function renderSettingsVariations() {
           inputsUI.btn("ghost", { size: "xs", square: true, icon: "▲", onclick: () => moveSharedVariation(idx, -1), disabled: idx === 0 }),
           inputsUI.btn("ghost", { size: "xs", square: true, icon: "▼", onclick: () => moveSharedVariation(idx, 1),  disabled: idx === vars.length - 1 }),
         ]),
-        el("input", {
-          type: "text", value: v.name || "", placeholder: "Name",
-          oninput: (e) => updateSharedVariation(idx, "name", e.target.value),
-          class: "flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
-        el("input", {
-          type: "text", value: v.shorthand || "", placeholder: "Short",
-          oninput: (e) => updateSharedVariation(idx, "shorthand", e.target.value),
-          class: "w-[52px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
+        panelUI.input({ value: v.name || "", placeholder: "Name", size: "sm", width: "flex", oninput: (e) => updateSharedVariation(idx, "name", e.target.value) }),
+        panelUI.input({ value: v.shorthand || "", placeholder: "Short", size: "sm", width: null, class: "w-[52px]", oninput: (e) => updateSharedVariation(idx, "shorthand", e.target.value) }),
         inputsUI.btn("danger", { size: "md", square: true, icon: Icons.Close, onclick: () => removeSharedVariation(idx), disabled: !canDelete }),
       ]),
     );
   });
 }
 
-function renderSettingsThemes() {
-  const container = document.getElementById("settings-themes-list");
+function renderSettingsThemes(containerId = "settings-themes-list") {
+  const container = document.getElementById(containerId);
   if (!container) return;
   const themes = appState.themes || [];
   const canDelete = themes.length > 1;
@@ -701,11 +604,7 @@ function renderSettingsThemes() {
     const hexVal = theme.bg || "FFFFFF";
     container.appendChild(
       el("div", { class: "flex items-center gap-1.5" }, [
-        el("input", {
-          type: "text", value: theme.name || "", placeholder: "Mode name",
-          oninput: (e) => { updateTheme(idx, "name", e.target.value); renderPreviewTabs(); },
-          class: "flex-1 h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)]",
-        }),
+        panelUI.input({ value: theme.name || "", placeholder: "Mode name", size: "sm", width: "flex", oninput: (e) => { updateTheme(idx, "name", e.target.value); renderPreviewTabs(); } }),
         el("div", { class: "relative flex items-center" }, [
           el("input", {
             type: "color", value: "#" + hexVal, id: `theme-picker-${idx}`,
@@ -725,9 +624,9 @@ function renderSettingsThemes() {
             style: `background:#${hexVal}`, id: `theme-swatch-${idx}`,
           }),
         ]),
-        el("input", {
-          type: "text", value: hexVal, placeholder: "RRGGBB",
-          id: `theme-hex-${idx}`, maxlength: 6,
+        panelUI.input({
+          id: `theme-hex-${idx}`, value: hexVal, placeholder: "RRGGBB",
+          size: "sm", width: null, class: "w-[80px]", maxlength: 6, mono: true,
           oninput: (e) => {
             const clean  = sanitizeHex(e.target.value);
             const swatch = document.getElementById(`theme-swatch-${idx}`);
@@ -737,7 +636,6 @@ function renderSettingsThemes() {
             if (picker && clean.length === 6) picker.value = "#" + clean;
             schedulePreview();
           },
-          class: "w-[80px] h-[32px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-2 text-[12px] uppercase outline-none focus:border-[var(--border-focus)] text-[var(--text-primary)] font-mono",
         }),
         inputsUI.btn("danger", {
           size: "md", square: true, icon: Icons.Close, disabled: !canDelete,
@@ -748,35 +646,57 @@ function renderSettingsThemes() {
   });
 }
 
-// ── SIDEBAR: PROJECT TAB ──────────────────────────────────────────────────────
+// ── SETTINGS LIFECYCLE ────────────────────────────────────────────────────────
 
-function renderSidebarProject() {
-  const container = document.getElementById("sidebar-content-container");
-  if (!container) return;
-  container.innerHTML = "";
+let _settingsSnapshot = null;
 
-  container.appendChild(
-    el("div", { class: "space-y-4 p-1" }, [
-      el("div", { class: "space-y-1" }, [
-        el("label", { class: "text-[11px] text-[var(--text-muted)] font-medium ml-1" }, ["Project Name"]),
-        el("input", {
-          type: "text", value: appState.name || "", placeholder: "CTM316",
-          oninput: (e) => updateProjectName(e.target.value),
-          class: "w-full h-[36px] bg-[var(--bg-input)] border border-[var(--border)] rounded-[8px] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--border-focus)]",
-        }),
-      ]),
-      el("div", { class: "space-y-2" }, [
-        el("div", { class: "flex items-center justify-between" }, [
-          el("label", { class: "text-[11px] text-[var(--text-muted)] font-medium ml-1" }, ["Themes (modes)"]),
-          el("button", {
-            onclick: () => { addTheme(); renderSidebarProject(); },
-            class: "h-[26px] px-2 text-[11px] font-medium rounded-[6px] text-[var(--accent)] hover:bg-[var(--bg-hover)] border border-dashed border-[var(--border)] transition-colors",
-          }, ["+ Add theme"]),
-        ]),
-        el("div", { id: "settings-themes-list", class: "space-y-1.5" }),
-      ]),
-    ]),
-  );
+function openSettings() {
+  _settingsSnapshot = JSON.parse(JSON.stringify({
+    scaleLength:                appState.scaleLength,
+    scaleAlgorithm:             appState.scaleAlgorithm,
+    scaleStepNames:             appState.scaleStepNames,
+    pluginMode:                 appState.pluginMode,
+    baseSelection:              appState.baseSelection,
+    spreadUnit:                 appState.spreadUnit,
+    tonalScaleCollectionName:   appState.tonalScaleCollectionName,
+    tokenCollectionName:        appState.tokenCollectionName,
+    embedDirectly:              appState.embedDirectly,
+    includeGlobalColors:        appState.includeGlobalColors,
+    globalColorsCollectionName: appState.globalColorsCollectionName,
+    includeAlphaTints:          appState.includeAlphaTints,
+    alphaValues:                appState.alphaValues,
+    variableStructure:          appState.variableStructure,
+    useShorthandColors:         appState.useShorthandColors,
+    useShorthandRoles:          appState.useShorthandRoles,
+    useShorthandVariations:     appState.useShorthandVariations,
+    useShorthandSteps:          appState.useShorthandSteps,
+    includeDescriptions:        appState.includeDescriptions,
+    allowRoleVariations:        appState.allowRoleVariations,
+    perRoleControls:            appState.perRoleControls,
+    includeTonalCollection:     appState.includeTonalCollection,
+    useGlobalAlgo:              appState.useGlobalAlgo,
+    perColorAlgoScope:          appState.perColorAlgoScope,
+    solverMode:                 appState.solverMode,
+    tokenNameOrder:             appState.tokenNameOrder ? [...appState.tokenNameOrder] : null,
+    variations:                 appState.variations ? JSON.parse(JSON.stringify(appState.variations)) : null,
+  }));
+  syncInputsFromState();
+  switchSettingsTab("tokens");
+  document.getElementById("settings-screen").classList.remove("hidden");
+}
 
-  renderSettingsThemes();
+function closeSettings(cancel) {
+  if (cancel && _settingsSnapshot) {
+    Object.assign(appState, _settingsSnapshot);
+    syncOutputToggles();
+    syncAlgoSection();
+    renderColorGroups();
+    renderRoles();
+  } else {
+    updateSettingsFromInputs();
+  }
+  _settingsSnapshot = null;
+  document.getElementById("settings-screen").classList.add("hidden");
+  if (typeof renderPreviewTabs === "function") renderPreviewTabs();
+  schedulePreview();
 }
