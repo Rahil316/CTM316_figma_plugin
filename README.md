@@ -28,6 +28,16 @@ Load in Figma Desktop → Plugins → Development → Import plugin from manifes
 
 ---
 
+## Testing
+
+`src/tests.js` runs automatically on plugin load when `TESTS_ENABLED = true`. Output appears in Figma's DevTools console (Plugins → Development → Open Console).
+
+It covers color math (`clrUtils`), all 7 tonal scale algorithms, the contrast solver (all 5 modes), the full `variableMaker` pipeline in both tonal and adaptive modes, and `translateConfig`.
+
+Set `TESTS_ENABLED = false` before shipping a build.
+
+---
+
 ## Docs
 
 | File | Contents |

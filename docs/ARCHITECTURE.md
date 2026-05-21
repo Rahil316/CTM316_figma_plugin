@@ -19,6 +19,8 @@ Both are generated from `src/` by `npm run build`. Never edit `dist/` directly.
 src/
   ui.html                          — plugin panel markup + script tags (inlined at build)
   input.css / output.css           — Tailwind source / compiled output
+  tests.js                         — automated test suite (color math, engine, pipeline); runs on
+                                     plugin load when TESTS_ENABLED = true
 
   color/
     clrUtils.js                    — color math: hex↔RGB↔HSL↔OKLCH↔HCT, WCAG contrast, sanitizeHex
@@ -37,6 +39,8 @@ src/
                                      validation, dirty-hash, savedState snapshot
     router.js                      — all screen/overlay visibility (show/hide only, no state mutations)
     runtime.js                     — event wiring, message handling, keyboard shortcuts, boot
+    betaLab.js                     — experimental entry point for in-progress features
+                                     (enable with LAB_ENABLED = true)
 
     components/
       primitives.js                — base DOM helpers: el(), debounce, inputsUI (input, toggle, row,
@@ -78,6 +82,8 @@ primitives.js        — el(), debounce, clipboard, inputsUI
     screens/*.js     — renderers (depend on store + organisms + crud)
     services/*.js    — publish, notifications (depend on store + screens)
       runtime.js     — wiring + boot (depends on everything above)
+      betaLab.js     — experimental features (depends on runtime)
+      tests.js       — test suite (depends on everything; runs last)
 ```
 
 ---

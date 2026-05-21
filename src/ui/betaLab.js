@@ -1,8 +1,8 @@
 /**
  * ============================================================================
- * TEMP — Design Lab
- * Set LAB_ENABLED = true to expose the Design Lab entry point in More Options.
- * Delete this file and its <script> tag in ui.html when no longer needed.
+ * CTM316 BETA LAB
+ * Experimental UI entry point for in-progress features not yet in main flow.
+ * Set LAB_ENABLED = true to expose the Beta Lab entry point in More Options.
  * ============================================================================
  */
 
