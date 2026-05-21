@@ -231,12 +231,12 @@ const inputsUI = {
   // Horizontal row: label on left, one or more controls on right.
   row: (label, ...controls) => el("div", { class: "flex items-center justify-between gap-2" }, [el("span", { class: "text-[var(--text-muted)] text-[12px] shrink-0" }, label), el("div", { class: "flex items-center gap-1.5" }, controls)]),
 
-  // Uppercase section-header label — use to divide settings sections.
+  // section-header label — use to divide settings sections.
   sectionLabel: (text) =>
     el(
       "h3",
       {
-        class: "text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1 uppercase mt-1",
+        class: "text-[var(--text-muted)] text-[11px] font-bold tracking-[1.2px] px-1 mt-1",
       },
       text,
     ),

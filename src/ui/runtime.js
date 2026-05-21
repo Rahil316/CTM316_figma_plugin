@@ -47,6 +47,64 @@ window.onmessage = (event) => {
   const msg = event.data?.pluginMessage;
   if (!msg) return;
 
+  // Standalone browser environment mocks (runs when window.parent === window)
+  if (window.parent === window) {
+    if (msg.type === "check-collections") {
+      setTimeout(() => {
+        window.postMessage({
+          pluginMessage: {
+            type: "collection-check-result",
+            existing: [],
+            renames: { ramps: {}, contextual: {}, summary: { rampCount: 0, contextualCount: 0, changes: [] } }
+          }
+        }, "*");
+      }, 50);
+      return;
+    }
+    if (msg.type === "run-creator") {
+      localStorage.setItem("ctm316_state", JSON.stringify(msg.state));
+      setTimeout(() => {
+        window.postMessage({
+          pluginMessage: {
+            type: "finish",
+            tally: { created: 12, updated: 4, renamed: 0, failed: 0 },
+            errors: null,
+            result: null
+          }
+        }, "*");
+      }, 1000);
+      return;
+    }
+    if (msg.type === "request-processed-data") {
+      const config = translateConfig(msg.state);
+      const result = variableMaker(config);
+      let content = "";
+      if (msg.exportType === "json") content = JSON.stringify({ config, tonalScales: result.tonalScales, colorTokens: result.colorTokens, errors: result.errors }, null, 2);
+      else if (msg.exportType === "csv") content = ExportFormatter.toCSV(result, config);
+      else if (msg.exportType === "css") content = ExportFormatter.toCSS(result, config);
+      else if (msg.exportType === "scss") content = generateScss(result, config);
+      
+      setTimeout(() => {
+        window.postMessage({
+          pluginMessage: {
+            type: "processed-data-response",
+            content,
+            exportType: msg.exportType
+          }
+        }, "*");
+      }, 50);
+      return;
+    }
+    if (msg.type === "save-ui-prefs-meta" || msg.type === "resize") {
+      if (msg.type === "save-ui-prefs-meta") {
+        localStorage.setItem("uiPrefsMeta", JSON.stringify(msg.prefs));
+      } else if (msg.type === "resize") {
+        localStorage.setItem("uiPrefs", JSON.stringify({ width: msg.width, height: msg.height }));
+      }
+      return;
+    }
+  }
+
   if (msg.type === "capabilities") {
     if (!msg.capabilities.multiMode) {
       const multiModeEls = document.querySelectorAll("[data-requires-multimode]");
@@ -463,6 +521,31 @@ document.getElementById("drop-overlay").ondrop = (e) => {
 // ── 6. BOOT ────────────────────────────────────────────────────────────────
 
 try {
+  if (window.parent === window) {
+    // Standalone browser boot mockup: load from localStorage
+    const savedConfig = localStorage.getItem("ctm316_state");
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig);
+        ensureIds(parsed);
+        setSavedState(parsed);
+        appState = Object.assign({}, JSON.parse(JSON.stringify(demoConfig)), parsed);
+      } catch (err) {
+        console.warn("Browser boot: failed to parse saved config", err);
+      }
+    }
+    const savedUiPrefs = localStorage.getItem("uiPrefsMeta");
+    if (savedUiPrefs) {
+      try {
+        const parsed = JSON.parse(savedUiPrefs);
+        if (parsed.scale !== undefined) uiPrefs.scale = parsed.scale;
+        if (parsed.theme !== undefined) uiPrefs.theme = parsed.theme;
+      } catch (err) {
+        console.warn("Browser boot: failed to parse uiPrefs", err);
+      }
+    }
+  }
+
   renderColorGroups();
   renderRoles();
   syncInputsFromState();

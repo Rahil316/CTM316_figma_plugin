@@ -14,7 +14,7 @@
 const panelUI = {
   // Uppercase section divider label.
   sectionLabel: (text) =>
-    el("p", { class: "text-[11px] font-bold tracking-[0.6px] uppercase text-[var(--text-muted)] mb-2" }, [text]),
+    el("p", { class: "text-[11px] font-bold tracking-[0.6px] text-[var(--text-muted)] mb-2" }, [text]),
 
   // Rounded card wrapper with consistent inner spacing.
   card: (children) =>
@@ -152,6 +152,14 @@ const panelUI = {
       )
     ),
 };
+
+// ── SHARED HELPERS ───────────────────────────────────────────────────────────
+
+// Returns true if white text is more legible on the given hex background.
+function useWhiteLabel(hex) {
+  const lum = relLum(normalizeHex(hex) || "#888888");
+  return 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.05;
+}
 
 // ── CARD COMPONENTS ──
 
